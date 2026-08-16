@@ -8,9 +8,9 @@
   },
   "scripts": {
     "generate": "prisma generate",
-    "migrate": "prisma migrate dev",
-    "push": "prisma db push",
-    "seed": "bun run src/seed.ts",
+    "migrate": "bun --env-file ../../.env x prisma migrate dev",
+    "push": "bun --env-file ../../.env x prisma db push",
+    "seed": "bun --env-file ../../.env run src/seed.ts",
     "typecheck": "tsc --noEmit",
     "lint": "echo 'ok'"
   },
