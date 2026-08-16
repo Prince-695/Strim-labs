@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { useAppState } from "@/lib/state";
+import { useSession } from "@/lib/session";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 type Overview = {
   application: string;
@@ -16,59 +18,75 @@ type Overview = {
 };
 
 export default function RuntimePage() {
-  const { token, orgId, environmentId } = useAppState();
-  const [data, setData] = useState<Overview | null>(null);
-  const [error, setError] = useState("");
+  const { token, orgId, environmentId } = useSession();
+  const q = useQuery({
+    queryKey: ["runtime", orgId, environmentId],
+    enabled: Boolean(token && orgId && environmentId),
+    queryFn: () =>
+      api<Overview>(`/v1/runtime/overview?environmentId=${environmentId}`, { token, orgId }),
+  });
 
-  useEffect(() => {
-    if (!token || !orgId || !environmentId) return;
-    api<Overview>(`/v1/runtime/overview?environmentId=${environmentId}`, { token, orgId })
-      .then(setData)
-      .catch((e) => setError(e.message));
-  }, [token, orgId, environmentId]);
+  if (!environmentId) return <p className="text-muted-foreground">Select an environment.</p>;
+  if (q.isError) return <p className="text-destructive">{(q.error as Error).message}</p>;
+  if (!q.data) return <p className="text-muted-foreground">Loading runtime…</p>;
 
-  if (error) return <p>{error}</p>;
-  if (!data) return <p className="muted">Select an environment to load runtime data.</p>;
-
+  const d = q.data;
   return (
-    <div>
-      <h1>Runtime</h1>
-      <p className="muted">
-        {data.application} / {data.environment} · version {data.currentVersion?.seq ?? "—"}
-      </p>
-      <div className="grid">
-        <div className="card">
-          <div className="muted">Health score</div>
-          <div className="score">{data.health.score}</div>
-        </div>
-        <div className="card">
-          <div className="muted">RPS</div>
-          <div className="score">{data.traffic.rps}</div>
-        </div>
-        <div className="card">
-          <div className="muted">P95 / P99</div>
-          <div className="score">
-            {Math.round(data.latency.p95)} / {Math.round(data.latency.p99)}
-          </div>
-        </div>
-        <div className="card">
-          <div className="muted">Error rate</div>
-          <div className="score">{(data.errorRate * 100).toFixed(2)}%</div>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Runtime</h1>
+        <p className="text-muted-foreground">
+          {d.application} / {d.environment} · version {d.currentVersion?.seq ?? "—"}
+        </p>
       </div>
-      <div className="card" style={{ marginTop: 16 }}>
-        <h3>Health breakdown</h3>
-        <table>
-          <tbody>
-            {Object.entries(data.health.breakdown).map(([k, v]) => (
-              <tr key={k}>
-                <td>{k}</td>
-                <td>{v}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Metric title="Health score" value={String(d.health.score)} hint="Always shown with breakdown" />
+        <Metric title="RPS" value={String(d.traffic.rps)} />
+        <Metric title="P95 / P99" value={`${Math.round(d.latency.p95)} / ${Math.round(d.latency.p99)}`} />
+        <Metric title="Error rate" value={`${(d.errorRate * 100).toFixed(2)}%`} />
       </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Health breakdown</CardTitle>
+          <CardDescription>Never a bare number — FR-9.1.2</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-2 sm:grid-cols-2">
+          {Object.entries(d.health.breakdown).map(([k, v]) => (
+            <div key={k} className="flex items-center justify-between rounded-md border px-3 py-2">
+              <span className="capitalize text-muted-foreground">{k}</span>
+              <Badge variant="secondary">{v}</Badge>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Active incidents</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {d.activeIncidents.length === 0 ? (
+            <p className="text-muted-foreground">None</p>
+          ) : (
+            <ul className="space-y-1">
+              {d.activeIncidents.map((i) => (
+                <li key={i.id}>{i.title}</li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
+  );
+}
+
+function Metric({ title, value, hint }: { title: string; value: string; hint?: string }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardDescription>{title}</CardDescription>
+        <CardTitle className="text-3xl">{value}</CardTitle>
+        {hint ? <CardDescription>{hint}</CardDescription> : null}
+      </CardHeader>
+    </Card>
   );
 }
