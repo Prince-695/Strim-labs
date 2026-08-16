@@ -1,0 +1,32 @@
+{
+  "name": "@strim/server",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/app.ts",
+    "./prisma": "./src/lib/prisma.ts",
+    "./ingest": "./src/modules/ingest.ts",
+    "./workers": "./src/app.ts"
+  },
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "start": "bun run src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'ok'"
+  },
+  "dependencies": {
+    "@hono/node-server": "1.14.1",
+    "@hono/zod-validator": "0.5.0",
+    "@prisma/client": "6.8.2",
+    "@strim/db": "workspace:*",
+    "@strim/shared": "workspace:*",
+    "hono": "4.7.11",
+    "zod": "3.24.4"
+  },
+  "devDependencies": {
+    "@strim/tsconfig": "workspace:*",
+    "bun-types": "1.2.13",
+    "typescript": "5.8.3"
+  }
+}
