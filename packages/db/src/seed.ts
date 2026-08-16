@@ -1,6 +1,9 @@
 import { PrismaClient } from "@prisma/client";
+import { loadWorkspaceEnv } from "./env";
 
-const prisma = new PrismaClient();
+loadWorkspaceEnv();
+
+const prisma = new PrismaClient({ datasourceUrl: process.env.DATABASE_URL });
 
 async function hash(password: string): Promise<string> {
   return Bun.password.hash(password, { algorithm: "argon2id" });
