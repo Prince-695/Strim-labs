@@ -1,0 +1,30 @@
+{
+  "name": "@strim/db",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "prisma generate",
+    "migrate": "prisma migrate dev",
+    "push": "prisma db push",
+    "seed": "bun run src/seed.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "echo 'ok'"
+  },
+  "dependencies": {
+    "@prisma/client": "6.8.2"
+  },
+  "devDependencies": {
+    "@strim/tsconfig": "workspace:*",
+    "bun-types": "1.2.13",
+    "prisma": "6.8.2",
+    "typescript": "5.8.3"
+  },
+  "prisma": {
+    "schema": "prisma/schema.prisma",
+    "seed": "bun run src/seed.ts"
+  }
+}

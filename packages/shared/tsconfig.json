@@ -1,0 +1,7 @@
+{
+  "extends": "@strim/tsconfig/base.json",
+  "compilerOptions": {
+    "rootDir": "src"
+  },
+  "include": ["src"]
+}

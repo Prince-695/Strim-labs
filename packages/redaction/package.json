@@ -1,0 +1,10 @@
+{
+  "name": "@strim/redaction",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": { "typecheck": "tsc --noEmit", "lint": "echo 'ok'" },
+  "dependencies": { "@strim/shared": "workspace:*" },
+  "devDependencies": { "@strim/tsconfig": "workspace:*", "typescript": "5.8.3" }
+}

@@ -1,0 +1,801 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  ENGINEER
+  DEVELOPER
+  VIEWER
+  BILLING
+}
+
+enum MembershipScope {
+  ORGANIZATION
+  WORKSPACE
+  PROJECT
+  APPLICATION
+}
+
+enum EnvironmentType {
+  DEVELOPMENT
+  STAGING
+  PRODUCTION
+  CUSTOM
+}
+
+enum ChangePlanState {
+  DRAFT
+  VALIDATING
+  SIMULATION_PENDING
+  SIMULATING
+  SIMULATION_PASSED
+  SIMULATION_FAILED
+  APPROVAL_PENDING
+  APPROVED
+  REJECTED
+  ROLLING_OUT
+  ROLLOUT_PAUSED
+  MONITORING
+  COMPLETED
+  ROLLBACK_PENDING
+  ROLLED_BACK
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum Confidence {
+  Low
+  Medium
+  High
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions              Session[]
+  memberships           Membership[]
+  teamMembers           TeamMember[]
+  ownedApplications     Application[]          @relation("TechnicalOwner")
+  auditLogs             AuditLog[]
+  apiKeysCreated        ApiKey[]
+  changePlanApprovals   ChangePlanApproval[]
+  aiQueries             AiQueryLog[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  ssoProvider String?
+  ssoConfig   Json?
+  createdAt   DateTime @default(now())
+
+  memberships     Membership[]
+  teams           Team[]
+  workspaces      Workspace[]
+  projects        Project[]
+  applications    Application[]
+  environments    Environment[]
+  apiKeys         ApiKey[]
+  auditLogs       AuditLog[]
+  usageEvents     UsageEvent[]
+  billingAccount  BillingAccount?
+  retentionPolicies RetentionPolicy[]
+  rateLimits      RateLimit[]
+  policies        Policy[]
+}
+
+model Membership {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           Role
+  scope          MembershipScope  @default(ORGANIZATION)
+  workspaceId    String?
+  projectId      String?
+  applicationId  String?
+  createdAt      DateTime         @default(now())
+
+  @@index([organizationId, userId])
+}
+
+model Team {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  members        TeamMember[]
+  ownedApps      Application[] @relation("OwnerTeam")
+  oncallApps     Application[] @relation("OncallTeam")
+}
+
+model TeamMember {
+  id     String @id @default(cuid())
+  teamId String
+  team   Team   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+}
+
+model Workspace {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  slug           String
+  projects       Project[]
+
+  @@unique([organizationId, slug])
+}
+
+model Project {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspaceId    String
+  workspace      Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  name           String
+  slug           String
+  applications   Application[]
+
+  @@unique([workspaceId, slug])
+}
+
+model Application {
+  id               String       @id @default(cuid())
+  organizationId   String
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId        String
+  project          Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name             String
+  repository       String?
+  language         String?
+  framework        String?
+  region           String?
+  version          String?
+  ownerTeamId      String
+  ownerTeam        Team         @relation("OwnerTeam", fields: [ownerTeamId], references: [id])
+  technicalOwnerId String
+  technicalOwner   User         @relation("TechnicalOwner", fields: [technicalOwnerId], references: [id])
+  oncallTeamId     String
+  oncallTeam       Team         @relation("OncallTeam", fields: [oncallTeamId], references: [id])
+  createdAt        DateTime     @default(now())
+  environments     Environment[]
+}
+
+model Environment {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  applicationId  String
+  application    Application     @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  name           String
+  type           EnvironmentType
+  region         String?
+  declaredState  Json?
+
+  healthSnapshots     RuntimeHealthSnapshot[]
+  requestRecords      RequestRecord[]
+  traces              Trace[]
+  topologyNodes       TopologyNode[]
+  topologyEdges       TopologyEdge[]
+  requestSessions     RequestSession[]
+  replays             Replay[]
+  samplingRules       SamplingRule[]
+  redactionRules      RedactionRule[]
+  configurations      Configuration[]
+  runtimeVersions     RuntimeVersion[]
+  cacheRules          CacheRule[]
+  runtimeSnapshots    RuntimeSnapshot[]
+  trafficSnapshots    TrafficSnapshot[]
+  scenarios           Scenario[]
+  simulations         Simulation[]
+  loadTests           LoadTest[]
+  changePlans         ChangePlan[]
+  incidents           Incident[]
+  anomalyBaselines    AnomalyBaseline[]
+  policies            Policy[]
+  promotionsFrom      Promotion[]        @relation("PromoFrom")
+  promotionsTo        Promotion[]        @relation("PromoTo")
+  driftReports        DriftReport[]
+  gitIntegrations     GitIntegration[]
+  deploymentEvents    DeploymentEvent[]
+  chaosExperiments    ChaosExperiment[]
+}
+
+model ApiKey {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  prefix         String
+  keyHash        String        @unique
+  scopes         String[]
+  environmentId  String?
+  expiresAt      DateTime?
+  revokedAt      DateTime?
+  createdById    String?
+  createdBy      User?         @relation(fields: [createdById], references: [id])
+  createdAt      DateTime      @default(now())
+}
+
+model AuditLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  actorId        String?
+  actor          User?        @relation(fields: [actorId], references: [id])
+  actorType      String       @default("user")
+  action         String
+  resourceType   String
+  resourceId     String?
+  environmentId  String?
+  oldValue       Json?
+  newValue       Json?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, action])
+}
+
+model UsageEvent {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  metric         String
+  quantity       Float
+  occurredAt     DateTime     @default(now())
+
+  @@index([organizationId, metric, occurredAt])
+}
+
+model RuntimeHealthSnapshot {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  score          Int
+  breakdown      Json
+  rps            Float
+  p95Ms          Float
+  p99Ms          Float
+  errorRate      Float
+  capturedAt     DateTime    @default(now())
+}
+
+model RequestRecord {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  requestId      String
+  traceId        String
+  method         String
+  path           String
+  status         Int
+  durationMs     Float
+  region         String?
+  service        String?
+  requestSize    Int?
+  responseSize   Int?
+  sessionId      String?
+  payloadRef     String?
+  headers        Json?
+  createdAt      DateTime    @default(now())
+
+  @@index([organizationId, environmentId, createdAt])
+  @@index([traceId])
+}
+
+model Trace {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  traceId        String
+  spans          Span[]
+  createdAt      DateTime    @default(now())
+
+  @@unique([environmentId, traceId])
+}
+
+model Span {
+  id          String  @id @default(cuid())
+  traceRowId  String
+  trace       Trace   @relation(fields: [traceRowId], references: [id], onDelete: Cascade)
+  spanId      String
+  parentSpanId String?
+  service     String
+  name        String
+  durationMs  Float
+  status      Int?
+}
+
+model TopologyNode {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  name           String
+  kind           String      @default("service")
+  owner          String?
+  manual         Boolean     @default(false)
+  metadata       Json?
+
+  @@unique([environmentId, name])
+}
+
+model TopologyEdge {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  fromName       String
+  toName         String
+  manual         Boolean     @default(false)
+
+  @@unique([environmentId, fromName, toName])
+}
+
+model RequestSession {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  externalId     String
+  startedAt      DateTime
+  endedAt        DateTime?
+}
+
+model Replay {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  mode           String
+  targetEnvType  EnvironmentType
+  requestIds     String[]
+  status         String      @default("queued")
+  actorId        String?
+  result         Json?
+  createdAt      DateTime    @default(now())
+}
+
+model SamplingRule {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  pathPattern    String?
+  errorOnly      Boolean     @default(false)
+  sampleRate     Float       @default(1)
+}
+
+model RedactionRule {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  name           String
+  pattern        String
+  flags          String      @default("gi")
+}
+
+model Configuration {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  key            String
+  value          Json
+  versions       ConfigurationVersion[]
+
+  @@unique([environmentId, key])
+}
+
+model ConfigurationVersion {
+  id              String        @id @default(cuid())
+  configurationId String
+  configuration   Configuration @relation(fields: [configurationId], references: [id], onDelete: Cascade)
+  actorId         String?
+  reason          String
+  oldValue        Json?
+  newValue        Json
+  createdAt       DateTime      @default(now())
+}
+
+model RuntimeVersion {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  seq            Int
+  values         Json
+  approved       Boolean     @default(false)
+  createdAt      DateTime    @default(now())
+
+  @@unique([environmentId, seq])
+}
+
+model CacheRule {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  endpoint       String
+  method         String
+  ttlSeconds     Int
+  cacheKey       String?
+  queryParams    String[]
+  headers        String[]
+  tags           String[]
+  enabled        Boolean     @default(true)
+}
+
+model CacheInvalidationEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  cacheRuleId    String?
+  kind           String
+  createdAt      DateTime @default(now())
+}
+
+model RuntimeSnapshot {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  payload        Json
+  createdAt      DateTime    @default(now())
+}
+
+model TrafficSnapshot {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  distribution   Json
+  createdAt      DateTime    @default(now())
+}
+
+model Scenario {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  name           String
+  definition     Json
+}
+
+model Simulation {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  scenarioId     String?
+  status         String      @default("queued")
+  baseline       Json?
+  experiment     Json?
+  comparison     Json?
+  createdAt      DateTime    @default(now())
+  changePlans    ChangePlan[]
+}
+
+model LoadTest {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  kind           String
+  config         Json
+  status         String      @default("queued")
+  result         Json?
+  breakingPoint  Json?
+  createdAt      DateTime    @default(now())
+}
+
+model ChangePlan {
+  id                   String          @id @default(cuid())
+  organizationId       String
+  environmentId        String
+  environment          Environment     @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  title                String
+  description          String
+  objective            String
+  state                ChangePlanState @default(DRAFT)
+  currentVersionId     String?
+  proposedVersionId    String?
+  simulationId         String?
+  simulation           Simulation?     @relation(fields: [simulationId], references: [id])
+  riskLevel            RiskLevel?
+  riskPayload          Json?
+  blastRadius          Json?
+  gitCommit            String?
+  gitBranch            String?
+  gitPullRequest       String?
+  rolloutPercent       Int             @default(0)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  approvals            ChangePlanApproval[]
+  transitions          ChangePlanStateTransition[]
+  rollouts             Rollout[]
+  incidents            Incident[]
+  lineageLinks         LineageLink[]
+}
+
+model ChangePlanApproval {
+  id           String     @id @default(cuid())
+  changePlanId String
+  changePlan   ChangePlan @relation(fields: [changePlanId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User       @relation(fields: [userId], references: [id])
+  decision     String
+  justification String?
+  createdAt    DateTime   @default(now())
+}
+
+model ChangePlanStateTransition {
+  id           String          @id @default(cuid())
+  changePlanId String
+  changePlan   ChangePlan      @relation(fields: [changePlanId], references: [id], onDelete: Cascade)
+  fromState    ChangePlanState
+  toState      ChangePlanState
+  createdAt    DateTime        @default(now())
+}
+
+model Guardrail {
+  id             String @id @default(cuid())
+  organizationId String
+  environmentId  String?
+  metric         String
+  operator       String
+  threshold      Float
+  action         String
+}
+
+model Rollout {
+  id             String     @id @default(cuid())
+  organizationId String
+  changePlanId   String
+  changePlan     ChangePlan @relation(fields: [changePlanId], references: [id], onDelete: Cascade)
+  percent        Int
+  status         String
+  createdAt      DateTime   @default(now())
+}
+
+model Rollback {
+  id             String   @id @default(cuid())
+  organizationId String
+  changePlanId   String
+  toVersionId    String
+  createdAt      DateTime @default(now())
+}
+
+model Incident {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  title          String
+  severity       String
+  status         String      @default("open")
+  changePlanId   String?
+  changePlan     ChangePlan? @relation(fields: [changePlanId], references: [id])
+  createdAt      DateTime    @default(now())
+  resolvedAt     DateTime?
+  factors        IncidentFactor[]
+  timeline       IncidentTimelineEvent[]
+}
+
+model IncidentFactor {
+  id         String     @id @default(cuid())
+  incidentId String
+  incident   Incident   @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  label      String
+  confidence Confidence
+  sourceId   String
+  occurredAt DateTime
+}
+
+model IncidentTimelineEvent {
+  id         String   @id @default(cuid())
+  incidentId String
+  incident   Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  label      String
+  occurredAt DateTime
+}
+
+model AnomalyBaseline {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  metric         String
+  mean           Float
+  stddev         Float
+}
+
+model Notification {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String?
+  title          String
+  body           String
+  read           Boolean  @default(false)
+  createdAt      DateTime @default(now())
+}
+
+model Policy {
+  id             String      @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  environmentId  String?
+  environment    Environment? @relation(fields: [environmentId], references: [id])
+  kind           String
+  name           String
+  body           Json
+  versions       PolicyVersion[]
+}
+
+model PolicyVersion {
+  id        String   @id @default(cuid())
+  policyId  String
+  policy    Policy   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  body      Json
+  actorId   String?
+  createdAt DateTime @default(now())
+}
+
+model RateLimit {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  scope          String
+  scopeId        String?
+  limit          Int
+  windowSeconds  Int          @default(60)
+}
+
+model Promotion {
+  id             String      @id @default(cuid())
+  organizationId String
+  fromEnvId      String
+  fromEnv        Environment @relation("PromoFrom", fields: [fromEnvId], references: [id])
+  toEnvId        String
+  toEnv          Environment @relation("PromoTo", fields: [toEnvId], references: [id])
+  requireSimulation Boolean  @default(false)
+  status         String      @default("pending")
+  createdAt      DateTime    @default(now())
+}
+
+model DriftReport {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  expected       Json
+  actual         Json
+  status         String      @default("open")
+  createdAt      DateTime    @default(now())
+}
+
+model AiQueryLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String
+  user           User     @relation(fields: [userId], references: [id])
+  question       String
+  answer         String
+  citations      AiResponseCitation[]
+  createdAt      DateTime @default(now())
+}
+
+model AiResponseCitation {
+  id        String     @id @default(cuid())
+  queryId   String
+  query     AiQueryLog @relation(fields: [queryId], references: [id], onDelete: Cascade)
+  sourceType String
+  sourceId  String
+}
+
+model GitIntegration {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  repo           String
+  webhookSecret  String?
+}
+
+model DeploymentEvent {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  source         String
+  sha            String?
+  metadata       Json?
+  createdAt      DateTime    @default(now())
+}
+
+model PagingIntegration {
+  id             String @id @default(cuid())
+  organizationId String
+  provider       String
+  config         Json
+}
+
+model LineageLink {
+  id           String     @id @default(cuid())
+  changePlanId String
+  changePlan   ChangePlan @relation(fields: [changePlanId], references: [id], onDelete: Cascade)
+  kind         String
+  ref          String
+}
+
+model ChaosExperiment {
+  id             String      @id @default(cuid())
+  organizationId String
+  environmentId  String
+  environment    Environment @relation(fields: [environmentId], references: [id], onDelete: Cascade)
+  kind           String
+  target         String
+  status         String      @default("running")
+  revertedAt     DateTime?
+  createdAt      DateTime    @default(now())
+}
+
+model BillingAccount {
+  id             String       @id @default(cuid())
+  organizationId String       @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan           String       @default("team")
+  invoices       Invoice[]
+}
+
+model Invoice {
+  id         String         @id @default(cuid())
+  accountId  String
+  account    BillingAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  periodStart DateTime
+  periodEnd  DateTime
+  amountCents Int
+  status     String         @default("draft")
+}
+
+model RetentionPolicy {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  dataClass      String
+  days           Int
+}
