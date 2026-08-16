@@ -188,7 +188,7 @@ export async function registerReplayWorker(db: AppEnv["Variables"]["db"]): Promi
       : null;
     await db.replay.update({
       where: { id: replay.id },
-      data: { status: "completed", result: { replayed, comparison } },
+      data: { status: "completed", result: { replayed, comparison } as object },
     });
   });
 }

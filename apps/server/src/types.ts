@@ -1,5 +1,5 @@
 import type { Role } from "@strim/shared";
-import type { AppDb } from "../lib/prisma";
+import type { AppDb } from "./lib/prisma";
 
 export type AppEnv = {
   Variables: {

@@ -13,9 +13,9 @@ describe("sdk fail-open", () => {
       environment: "production",
       apiKey: "sk_test",
       ingestUrl: "http://127.0.0.1:1",
-      fetchImpl: (async () => {
+      fetchImpl: async () => {
         throw new Error("down");
-      }) as typeof fetch,
+      },
       defaults: { "checkout.timeout": 5000 },
     });
     strim.capture({ type: "request", path: "/checkout", status: 200, durationMs: 12 });

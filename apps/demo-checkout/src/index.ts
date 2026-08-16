@@ -15,7 +15,7 @@ strim.init({
 });
 
 const app = new Hono();
-const cache = new Map<string, { exp: number; body: unknown }>();
+const cache = new Map<string, { exp: number; body: Record<string, unknown> }>();
 
 app.use("*", async (c, next) => {
   const started = Date.now();
@@ -49,7 +49,7 @@ app.get("/products", (c) => {
   const key = "GET:/products";
   if (enabled && ttl > 0) {
     const hit = cache.get(key);
-    if (hit && hit.exp > Date.now()) return c.json(hit.body);
+    if (hit && hit.exp > Date.now()) return c.json(hit.body as Record<string, unknown>);
   }
   const body = {
     products: [

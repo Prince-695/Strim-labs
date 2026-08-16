@@ -2,6 +2,8 @@ import { inRollout, type TelemetryEnvelope, type TelemetryEvent } from "@strim/s
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
+export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
+
 export type StrimInitOptions = {
   projectId: string;
   environment: string;
@@ -12,7 +14,7 @@ export type StrimInitOptions = {
   maxBuffer?: number;
   configCachePath?: string;
   defaults?: Record<string, unknown>;
-  fetchImpl?: typeof fetch;
+  fetchImpl?: FetchLike;
 };
 
 type Buffered = TelemetryEvent;
@@ -23,14 +25,14 @@ class StrimClient {
   private opts: StrimInitOptions | null = null;
   private buffer: Buffered[] = [];
   private timer: ReturnType<typeof setInterval> | null = null;
-  private config: Record<string, unknown> = {};
+  private runtimeValues: Record<string, unknown> = {};
   private rolloutPercent = 0;
   private proposed: Record<string, unknown> = {};
   private closed = false;
 
   init(options: StrimInitOptions): void {
     this.opts = options;
-    this.config = { ...(options.defaults ?? {}) };
+    this.runtimeValues = { ...(options.defaults ?? {}) };
     this.loadCache().catch(() => undefined);
     this.timer = setInterval(() => {
       void this.flush();
@@ -56,7 +58,13 @@ class StrimClient {
   }
 
   middleware() {
-    return async (c: { req: { method: string; path: string; header: (n: string) => string | undefined }; header: (k: string, v: string) => void }, next: () => Promise<void>) => {
+    return async (
+      c: {
+        req: { method: string; path: string; header: (n: string) => string | undefined };
+        header: (k: string, v: string) => void;
+      },
+      next: () => Promise<void>,
+    ) => {
       const started = Date.now();
       const requestId = c.req.header("x-request-id") ?? crypto.randomUUID();
       const traceId = c.req.header("x-trace-id") ?? crypto.randomUUID();
@@ -87,20 +95,24 @@ class StrimClient {
     };
   }
 
-  configValue<T = unknown>(key: string, fallback?: T): T {
+  configValue<T>(key: string, fallback: T): T;
+  configValue(key: string): unknown;
+  configValue<T>(key: string, fallback?: T): T | unknown {
     try {
       const useProposed = this.rolloutKey() ? inRollout(this.rolloutKey()!, this.rolloutPercent) : false;
-      const source = useProposed ? this.proposed : this.config;
+      const source = useProposed ? this.proposed : this.runtimeValues;
       if (key in source) return source[key] as T;
       if (this.opts?.defaults && key in this.opts.defaults) return this.opts.defaults[key] as T;
-      return fallback as T;
+      return fallback;
     } catch {
-      return fallback as T;
+      return fallback;
     }
   }
 
-  config<T = unknown>(key: string, fallback?: T): T {
-    return this.configValue(key, fallback);
+  config<T>(key: string, fallback: T): T;
+  config(key: string): unknown;
+  config<T>(key: string, fallback?: T): T | unknown {
+    return this.configValue(key, fallback as T);
   }
 
   private rolloutKey(): string | null {
@@ -124,7 +136,7 @@ class StrimClient {
         proposed?: Record<string, unknown>;
         rolloutPercent?: number;
       };
-      this.config = body.values ?? {};
+      this.runtimeValues = body.values ?? {};
       this.proposed = body.proposed ?? {};
       this.rolloutPercent = body.rolloutPercent ?? 0;
       await this.saveCache();
@@ -168,7 +180,7 @@ class StrimClient {
     return (this.opts?.ingestUrl ?? "http://localhost:3001").replace(/\/$/, "");
   }
 
-  private fetcher(): typeof fetch {
+  private fetcher(): FetchLike {
     return this.opts?.fetchImpl ?? fetch;
   }
 
@@ -180,7 +192,7 @@ class StrimClient {
     try {
       const raw = await readFile(this.cachePath(), "utf8");
       const parsed = JSON.parse(raw) as Record<string, unknown>;
-      this.config = { ...parsed, ...this.config };
+      this.runtimeValues = { ...parsed, ...this.runtimeValues };
     } catch {
       // none
     }
@@ -189,7 +201,7 @@ class StrimClient {
   private async saveCache(): Promise<void> {
     try {
       await mkdir(dirname(this.cachePath()), { recursive: true });
-      await writeFile(this.cachePath(), JSON.stringify(this.config));
+      await writeFile(this.cachePath(), JSON.stringify(this.runtimeValues));
     } catch {
       // fail-open
     }
