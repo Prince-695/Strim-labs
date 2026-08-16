@@ -1,0 +1,32 @@
+name: "Strim CI gate"
+description: Fail CI when a linked Change Plan simulation exceeds P95 regression threshold
+inputs:
+  api-url:
+    required: true
+  token:
+    required: true
+  organization-id:
+    required: true
+  change-plan-id:
+    required: true
+  threshold:
+    default: "20"
+runs:
+  using: composite
+  steps:
+    - name: Evaluate Strim gate
+      shell: bash
+      env:
+        API_URL: ${{ inputs.api-url }}
+        TOKEN: ${{ inputs.token }}
+        ORG: ${{ inputs.organization-id }}
+        PLAN: ${{ inputs.change-plan-id }}
+        THRESHOLD: ${{ inputs.threshold }}
+      run: |
+        BODY=$(curl -sS -X POST "$API_URL/v1/integrations/ci/gate" \
+          -H "authorization: Bearer $TOKEN" \
+          -H "x-organization-id: $ORG" \
+          -H "content-type: application/json" \
+          -d "{\"changePlanId\":\"$PLAN\",\"p95RegressionPct\":0,\"thresholdPct\":$THRESHOLD}")
+        echo "$BODY"
+        echo "$BODY" | grep -q '"result":"PASS"' || exit 1

@@ -1,0 +1,23 @@
+{
+  "name": "strim",
+  "private": true,
+  "packageManager": "bun@1.3.8",
+  "workspaces": ["apps/*", "packages/*"],
+  "scripts": {
+    "dev": "bun run --filter @strim/server dev & bun run --filter @strim/web dev & bun run --filter @strim/demo-checkout dev & wait",
+    "dev:server": "bun run --filter @strim/server dev",
+    "dev:web": "bun run --filter @strim/web dev",
+    "dev:demo": "bun run --filter @strim/demo-checkout dev",
+    "db:generate": "bun run --filter @strim/db generate",
+    "db:migrate": "bun run --filter @strim/db migrate",
+    "db:push": "bun run --filter @strim/db push",
+    "db:seed": "bun run --filter @strim/db seed",
+    "test": "bun test",
+    "typecheck": "bun run --filter '*' typecheck",
+    "lint": "bun run --filter '*' lint"
+  },
+  "devDependencies": {
+    "bun-types": "1.2.13",
+    "typescript": "5.8.3"
+  }
+}
