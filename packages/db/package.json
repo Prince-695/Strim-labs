@@ -8,9 +8,9 @@
   },
   "scripts": {
     "generate": "prisma generate",
-    "migrate": "bun --env-file ../../.env x prisma migrate dev",
-    "push": "bun --env-file ../../.env x prisma db push",
-    "seed": "bun --env-file ../../.env run src/seed.ts",
+    "migrate": "bun --env-file=../../.env ./node_modules/.bin/prisma migrate dev",
+    "push": "bun --env-file=../../.env ./node_modules/.bin/prisma db push",
+    "seed": "bun --env-file=../../.env src/seed.ts",
     "typecheck": "tsc --noEmit",
     "lint": "echo 'ok'"
   },
@@ -25,6 +25,6 @@
   },
   "prisma": {
     "schema": "prisma/schema.prisma",
-    "seed": "bun run src/seed.ts"
+    "seed": "bun --env-file=../../.env src/seed.ts"
   }
 }
