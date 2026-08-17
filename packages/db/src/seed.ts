@@ -9,14 +9,20 @@ async function hash(password: string): Promise<string> {
   return Bun.password.hash(password, { algorithm: "argon2id" });
 }
 
+async function resetDatabase() {
+  const tables = await prisma.$queryRaw<{ tablename: string }[]>`
+    SELECT tablename
+    FROM pg_tables
+    WHERE schemaname = 'public'
+      AND tablename <> '_prisma_migrations'
+  `;
+  if (tables.length === 0) return;
+  const list = tables.map((t) => `"${t.tablename}"`).join(", ");
+  await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${list} CASCADE`);
+}
+
 async function main() {
-  await prisma.invoice.deleteMany();
-  await prisma.billingAccount.deleteMany();
-  await prisma.membership.deleteMany();
-  await prisma.teamMember.deleteMany();
-  await prisma.session.deleteMany();
-  await prisma.user.deleteMany();
-  await prisma.organization.deleteMany();
+  await resetDatabase();
 
   const passwordHash = await hash("password123");
 
