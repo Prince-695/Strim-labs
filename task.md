@@ -180,25 +180,25 @@ Last Updated: 2026-09-29
 ## 📂 Phase 6: AI Intelligence, Integrations & Billing
 *Test Guide: `test-phase-6.md`*
 
-- [ ] **Module: `ai`**
-  - [ ] `schemas.ts`: Natural language query and citation schemas
-  - [ ] `routes.ts`: OpenAPI contracts
-  - [ ] `handlers.ts`: AI query handlers
-  - [ ] `service.ts`: Runtime model context injection, grounded citation engine, change summarization
-  - [ ] `types.ts`, `index.ts`
-- [ ] **Module: `integrations`**
-  - [ ] `schemas.ts`: Git webhook and deployment event schemas
-  - [ ] `routes.ts`: OpenAPI contracts
-  - [ ] `handlers.ts`, `service.ts`, `types.ts`, `index.ts`
-- [ ] **Module: `billing`**
-  - [ ] `schemas.ts`: Usage events, plan tiers, invoices
-  - [ ] `routes.ts`, `handlers.ts`, `service.ts`, `types.ts`, `index.ts`
-- [ ] **Module: `docs`**
-  - [ ] Complete OpenAPI 3.1 specification generation and validation
-- [ ] **Phase 6 Testing & Commit**
-  - [ ] Create `test-phase-6.md`
-  - [ ] Verify all endpoints in Swagger UI & Scalar
-  - [ ] Git commit: `feat(intelligence): phase 6 ai assistant, integrations, and complete openapi docs`
+- [x] **Module: `ai`**
+  - [x] `schemas.ts`: Natural language query and citation schemas
+  - [x] `routes.ts`: OpenAPI contracts
+  - [x] `handlers.ts`: AI query handlers
+  - [x] `service.ts`: Runtime model context injection, grounded citation engine, change summarization
+  - [x] `types.ts`, `index.ts`
+- [x] **Module: `integrations`**
+  - [x] `schemas.ts`: Git webhook and deployment event schemas
+  - [x] `routes.ts`: OpenAPI contracts
+  - [x] `handlers.ts`, `service.ts`, `types.ts`, `index.ts`
+- [x] **Module: `billing`**
+  - [x] `schemas.ts`: Usage events, plan tiers, invoices, retention, sso, chaos
+  - [x] `routes.ts`, `handlers.ts`, `service.ts`, `types.ts`, `index.ts`
+- [x] **Module: `docs`**
+  - [x] Complete OpenAPI 3.1 specification generation and validation
+- [x] **Phase 6 Testing & Commit**
+  - [x] Create `test-phase-6.md`
+  - [x] Verify all endpoints in Swagger UI & Scalar
+  - [x] Git commit: `feat(intelligence): phase 6 ai assistant, integrations, and complete openapi docs`
 
 ---
 
