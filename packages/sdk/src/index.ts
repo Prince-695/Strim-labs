@@ -4,6 +4,10 @@ import { dirname } from "node:path";
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
+export type ConfigOptions = {
+  bucketKey?: string;
+};
+
 export type StrimInitOptions = {
   projectId: string;
   environment: string;
@@ -14,6 +18,7 @@ export type StrimInitOptions = {
   maxBuffer?: number;
   configCachePath?: string;
   defaults?: Record<string, unknown>;
+  enableStreaming?: boolean;
   fetchImpl?: FetchLike;
 };
 
@@ -29,6 +34,7 @@ class StrimClient {
   private rolloutPercent = 0;
   private proposed: Record<string, unknown> = {};
   private closed = false;
+  private streamAbortController: AbortController | null = null;
 
   init(options: StrimInitOptions): void {
     this.opts = options;
@@ -41,6 +47,10 @@ class StrimClient {
       this.timer.unref();
     }
     void this.refreshConfig();
+
+    if (options.enableStreaming !== false) {
+      void this.startConfigStream();
+    }
   }
 
   capture(event: Buffered): void {
@@ -95,11 +105,10 @@ class StrimClient {
     };
   }
 
-  configValue<T>(key: string, fallback: T): T;
-  configValue(key: string): unknown;
-  configValue<T>(key: string, fallback?: T): T | unknown {
+  configValue<T>(key: string, fallback?: T, options?: ConfigOptions): T | unknown {
     try {
-      const useProposed = this.rolloutKey() ? inRollout(this.rolloutKey()!, this.rolloutPercent) : false;
+      const keyToHash = options?.bucketKey ?? this.rolloutKey();
+      const useProposed = keyToHash && this.rolloutPercent > 0 ? inRollout(keyToHash, this.rolloutPercent) : false;
       const source = useProposed ? this.proposed : this.runtimeValues;
       if (key in source) return source[key] as T;
       if (this.opts?.defaults && key in this.opts.defaults) return this.opts.defaults[key] as T;
@@ -109,10 +118,8 @@ class StrimClient {
     }
   }
 
-  config<T>(key: string, fallback: T): T;
-  config(key: string): unknown;
-  config<T>(key: string, fallback?: T): T | unknown {
-    return this.configValue(key, fallback as T);
+  config<T>(key: string, fallback?: T, options?: ConfigOptions): T | unknown {
+    return this.configValue(key, fallback, options);
   }
 
   private rolloutKey(): string | null {
@@ -145,6 +152,69 @@ class StrimClient {
     }
   }
 
+  private async startConfigStream(): Promise<void> {
+    if (!this.opts || this.closed) return;
+    const streamUrl = `${this.ingestBase()}/v1/sdk/config/stream?project=${encodeURIComponent(
+      this.opts.projectId,
+    )}&environment=${encodeURIComponent(this.opts.environment)}`;
+
+    try {
+      this.streamAbortController = new AbortController();
+      const res = await this.fetcher()(streamUrl, {
+        headers: {
+          authorization: `Bearer ${this.opts.apiKey}`,
+          "x-strim-project": this.opts.projectId,
+          "x-strim-environment": this.opts.environment,
+        },
+        signal: this.streamAbortController.signal,
+      });
+
+      if (!res.ok || !res.body) return;
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (!this.closed) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() ?? "";
+
+        for (const block of lines) {
+          if (block.includes("event: config")) {
+            const dataMatch = block.match(/data: (.+)/);
+            if (dataMatch?.[1]) {
+              try {
+                const payload = JSON.parse(dataMatch[1]) as {
+                  values?: Record<string, unknown>;
+                  proposed?: Record<string, unknown>;
+                  percent?: number;
+                };
+                if (payload.values) {
+                  this.runtimeValues = { ...this.runtimeValues, ...payload.values };
+                }
+                if (payload.proposed) {
+                  this.proposed = payload.proposed;
+                }
+                if (typeof payload.percent === "number") {
+                  this.rolloutPercent = payload.percent;
+                }
+                await this.saveCache();
+              } catch {
+                // ignore malformed frame
+              }
+            }
+          }
+        }
+      }
+    } catch {
+      // Stream disconnected; will retry on next refresh
+    }
+  }
+
   async flush(): Promise<void> {
     if (!this.opts || this.buffer.length === 0) return;
     const events = this.buffer.splice(0, this.buffer.length);
@@ -173,6 +243,13 @@ class StrimClient {
   shutdown(): void {
     this.closed = true;
     if (this.timer) clearInterval(this.timer);
+    if (this.streamAbortController) {
+      try {
+        this.streamAbortController.abort();
+      } catch {
+        // ignore
+      }
+    }
     void this.flush();
   }
 
@@ -211,3 +288,4 @@ class StrimClient {
 export const strim = new StrimClient();
 
 export default strim;
+
