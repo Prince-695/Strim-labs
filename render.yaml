@@ -1,0 +1,58 @@
+services:
+  # Strim Core API, Ingest, OpenTelemetry, and Worker Service
+  - type: web
+    name: strim-server
+    runtime: docker
+    dockerfilePath: Dockerfile
+    plan: starter
+    region: oregon
+    healthCheckPath: /health
+    disk:
+      name: strim-storage
+      mountPath: /app/data/storage
+      sizeGB: 10
+    envVars:
+      - key: PORT
+        value: 3001
+      - key: NODE_ENV
+        value: production
+      - key: STORAGE_DRIVER
+        value: local
+      - key: STORAGE_LOCAL_DIR
+        value: /app/data/storage
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: WEB_ORIGIN
+        sync: false
+      # Optional external services (falls back automatically to Postgres & in-memory if omitted)
+      - key: REDIS_URL
+        sync: false
+      - key: CLICKHOUSE_URL
+        sync: false
+      - key: S3_ENDPOINT
+        sync: false
+      - key: S3_BUCKET
+        sync: false
+      - key: S3_ACCESS_KEY
+        sync: false
+      - key: S3_SECRET_KEY
+        sync: false
+
+  # Strim Web Console (Next.js 16 Dashboard)
+  - type: web
+    name: strim-web
+    runtime: node
+    plan: starter
+    region: oregon
+    buildCommand: bun install && cd apps/web && bun run build
+    startCommand: cd apps/web && bun run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: strim-server
+          property: host

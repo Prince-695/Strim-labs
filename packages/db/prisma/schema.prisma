@@ -76,6 +76,8 @@ model User {
   apiKeysCreated        ApiKey[]
   changePlanApprovals   ChangePlanApproval[]
   aiQueries             AiQueryLog[]
+  passwordResetTokens   PasswordResetToken[]
+  invitesSent           OrganizationInvite[]
 }
 
 model Session {
@@ -108,6 +110,7 @@ model Organization {
   retentionPolicies RetentionPolicy[]
   rateLimits      RateLimit[]
   policies        Policy[]
+  invites         OrganizationInvite[]
 }
 
 model Membership {
@@ -799,3 +802,64 @@ model RetentionPolicy {
   dataClass      String
   days           Int
 }
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model OrganizationInvite {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  role           Role            @default(ENGINEER)
+  scope          MembershipScope @default(ORGANIZATION)
+  tokenHash      String          @unique
+  invitedById    String
+  invitedBy      User            @relation(fields: [invitedById], references: [id], onDelete: Cascade)
+  expiresAt      DateTime
+  createdAt      DateTime        @default(now())
+
+  @@unique([organizationId, email])
+}
+
+model QueueJob {
+  id          String    @id @default(cuid())
+  queueName   String
+  payload     Json
+  status      String    @default("pending")
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
+  lastError   String?
+  lockedAt    DateTime?
+  lockedBy    String?
+  runAt       DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([queueName, status, runAt])
+}
+
+model RequestAggregate {
+  id             String   @id @default(cuid())
+  organizationId String
+  environmentId  String
+  service        String
+  endpoint       String
+  method         String
+  statusCode     Int
+  durationMs     Float
+  cacheHit       Boolean  @default(false)
+  bytesIn        Int      @default(0)
+  bytesOut       Int      @default(0)
+  timestamp      DateTime @default(now())
+
+  @@index([organizationId, environmentId, timestamp])
+  @@index([organizationId, environmentId, service, endpoint])
+}
+
