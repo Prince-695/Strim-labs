@@ -14,6 +14,8 @@ import { topologyRoutes } from "./topology";
 import { replayRoutes } from "./replay";
 import { configRoutes } from "./config";
 import { cacheRoutes } from "./cache";
+import { simulationRoutes } from "./simulations";
+import { loadTestRoutes } from "./load-testing";
 
 export const docsRoutes = new Hono<AppEnv>();
 
@@ -395,122 +397,7 @@ const openApiSpec = {
         },
       },
     },
-    "/v1/simulations": {
-      get: {
-        tags: ["Simulations"],
-        summary: "List simulations",
-        responses: {
-          200: { description: "List of simulations" },
-        },
-      },
-      post: {
-        tags: ["Simulations"],
-        summary: "Execute What-If scenario against baseline traffic",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  environmentId: { type: "string" },
-                  change: {
-                    type: "object",
-                    properties: {
-                      kind: {
-                        type: "string",
-                        enum: ["traffic", "cache", "timeout", "dependencyLatency", "dependencyUnavailable"],
-                      },
-                      multiplier: { type: "number" },
-                      enabled: { type: "boolean" },
-                      fromMs: { type: "number" },
-                      toMs: { type: "number" },
-                      factor: { type: "number" },
-                      dependency: { type: "string" },
-                    },
-                    required: ["kind"],
-                  },
-                },
-                required: ["environmentId", "change"],
-              },
-            },
-          },
-        },
-        responses: {
-          201: { description: "Simulation executed" },
-        },
-      },
-    },
-    "/v1/cache/rules": {
-      get: {
-        tags: ["Cache"],
-        summary: "List cache rules",
-        responses: { 200: { description: "List of cache rules" } },
-      },
-      post: {
-        tags: ["Cache"],
-        summary: "Create cache rule",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  environmentId: { type: "string" },
-                  endpoint: { type: "string" },
-                  method: { type: "string" },
-                  ttlSeconds: { type: "number" },
-                  tags: { type: "array", items: { type: "string" } },
-                },
-                required: ["environmentId", "endpoint", "method", "ttlSeconds"],
-              },
-            },
-          },
-        },
-        responses: { 201: { description: "Rule created" } },
-      },
-    },
-    "/v1/cache/invalidate": {
-      post: {
-        tags: ["Cache"],
-        summary: "Trigger targeted or global cache invalidation",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  kind: { type: "string", enum: ["manual", "tag", "endpoint"] },
-                  cacheRuleId: { type: "string" },
-                  tag: { type: "string" },
-                  endpoint: { type: "string" },
-                },
-                required: ["kind"],
-              },
-            },
-          },
-        },
-        responses: { 200: { description: "Invalidation dispatched" } },
-      },
-    },
-    "/v1/cache/analytics": {
-      get: {
-        tags: ["Cache"],
-        summary: "Get real cache performance metrics (hit rate, origin reduction, bandwidth saved)",
-        parameters: [{ name: "environmentId", in: "query", schema: { type: "string" } }],
-        responses: { 200: { description: "Analytics data" } },
-      },
-    },
-    "/v1/cache/recommendations": {
-      get: {
-        tags: ["Cache"],
-        summary: "Scan telemetry to recommend cache candidates",
-        parameters: [{ name: "environmentId", in: "query", schema: { type: "string" } }],
-        responses: { 200: { description: "Recommended endpoints" } },
-      },
-    },
+
     "/v1/incidents": {
       get: {
         tags: ["Incidents"],
@@ -585,7 +472,7 @@ const openApiSpec = {
   },
 };
 
-function getFullOpenApiSpec() {
+export function getFullOpenApiSpec() {
   const registry = new OpenAPIHono<AppEnv>();
   registry.route("/v1/auth", authRoutes);
   registry.route("/v1/org", directoryRoutes);
@@ -598,6 +485,8 @@ function getFullOpenApiSpec() {
   registry.route("/v1/replay", replayRoutes);
   registry.route("/v1/config", configRoutes);
   registry.route("/v1/cache", cacheRoutes);
+  registry.route("/v1/simulations", simulationRoutes);
+  registry.route("/v1/load-tests", loadTestRoutes);
 
   const generated = registry.getOpenAPIDocument({
     openapi: "3.1.0",
