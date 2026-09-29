@@ -12,6 +12,8 @@ import { runtimeRoutes } from "./runtime";
 import { requestRoutes } from "./requests";
 import { topologyRoutes } from "./topology";
 import { replayRoutes } from "./replay";
+import { configRoutes } from "./config";
+import { cacheRoutes } from "./cache";
 
 export const docsRoutes = new Hono<AppEnv>();
 
@@ -594,6 +596,8 @@ function getFullOpenApiSpec() {
   registry.route("/v1/requests", requestRoutes);
   registry.route("/v1/topology", topologyRoutes);
   registry.route("/v1/replay", replayRoutes);
+  registry.route("/v1/config", configRoutes);
+  registry.route("/v1/cache", cacheRoutes);
 
   const generated = registry.getOpenAPIDocument({
     openapi: "3.1.0",
