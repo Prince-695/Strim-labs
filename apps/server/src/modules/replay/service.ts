@@ -8,9 +8,33 @@ import {
 import type { PrismaClient } from "@prisma/client";
 import { writeAudit } from "../../lib/audit";
 import { queue } from "../../lib/queue";
+import { validateReplayTargetUrl } from "./ssrf";
 import type { CreateReplayInput } from "./types";
 
 export class ReplayService {
+  /**
+   * Lists past replay executions for an environment.
+   */
+  static async listReplays(db: PrismaClient, organizationId: string, environmentId?: string) {
+    return db.replay.findMany({
+      where: {
+        organizationId,
+        environmentId: environmentId || undefined,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+    });
+  }
+
+  /**
+   * Retrieves specific replay record and comparison diff.
+   */
+  static async getReplayById(db: PrismaClient, organizationId: string, id: string) {
+    return db.replay.findFirst({
+      where: { id, organizationId },
+    });
+  }
+
   /**
    * Validates safety, creates a replay record, writes audit log, and enqueues worker job.
    */
@@ -82,7 +106,7 @@ export class ReplayService {
   }
 
   /**
-   * Replay worker execution logic.
+   * Replay worker execution logic with SSRF defense and credential scrubbing.
    */
   static async processReplayJob(db: PrismaClient, job: { replayId: string; organizationId: string }) {
     const replay = await db.replay.findFirst({
@@ -102,12 +126,32 @@ export class ReplayService {
     let replayedStatus = original.status;
     let replayedDurationMs = Math.max(1, Math.round(original.durationMs * 0.95));
     let replayedBody: unknown = { ok: true, replayed: true };
-    const sanitizedHeaders = redactHeaders((original.headers as Record<string, string>) ?? {});
 
-    const targetBaseUrl =
-      process.env.REPLAY_TARGET_URL ?? (original.service === "checkout" ? "http://localhost:3002" : null);
+    // Credential Scrubber: Strip all sensitive headers, auth tokens, cookies
+    const sanitizedHeaders = redactHeaders((original.headers as Record<string, string>) ?? {});
+    delete (sanitizedHeaders as Record<string, string>)["authorization"];
+    delete (sanitizedHeaders as Record<string, string>)["cookie"];
+    delete (sanitizedHeaders as Record<string, string>)["proxy-authorization"];
+
+    const targetBaseUrl = process.env.REPLAY_TARGET_URL;
 
     if (targetBaseUrl) {
+      // SSRF & Replay Bomb Protection check
+      const ssrfCheck = validateReplayTargetUrl(targetBaseUrl);
+      if (!ssrfCheck.safe) {
+        await db.replay.update({
+          where: { id: replay.id },
+          data: {
+            status: "failed",
+            result: {
+              error: "BLOCKED_SSRF",
+              reason: ssrfCheck.reason,
+            } as object,
+          },
+        });
+        return;
+      }
+
       try {
         const start = Date.now();
         const res = await fetch(`${targetBaseUrl}${original.path}`, {

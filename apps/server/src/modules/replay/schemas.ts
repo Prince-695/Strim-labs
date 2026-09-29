@@ -25,6 +25,27 @@ export const ReplayRecordSchema = z
   })
   .openapi("ReplayRecord");
 
+export const ListReplaysResponseSchema = z
+  .object({
+    replays: z.array(ReplayRecordSchema),
+  })
+  .openapi("ListReplaysResponse");
+
+export const ReplayIdParamSchema = z.object({
+  id: z.string().openapi({
+    param: { name: "id", in: "path" },
+    description: "Replay execution identifier",
+    example: "rep_9988",
+  }),
+});
+
+export const OptionalEnvironmentQuerySchema = z.object({
+  environmentId: z.string().optional().openapi({
+    description: "Environment identifier",
+    example: "env_staging_123",
+  }),
+});
+
 export const ErrorResponseSchema = z
   .object({
     error: z.string().openapi({ example: "FORBIDDEN" }),
