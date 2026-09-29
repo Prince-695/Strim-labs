@@ -6,7 +6,7 @@
   "exports": {
     ".": "./src/app.ts",
     "./prisma": "./src/lib/prisma.ts",
-    "./ingest": "./src/modules/ingest.ts",
+    "./ingest": "./src/modules/ingest/index.ts",
     "./workers": "./src/app.ts"
   },
   "scripts": {

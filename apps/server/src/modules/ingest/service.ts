@@ -1,67 +1,62 @@
-import { Hono } from "hono";
 import {
   computeHealthScore,
-  otlpToEnvelope,
   redactHeaders,
   redactJson,
   type RedactionRule,
   type TelemetryEnvelope,
 } from "@strim/shared";
-import type { AppEnv } from "../types";
-import { apiKeyAuth, requireScope } from "../middleware/api-key";
-import { queue } from "../lib/queue";
-import { insertRequestAggregates, type RequestAggregateRow } from "../lib/clickhouse";
-import { rateLimit } from "../lib/redis";
-import { storePayload } from "../lib/storage";
+import type { PrismaClient } from "@prisma/client";
+import { queue } from "../../lib/queue";
+import { insertRequestAggregates, type RequestAggregateRow } from "../../lib/clickhouse";
+import { rateLimit } from "../../lib/redis";
+import { storePayload } from "../../lib/storage";
 
 const MAX_RPS = Number(process.env.INGEST_MAX_RPS ?? 2000);
+export const MAX_PAYLOAD_BYTES = 500 * 1024; // 500 KB limit for anti-DDoS / bombardment defense
 
-export const ingestRoutes = new Hono<AppEnv>();
-ingestRoutes.use("*", apiKeyAuth);
-
-ingestRoutes.post("/v1/ingest", requireScope("telemetry:write"), async (c) => {
-  const organizationId = c.get("organizationId");
-  if (!organizationId) return c.json({ error: "UNAUTHORIZED" }, 401);
-
-  const rl = await rateLimit(`ingest:${organizationId}`, MAX_RPS, 1);
-  if (!rl.allowed) {
-    c.header("retry-after", "1");
-    return c.json({ error: "RATE_LIMITED", message: "Telemetry ingestion rate limit exceeded" }, 429);
+export class IngestService {
+  /**
+   * Evaluates rate limiting per organization with Redis sliding-window.
+   */
+  static async checkRateLimit(organizationId: string): Promise<{ allowed: boolean; remaining: number }> {
+    return rateLimit(`ingest:${organizationId}`, MAX_RPS, 1);
   }
 
-  const envelope = (await c.req.json()) as TelemetryEnvelope;
-  await queue.enqueue("telemetry.process", { organizationId, envelope });
+  /**
+   * Enqueues a telemetry batch for asynchronous background processing.
+   */
+  static async enqueueBatch(
+    db: PrismaClient,
+    organizationId: string,
+    envelope: TelemetryEnvelope,
+  ): Promise<{ accepted: boolean; queuedEvents: number }> {
+    const eventCount = envelope.events?.length ?? 1;
 
-  await c.get("db").usageEvent.create({
-    data: { organizationId, metric: "telemetry_events", quantity: envelope.events?.length ?? 1 },
-  });
+    await queue.enqueue("telemetry.process", { organizationId, envelope });
 
-  return c.json({ accepted: true }, 202);
-});
+    try {
+      await db.usageEvent.create({
+        data: {
+          organizationId,
+          metric: "telemetry_events",
+          quantity: eventCount,
+        },
+      });
+    } catch {
+      // Non-blocking usage recording
+    }
 
-ingestRoutes.post("/v1/otlp/v1/traces", requireScope("telemetry:write"), async (c) => {
-  const organizationId = c.get("organizationId");
-  if (!organizationId) return c.json({ error: "UNAUTHORIZED" }, 401);
+    return { accepted: true, queuedEvents: eventCount };
+  }
 
-  const body = (await c.req.json()) as {
-    projectId?: string;
-    environment?: string;
-    resourceSpans: { scopeSpans: { spans: never[] }[] }[];
-  };
-
-  const envelope = otlpToEnvelope({
-    projectId: body.projectId ?? "unknown",
-    environment: body.environment ?? "production",
-    resourceSpans: body.resourceSpans,
-  });
-
-  await queue.enqueue("telemetry.process", { organizationId, envelope });
-  return c.json({ accepted: true }, 202);
-});
-
-export async function registerTelemetryWorker(db: AppEnv["Variables"]["db"]): Promise<void> {
-  queue.process("telemetry.process", async (job: { organizationId: string; envelope: TelemetryEnvelope }) => {
-    const { organizationId, envelope } = job;
+  /**
+   * Processes a single telemetry batch in background worker.
+   */
+  static async processTelemetryBatch(
+    db: PrismaClient,
+    organizationId: string,
+    envelope: TelemetryEnvelope,
+  ): Promise<void> {
     const env = await db.environment.findFirst({
       where: {
         organizationId,
@@ -99,7 +94,10 @@ export async function registerTelemetryWorker(db: AppEnv["Variables"]["db"]): Pr
 
       if (body) {
         try {
-          payloadRef = await storePayload(`payloads/${organizationId}/${env.id}/${reqId}.json`, body as Record<string, unknown>);
+          payloadRef = await storePayload(
+            `payloads/${organizationId}/${env.id}/${reqId}.json`,
+            body as Record<string, unknown>,
+          );
         } catch {
           payloadRef = "inline-fallback";
         }
@@ -134,6 +132,7 @@ export async function registerTelemetryWorker(db: AppEnv["Variables"]["db"]): Pr
         timestamp: new Date(),
       });
 
+      // Auto-derive service topology nodes and edges
       if (event.service && event.service !== env.application.name) {
         await db.topologyNode.upsert({
           where: { environmentId_name: { environmentId: env.id, name: event.service } },
@@ -178,12 +177,12 @@ export async function registerTelemetryWorker(db: AppEnv["Variables"]["db"]): Pr
       }
     }
 
-    // Batch insert request records to PostgreSQL
+    // Persist request records in PostgreSQL
     if (requestRecordsToCreate.length > 0) {
       await db.requestRecord.createMany({ data: requestRecordsToCreate });
     }
 
-    // Insert analytics aggregates into ClickHouse / Postgres fallback
+    // Insert analytics aggregates into ClickHouse (or Postgres fallback)
     if (aggregatesToInsert.length > 0) {
       await insertRequestAggregates(db, aggregatesToInsert);
     }
@@ -215,5 +214,11 @@ export async function registerTelemetryWorker(db: AppEnv["Variables"]["db"]): Pr
     });
 
     queue.publish("REQUEST_COMPLETED", { organizationId, environmentId: env.id, health });
+  }
+}
+
+export async function registerTelemetryWorker(db: PrismaClient): Promise<void> {
+  queue.process("telemetry.process", async (job: { organizationId: string; envelope: TelemetryEnvelope }) => {
+    await IngestService.processTelemetryBatch(db, job.organizationId, job.envelope);
   });
 }
