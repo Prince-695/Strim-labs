@@ -152,28 +152,28 @@ Last Updated: 2026-09-29
 ## 📂 Phase 5: Change Plans, Guardrails, Incidents & Rollback
 *Test Guide: `test-phase-5.md`*
 
-- [ ] **Module: `change-plans`**
-  - [ ] `schemas.ts`: 12-state change plan schemas (draft, simulate, approve, rollout, rollback)
-  - [ ] `routes.ts`: OpenAPI contracts
-  - [ ] `handlers.ts`: State transition controllers
-  - [ ] `service.ts`: Risk score engine (Low/Med/High), blast radius evaluator, staged rollout stepper (10%->25%->50%->100%)
-  - [ ] `types.ts`, `index.ts`
-- [ ] **Module: `policies`**
-  - [ ] `schemas.ts`: Guardrails (error rate > 5%, latency > 2s) & rate limit rules
-  - [ ] `routes.ts`: OpenAPI contracts
-  - [ ] `handlers.ts`: Policy controllers
-  - [ ] `service.ts`: Automated circuit breakers & guardrail evaluator
-  - [ ] `types.ts`, `index.ts`
-- [ ] **Module: `incidents`**
-  - [ ] `schemas.ts`: Incident detection and factor ranking schemas
-  - [ ] `routes.ts`: OpenAPI contracts
-  - [ ] `handlers.ts`: Incident controllers
-  - [ ] `service.ts`: Anomaly baseline detection, causal factor correlation, 1-click instant rollback
-  - [ ] `types.ts`, `index.ts`
-- [ ] **Phase 5 Testing & Commit**
-  - [ ] Create `test-phase-5.md`
-  - [ ] Verify in Swagger docs
-  - [ ] Git commit: `feat(change-plans): phase 5 change plans, guardrails, and incident rollback`
+- [x] **Module: `change-plans`**
+  - [x] `schemas.ts`: 12-state change plan schemas (draft, simulate, approve, rollout, rollback)
+  - [x] `routes.ts`: OpenAPI contracts
+  - [x] `handlers.ts`: State transition controllers
+  - [x] `service.ts`: Risk score engine (Low/Med/High), blast radius evaluator, staged rollout stepper (10%->25%->50%->100%)
+  - [x] `types.ts`, `index.ts`
+- [x] **Module: `policies`**
+  - [x] `schemas.ts`: Guardrails (error rate > 5%, latency > 2s) & rate limit rules
+  - [x] `routes.ts`: OpenAPI contracts
+  - [x] `handlers.ts`: Policy controllers
+  - [x] `service.ts`: Automated circuit breakers & guardrail evaluator
+  - [x] `types.ts`, `index.ts`
+- [x] **Module: `incidents`**
+  - [x] `schemas.ts`: Incident detection and factor ranking schemas
+  - [x] `routes.ts`: OpenAPI contracts
+  - [x] `handlers.ts`: Incident controllers
+  - [x] `service.ts`: Anomaly baseline detection, causal factor correlation, 1-click instant rollback
+  - [x] `types.ts`, `index.ts`
+- [x] **Phase 5 Testing & Commit**
+  - [x] Create `test-phase-5.md`
+  - [x] Verify in Swagger docs
+  - [x] Git commit: `feat(change-plans): phase 5 change plans, guardrails, and incident rollback`
 
 ---
 
