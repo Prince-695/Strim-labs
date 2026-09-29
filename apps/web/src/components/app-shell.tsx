@@ -14,6 +14,7 @@ import {
   Shield,
   History,
   Sparkles,
+  KeyRound,
   LogOut,
 } from "lucide-react";
 import { useSession } from "@/lib/session";
@@ -40,6 +41,7 @@ const NAV = [
   { href: "/incidents", label: "Incidents", icon: Siren },
   { href: "/policies", label: "Policies", icon: Shield },
   { href: "/audit", label: "Audit", icon: History },
+  { href: "/keys", label: "API Keys", icon: KeyRound },
   { href: "/ai", label: "AI", icon: Sparkles },
 ] as const;
 
