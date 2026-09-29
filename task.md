@@ -6,7 +6,7 @@ Last Updated: 2026-09-29
 ---
 
 ## 📌 Roadmap Overview
-- [ ] **Phase 1**: Foundations, Single `.env`, Auth (Google OAuth + Password) & Multi-Tenancy Core
+- [x] **Phase 1**: Foundations, Single `.env`, Auth (Google OAuth + Password) & Multi-Tenancy Core
 - [ ] **Phase 2**: Runtime Observability & Ingestion Hardening (Anti-DDoS, Health 0-100, Topology)
 - [ ] **Phase 3**: Configuration, Cache & Safe Replay (SSRF Protection, Sanitization)
 - [ ] **Phase 4**: Simulations, Load Testing & What-If Engine (Breaking Point Analysis)
@@ -20,45 +20,45 @@ Last Updated: 2026-09-29
 ## 📂 Phase 1: Foundations, Single `.env`, Auth & Multi-Tenancy Core
 *Test Guide: `test-phase-1.md`*
 
-- [ ] **Environment & Cleanup**
-  - [ ] Consolidate all configuration to a single root `.env` / `.env.example`
-  - [ ] Add Google OAuth configuration (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`)
-  - [ ] Decommission and remove `apps/demo-checkout` from monorepo workspaces
-- [ ] **Module: `auth`**
-  - [ ] `apps/server/src/modules/auth/schemas.ts`: Zod schemas for login, register, Google OAuth, session refresh, invite accept
-  - [ ] `apps/server/src/modules/auth/routes.ts`: Contract-first routes using `@hono/zod-openapi`
-  - [ ] `apps/server/src/modules/auth/handlers.ts`: Controllers with secure HTTP-only cookies and Bearer tokens
-  - [ ] `apps/server/src/modules/auth/service.ts`: Business logic (Argon2id hashing, Google OAuth profile fetch, session token generation)
-  - [ ] `apps/server/src/modules/auth/types.ts`: Auth interfaces
-  - [ ] `apps/server/src/modules/auth/index.ts`: Module export
-- [ ] **Module: `directory`**
-  - [ ] `apps/server/src/modules/directory/schemas.ts`: Zod schemas for Orgs, Workspaces, Projects, Applications, Environments, Teams, Memberships
-  - [ ] `apps/server/src/modules/directory/routes.ts`: OpenAPI route definitions
-  - [ ] `apps/server/src/modules/directory/handlers.ts`: Handlers with tenant context extraction
-  - [ ] `apps/server/src/modules/directory/service.ts`: Prisma queries with strict `organizationId` scoping
-  - [ ] `apps/server/src/modules/directory/types.ts`: Domain models
-  - [ ] `apps/server/src/modules/directory/index.ts`: Module export
-- [ ] **Module: `keys`**
-  - [ ] `apps/server/src/modules/keys/schemas.ts`: Scoped API key creation & revocation schemas
-  - [ ] `apps/server/src/modules/keys/routes.ts`: OpenAPI contracts
-  - [ ] `apps/server/src/modules/keys/handlers.ts`: Handlers
-  - [ ] `apps/server/src/modules/keys/service.ts`: Hashed API key generation & scope validation
-  - [ ] `apps/server/src/modules/keys/types.ts`: Types
-  - [ ] `apps/server/src/modules/keys/index.ts`: Module export
-- [ ] **Module: `audit`**
-  - [ ] `apps/server/src/modules/audit/schemas.ts`: Audit querying and filter schemas
-  - [ ] `apps/server/src/modules/audit/routes.ts`: OpenAPI contracts
-  - [ ] `apps/server/src/modules/audit/handlers.ts`: Handlers (read-only; writes are internal/middleware)
-  - [ ] `apps/server/src/modules/audit/service.ts`: Append-only audit logger and query engine
-  - [ ] `apps/server/src/modules/audit/types.ts`: Audit event types
-  - [ ] `apps/server/src/modules/audit/index.ts`: Module export
-- [ ] **OpenAPI & Swagger UI Verification**
-  - [ ] Mount `/openapi.json`, `/docs` (Swagger UI), and `/reference` (Scalar)
-  - [ ] Verify Phase 1 endpoints in Swagger docs
-- [ ] **Phase 1 Testing & Commit**
-  - [ ] Create `test-phase-1.md` with curl steps and test scripts
-  - [ ] Execute manual verification and tick tasks
-  - [ ] Git commit: `feat(core): phase 1 modular auth, tenancy, keys, and audit with openapi`
+- [x] **Environment & Cleanup**
+  - [x] Consolidate all configuration to a single root `.env` / `.env.example`
+  - [x] Add Google OAuth configuration (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`)
+  - [x] Decommission and remove `apps/demo-checkout` from monorepo workspaces
+- [x] **Module: `auth`**
+  - [x] `apps/server/src/modules/auth/schemas.ts`: Zod schemas for login, register, Google OAuth, session refresh, invite accept
+  - [x] `apps/server/src/modules/auth/routes.ts`: Contract-first routes using `@hono/zod-openapi`
+  - [x] `apps/server/src/modules/auth/handlers.ts`: Controllers with secure HTTP-only cookies and Bearer tokens
+  - [x] `apps/server/src/modules/auth/service.ts`: Business logic (Argon2id hashing, Google OAuth profile fetch, session token generation)
+  - [x] `apps/server/src/modules/auth/types.ts`: Auth interfaces
+  - [x] `apps/server/src/modules/auth/index.ts`: Module export
+- [x] **Module: `directory`**
+  - [x] `apps/server/src/modules/directory/schemas.ts`: Zod schemas for Orgs, Workspaces, Projects, Applications, Environments, Teams, Memberships
+  - [x] `apps/server/src/modules/directory/routes.ts`: OpenAPI route definitions
+  - [x] `apps/server/src/modules/directory/handlers.ts`: Handlers with tenant context extraction
+  - [x] `apps/server/src/modules/directory/service.ts`: Prisma queries with strict `organizationId` scoping
+  - [x] `apps/server/src/modules/directory/types.ts`: Domain models
+  - [x] `apps/server/src/modules/directory/index.ts`: Module export
+- [x] **Module: `keys`**
+  - [x] `apps/server/src/modules/keys/schemas.ts`: Scoped API key creation & revocation schemas
+  - [x] `apps/server/src/modules/keys/routes.ts`: OpenAPI contracts
+  - [x] `apps/server/src/modules/keys/handlers.ts`: Handlers
+  - [x] `apps/server/src/modules/keys/service.ts`: Hashed API key generation & scope validation
+  - [x] `apps/server/src/modules/keys/types.ts`: Types
+  - [x] `apps/server/src/modules/keys/index.ts`: Module export
+- [x] **Module: `audit`**
+  - [x] `apps/server/src/modules/audit/schemas.ts`: Audit querying and filter schemas
+  - [x] `apps/server/src/modules/audit/routes.ts`: OpenAPI contracts
+  - [x] `apps/server/src/modules/audit/handlers.ts`: Handlers (read-only; writes are internal/middleware)
+  - [x] `apps/server/src/modules/audit/service.ts`: Append-only audit logger and query engine
+  - [x] `apps/server/src/modules/audit/types.ts`: Audit event types
+  - [x] `apps/server/src/modules/audit/index.ts`: Module export
+- [x] **OpenAPI & Swagger UI Verification**
+  - [x] Mount `/openapi.json`, `/docs` (Swagger UI), and `/reference` (Scalar)
+  - [x] Verify Phase 1 endpoints in Swagger docs
+- [x] **Phase 1 Testing & Commit**
+  - [x] Create `test-phase-1.md` with curl steps and test scripts
+  - [x] Execute manual verification and tick tasks
+  - [x] Git commit: split feature commits for Phase 1 modular services
 
 ---
 
