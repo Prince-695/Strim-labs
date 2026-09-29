@@ -1,20 +1,15 @@
-import { Hono } from "hono";
-import { z } from "zod";
+import type { PrismaClient } from "@strim/db";
 import { hedge, lintCausality, parseNlQuery, recommendCache } from "@strim/shared";
-import type { AppEnv } from "../types";
-import { requireAuth } from "../middleware/auth";
-import { requireOrg } from "../middleware/tenant";
+import type { AiCitation, AiQueryOutput } from "./types";
 
-export const aiRoutes = new Hono<AppEnv>();
-aiRoutes.use("*", requireAuth, requireOrg);
-
-aiRoutes.post("/query", async (c) => {
-  const body = z.object({ question: z.string().min(1) }).parse(await c.req.json());
-  const db = c.get("db");
-  const organizationId = c.get("organizationId")!;
-  const userId = c.get("userId")!;
-  const intent = parseNlQuery(body.question);
-  const citations: { sourceType: string; sourceId: string }[] = [];
+export async function executeQuery(
+  db: PrismaClient,
+  organizationId: string,
+  userId: string,
+  question: string,
+): Promise<AiQueryOutput> {
+  const intent = parseNlQuery(question);
+  const citations: AiCitation[] = [];
   let answer = "";
 
   switch (intent.type) {
@@ -94,16 +89,34 @@ aiRoutes.post("/query", async (c) => {
     data: {
       organizationId,
       userId,
-      question: body.question,
+      question,
       answer,
       citations: { create: citations },
     },
     include: { citations: true },
   });
-  return c.json({
+
+  return {
     answer: log.answer,
-    citations: log.citations,
+    citations: log.citations.map((c) => ({ sourceType: c.sourceType, sourceId: c.sourceId })),
     intent,
     uncertainty: "Answers are grounded in tenant-scoped Runtime Model data and do not prove causality.",
+  };
+}
+
+export async function listQueryLogs(db: PrismaClient, organizationId: string, limit = 20) {
+  const logs = await db.aiQueryLog.findMany({
+    where: { organizationId },
+    include: { citations: true },
+    orderBy: { createdAt: "desc" },
+    take: limit,
   });
-});
+
+  return logs.map((log) => ({
+    id: log.id,
+    question: log.question,
+    answer: log.answer,
+    createdAt: log.createdAt.toISOString(),
+    citations: log.citations.map((c) => ({ sourceType: c.sourceType, sourceId: c.sourceId })),
+  }));
+}
