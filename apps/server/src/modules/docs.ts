@@ -16,6 +16,9 @@ import { configRoutes } from "./config";
 import { cacheRoutes } from "./cache";
 import { simulationRoutes } from "./simulations";
 import { loadTestRoutes } from "./load-testing";
+import { changePlanRoutes } from "./change-plans";
+import { incidentRoutes } from "./incidents";
+import { policyRoutes } from "./policies";
 
 export const docsRoutes = new Hono<AppEnv>();
 
@@ -254,173 +257,7 @@ const openApiSpec = {
         },
       },
     },
-    "/v1/change-plans": {
-      get: {
-        tags: ["Change Plans"],
-        summary: "List change plans",
-        parameters: [
-          {
-            name: "environmentId",
-            in: "query",
-            schema: { type: "string" },
-          },
-        ],
-        responses: {
-          200: { description: "List of change plans" },
-        },
-      },
-      post: {
-        tags: ["Change Plans"],
-        summary: "Draft a new Change Plan with proposed runtime state",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  environmentId: { type: "string" },
-                  title: { type: "string" },
-                  description: { type: "string" },
-                  objective: { type: "string" },
-                  proposed: { type: "object" },
-                  gitCommit: { type: "string" },
-                  gitPullRequest: { type: "string" },
-                },
-                required: ["environmentId", "title", "description", "objective", "proposed"],
-              },
-            },
-          },
-        },
-        responses: {
-          201: { description: "Change plan created in DRAFT state" },
-        },
-      },
-    },
-    "/v1/change-plans/{id}": {
-      get: {
-        tags: ["Change Plans"],
-        summary: "Get change plan details, diff, approvals, and rollout status",
-        parameters: [
-          {
-            name: "id",
-            in: "path",
-            required: true,
-            schema: { type: "string" },
-          },
-        ],
-        responses: {
-          200: { description: "Change plan details" },
-          404: { description: "Not found" },
-        },
-      },
-    },
-    "/v1/change-plans/{id}/simulate": {
-      post: {
-        tags: ["Change Plans"],
-        summary: "Run What-If simulation comparing baseline vs proposed state",
-        parameters: [
-          {
-            name: "id",
-            in: "path",
-            required: true,
-            schema: { type: "string" },
-          },
-        ],
-        responses: {
-          200: { description: "Simulation completed" },
-        },
-      },
-    },
-    "/v1/change-plans/{id}/approve": {
-      post: {
-        tags: ["Change Plans"],
-        summary: "Approve change plan for rollout",
-        parameters: [
-          {
-            name: "id",
-            in: "path",
-            required: true,
-            schema: { type: "string" },
-          },
-        ],
-        requestBody: {
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  override: { type: "boolean" },
-                  justification: { type: "string" },
-                },
-              },
-            },
-          },
-        },
-        responses: {
-          200: { description: "Approved" },
-          409: { description: "Conflict / cannot approve" },
-        },
-      },
-    },
-    "/v1/change-plans/{id}/rollout": {
-      post: {
-        tags: ["Change Plans"],
-        summary: "Advance canary rollout stage (10% -> 25% -> 50% -> 100%)",
-        parameters: [
-          {
-            name: "id",
-            in: "path",
-            required: true,
-            schema: { type: "string" },
-          },
-        ],
-        responses: {
-          200: { description: "Rollout stage advanced" },
-        },
-      },
-    },
-    "/v1/change-plans/{id}/rollback": {
-      post: {
-        tags: ["Change Plans"],
-        summary: "Instant 1-click rollback to previous Runtime Version",
-        parameters: [
-          {
-            name: "id",
-            in: "path",
-            required: true,
-            schema: { type: "string" },
-          },
-        ],
-        responses: {
-          200: { description: "Rolled back" },
-        },
-      },
-    },
 
-    "/v1/incidents": {
-      get: {
-        tags: ["Incidents"],
-        summary: "List incidents",
-        responses: { 200: { description: "List of incidents" } },
-      },
-    },
-    "/v1/incidents/{id}": {
-      get: {
-        tags: ["Incidents"],
-        summary: "Get incident with unified timeline and ranked contributing factors",
-        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
-        responses: { 200: { description: "Incident details" } },
-      },
-    },
-    "/v1/incidents/{id}/rollback": {
-      post: {
-        tags: ["Incidents"],
-        summary: "Trigger instant rollback for change plan correlated to incident",
-        parameters: [{ name: "id", in: "path", required: true, schema: { type: "string" } }],
-        responses: { 200: { description: "Rollback executed" } },
-      },
-    },
     "/v1/ai/query": {
       post: {
         tags: ["AI Copilot"],
@@ -487,6 +324,9 @@ export function getFullOpenApiSpec() {
   registry.route("/v1/cache", cacheRoutes);
   registry.route("/v1/simulations", simulationRoutes);
   registry.route("/v1/load-tests", loadTestRoutes);
+  registry.route("/v1/change-plans", changePlanRoutes);
+  registry.route("/v1/incidents", incidentRoutes);
+  registry.route("/v1/policies", policyRoutes);
 
   const generated = registry.getOpenAPIDocument({
     openapi: "3.1.0",
