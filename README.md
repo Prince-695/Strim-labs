@@ -32,7 +32,7 @@ bun run dev
 ```
 
 - Web: http://localhost:3000
-- API: http://localhost:3001
+- API: http://localhost:8080
 
 Seeded login: `priya@acme.test` / `password123` (Acme) and `marcus@globex.test` / `password123` (Globex).
 

@@ -13,7 +13,7 @@ services:
       sizeGB: 10
     envVars:
       - key: PORT
-        value: 3001
+        value: 8080
       - key: NODE_ENV
         value: production
       - key: STORAGE_DRIVER

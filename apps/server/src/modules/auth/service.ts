@@ -142,7 +142,7 @@ export class AuthService {
 
   static getGoogleAuthUrl(): string {
     const clientId = process.env.GOOGLE_CLIENT_ID ?? "mock-client-id";
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI ?? "http://localhost:3001/api/v1/auth/google/callback";
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI ?? "http://localhost:8080/v1/auth/google/callback";
     const params = new URLSearchParams({
       client_id: clientId,
       redirect_uri: redirectUri,
@@ -162,7 +162,7 @@ export class AuthService {
 
     const clientId = process.env.GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI ?? "http://localhost:3001/api/v1/auth/google/callback";
+    const redirectUri = process.env.GOOGLE_REDIRECT_URI ?? "http://localhost:8080/v1/auth/google/callback";
 
     // Handle mock/dev mode for seamless local testing
     if (!clientId || clientId.startsWith("mock-") || code.startsWith("mock_")) {

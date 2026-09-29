@@ -254,7 +254,7 @@ class StrimClient {
   }
 
   private ingestBase(): string {
-    return (this.opts?.ingestUrl ?? "http://localhost:3001").replace(/\/$/, "");
+    return (this.opts?.ingestUrl ?? "http://localhost:8080").replace(/\/$/, "");
   }
 
   private fetcher(): FetchLike {

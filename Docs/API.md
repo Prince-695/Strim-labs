@@ -1,6 +1,6 @@
 # Strim API (dogfooded)
 
-Base URL: `http://localhost:3001`
+Base URL: `http://localhost:8080`
 
 Auth: `Authorization: Bearer <session-or-sk_key>` plus `x-organization-id` for tenant-scoped routes.
 

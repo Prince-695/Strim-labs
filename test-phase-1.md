@@ -15,7 +15,7 @@ This guide provides step-by-step commands to manually verify all deliverables of
    ```bash
    bun run --filter @strim/server dev
    ```
-   *The server runs on `http://localhost:3001`.*
+   *The server runs on `http://localhost:8080`.*
 
 ---
 
@@ -23,7 +23,7 @@ This guide provides step-by-step commands to manually verify all deliverables of
 
 ### 1.1 Sign Up New User & Provision Tenant
 ```bash
-curl -s -X POST http://localhost:3001/v1/auth/signup \
+curl -s -X POST http://localhost:8080/v1/auth/signup \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test-engineer@acme.test",
@@ -42,7 +42,7 @@ curl -s -X POST http://localhost:3001/v1/auth/signup \
 
 ### 1.2 Log In with Email & Password
 ```bash
-curl -s -X POST http://localhost:3001/v1/auth/login \
+curl -s -X POST http://localhost:8080/v1/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test-engineer@acme.test",
@@ -53,7 +53,7 @@ curl -s -X POST http://localhost:3001/v1/auth/login \
 
 ### 1.3 Introspect Current Profile
 ```bash
-curl -s -X GET http://localhost:3001/v1/auth/me \
+curl -s -X GET http://localhost:8080/v1/auth/me \
   -H "Authorization: Bearer $TOKEN" | jq .
 ```
 - **Expected Outcome**: Returns user details and affiliated organizations.
@@ -61,13 +61,13 @@ curl -s -X GET http://localhost:3001/v1/auth/me \
 ### 1.4 Test Google OAuth 2.0 Endpoints
 **Get OAuth URL:**
 ```bash
-curl -s -X GET http://localhost:3001/v1/auth/google/url | jq .
+curl -s -X GET http://localhost:8080/v1/auth/google/url | jq .
 ```
 - **Expected Outcome**: Returns Google OAuth consent URL containing `client_id`, `redirect_uri`, and `scope`.
 
 **Simulate Google OAuth Callback:**
 ```bash
-curl -s -X POST http://localhost:3001/v1/auth/google/callback \
+curl -s -X POST http://localhost:8080/v1/auth/google/callback \
   -H "Content-Type: application/json" \
   -d '{
     "code": "mock_google_auth_code_for_testing@strim.test"
@@ -77,7 +77,7 @@ curl -s -X POST http://localhost:3001/v1/auth/google/callback \
 
 ### 1.5 Refresh Session Token
 ```bash
-curl -s -X POST http://localhost:3001/v1/auth/refresh \
+curl -s -X POST http://localhost:8080/v1/auth/refresh \
   -H "Authorization: Bearer $TOKEN" | jq .
 ```
 - **Expected Outcome**: `HTTP 200 OK` with a refreshed JWT token extended by 7 days.
@@ -88,7 +88,7 @@ curl -s -X POST http://localhost:3001/v1/auth/refresh \
 
 ### 2.1 Fetch Context Hierarchy
 ```bash
-curl -s -X GET http://localhost:3001/v1/org/context \
+curl -s -X GET http://localhost:8080/v1/org/context \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-organization-id: $ORG_ID" | jq .
 ```
@@ -96,7 +96,7 @@ curl -s -X GET http://localhost:3001/v1/org/context \
 
 ### 2.2 Create a Workspace
 ```bash
-curl -s -X POST http://localhost:3001/v1/org/workspaces \
+curl -s -X POST http://localhost:8080/v1/org/workspaces \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-organization-id: $ORG_ID" \
   -H "Content-Type: application/json" \
@@ -112,7 +112,7 @@ curl -s -X POST http://localhost:3001/v1/org/workspaces \
 
 ### 2.3 Create a Project
 ```bash
-curl -s -X POST http://localhost:3001/v1/org/workspaces/$WS_ID/projects \
+curl -s -X POST http://localhost:8080/v1/org/workspaces/$WS_ID/projects \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-organization-id: $ORG_ID" \
   -H "Content-Type: application/json" \
@@ -129,7 +129,7 @@ curl -s -X POST http://localhost:3001/v1/org/workspaces/$WS_ID/projects \
 ### 2.4 Verify Cross-Tenant Isolation
 Attempt to access this workspace using another organization's ID:
 ```bash
-curl -s -i -X GET http://localhost:3001/v1/org/workspaces/$WS_ID \
+curl -s -i -X GET http://localhost:8080/v1/org/workspaces/$WS_ID \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-organization-id: random_alien_org_123"
 ```
@@ -141,7 +141,7 @@ curl -s -i -X GET http://localhost:3001/v1/org/workspaces/$WS_ID \
 
 ### 3.1 Create Scoped Ingestion Key
 ```bash
-curl -s -X POST http://localhost:3001/v1/api-keys \
+curl -s -X POST http://localhost:8080/v1/api-keys \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-organization-id: $ORG_ID" \
   -H "Content-Type: application/json" \
@@ -159,7 +159,7 @@ curl -s -X POST http://localhost:3001/v1/api-keys \
 ### 3.2 Verify Incompatible Scope Rejection
 Attempt to combine telemetry ingestion with administrative write scopes:
 ```bash
-curl -s -i -X POST http://localhost:3001/v1/api-keys \
+curl -s -i -X POST http://localhost:8080/v1/api-keys \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-organization-id: $ORG_ID" \
   -H "Content-Type: application/json" \
@@ -172,7 +172,7 @@ curl -s -i -X POST http://localhost:3001/v1/api-keys \
 
 ### 3.3 Revoke API Key
 ```bash
-curl -s -X POST http://localhost:3001/v1/api-keys/$KEY_ID/revoke \
+curl -s -X POST http://localhost:8080/v1/api-keys/$KEY_ID/revoke \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-organization-id: $ORG_ID" | jq .
 ```
@@ -184,7 +184,7 @@ curl -s -X POST http://localhost:3001/v1/api-keys/$KEY_ID/revoke \
 
 ### 4.1 Query Organization Audit Logs
 ```bash
-curl -s -X GET http://localhost:3001/v1/audit \
+curl -s -X GET http://localhost:8080/v1/audit \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-organization-id: $ORG_ID" | jq .
 ```
@@ -193,11 +193,11 @@ curl -s -X GET http://localhost:3001/v1/audit \
 ### 4.2 Verify Audit Immutability Protection
 Attempt to update or delete an audit record:
 ```bash
-curl -s -i -X PATCH http://localhost:3001/v1/audit/any_audit_id \
+curl -s -i -X PATCH http://localhost:8080/v1/audit/any_audit_id \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-organization-id: $ORG_ID"
 
-curl -s -i -X DELETE http://localhost:3001/v1/audit/any_audit_id \
+curl -s -i -X DELETE http://localhost:8080/v1/audit/any_audit_id \
   -H "Authorization: Bearer $TOKEN" \
   -H "x-organization-id: $ORG_ID"
 ```
@@ -208,9 +208,9 @@ curl -s -i -X DELETE http://localhost:3001/v1/audit/any_audit_id \
 ## 📖 Test Suite 5: Interactive OpenAPI & Swagger Documentation
 
 1. Open your browser and navigate to:
-   - **Swagger UI**: [http://localhost:3001/swagger](http://localhost:3001/swagger)
-   - **Scalar API Reference**: [http://localhost:3001/docs](http://localhost:3001/docs)
-   - **Raw OpenAPI 3.1 JSON**: [http://localhost:3001/v1/openapi.json](http://localhost:3001/v1/openapi.json)
+   - **Swagger UI**: [http://localhost:8080/swagger](http://localhost:8080/swagger)
+   - **Scalar API Reference**: [http://localhost:8080/docs](http://localhost:8080/docs)
+   - **Raw OpenAPI 3.1 JSON**: [http://localhost:8080/v1/openapi.json](http://localhost:8080/v1/openapi.json)
 2. **Verification Checklist**:
    - [ ] All Authentication endpoints (`/v1/auth/*`) are listed with input/output models.
    - [ ] All Directory endpoints (`/v1/org/*`) are visible under "Directory & Tenancy".

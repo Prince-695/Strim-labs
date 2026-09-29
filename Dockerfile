@@ -28,14 +28,14 @@ RUN cd apps/web && bun run build || echo "Web build optional for API server imag
 
 # Set runtime environment
 ENV NODE_ENV=production
-ENV PORT=3001
+ENV PORT=8080
 ENV STORAGE_DRIVER=local
 ENV STORAGE_LOCAL_DIR=/app/data/storage
 
 # Create storage volume directory
 RUN mkdir -p /app/data/storage
 
-EXPOSE 3001
+EXPOSE 8080
 
 # Entrypoint auto-pushes DB migrations if DATABASE_URL is set, then launches server
 CMD ["sh", "-c", "bun run db:push || true && cd apps/server && bun src/index.ts"]
