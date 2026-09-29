@@ -1,7 +1,12 @@
 import { Hono } from "hono";
+import { OpenAPIHono } from "@hono/zod-openapi";
 import { apiReference } from "@scalar/hono-api-reference";
 import { swaggerUI } from "@hono/swagger-ui";
 import type { AppEnv } from "../types";
+import { authRoutes } from "./auth";
+import { directoryRoutes } from "./directory";
+import { keyRoutes } from "./keys";
+import { auditRoutes } from "./audit";
 
 export const docsRoutes = new Hono<AppEnv>();
 
@@ -573,8 +578,37 @@ const openApiSpec = {
   },
 };
 
+function getFullOpenApiSpec() {
+  const registry = new OpenAPIHono<AppEnv>();
+  registry.route("/v1/auth", authRoutes);
+  registry.route("/v1/org", directoryRoutes);
+  registry.route("/v1/api-keys", keyRoutes);
+  registry.route("/v1/audit", auditRoutes);
+
+  const generated = registry.getOpenAPIDocument({
+    openapi: "3.1.0",
+    info: openApiSpec.info,
+    servers: openApiSpec.servers,
+  });
+
+  return {
+    ...openApiSpec,
+    paths: {
+      ...openApiSpec.paths,
+      ...generated.paths,
+    },
+    components: {
+      ...openApiSpec.components,
+      schemas: {
+        ...openApiSpec.components.schemas,
+        ...generated.components?.schemas,
+      },
+    },
+  };
+}
+
 // Serve OpenAPI 3.1 JSON Specification
-docsRoutes.get("/openapi.json", (c) => c.json(openApiSpec));
+docsRoutes.get("/openapi.json", (c) => c.json(getFullOpenApiSpec()));
 
 // Serve Official Swagger UI
 docsRoutes.get("/swagger", swaggerUI({ url: "/v1/openapi.json" }));
