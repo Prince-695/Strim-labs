@@ -19,6 +19,9 @@ import { loadTestRoutes } from "./load-testing";
 import { changePlanRoutes } from "./change-plans";
 import { incidentRoutes } from "./incidents";
 import { policyRoutes } from "./policies";
+import { aiRoutes } from "./ai";
+import { integrationRoutes } from "./integrations";
+import { billingRoutes, chaosRoutes, retentionRoutes, ssoRoutes } from "./billing";
 
 export const docsRoutes = new Hono<AppEnv>();
 
@@ -140,6 +143,10 @@ const openApiSpec = {
     { name: "AI Copilot", description: "Grounded runtime intelligence queries" },
     { name: "Integrations", description: "GitHub webhooks, CI/CD gates, and deployments" },
     { name: "Audit", description: "Immutable audit logs and compliance export" },
+    { name: "Billing & Subscriptions", description: "Tenant subscription plans, usage metering, and invoices" },
+    { name: "Data Retention & Compliance", description: "Configurable telemetry data retention windows and statutory compliance purge" },
+    { name: "Enterprise SSO", description: "SAML 2.0, OIDC, and SCIM enterprise identity integration" },
+    { name: "Chaos Engineering", description: "Targeted fault injection experiments and instant revert controls" },
   ],
   paths: {
     "/v1/auth/signup": {
@@ -257,55 +264,6 @@ const openApiSpec = {
         },
       },
     },
-
-    "/v1/ai/query": {
-      post: {
-        tags: ["AI Copilot"],
-        summary: "Ask natural language question grounded in the tenant's Runtime Model",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  question: { type: "string" },
-                },
-                required: ["question"],
-              },
-            },
-          },
-        },
-        responses: {
-          200: { description: "Grounded answer with citations and uncertainty notice" },
-        },
-      },
-    },
-    "/v1/integrations/ci/gate": {
-      post: {
-        tags: ["Integrations"],
-        summary: "CI/CD pipeline simulation gate (API Key authenticated)",
-        requestBody: {
-          required: true,
-          content: {
-            "application/json": {
-              schema: {
-                type: "object",
-                properties: {
-                  changePlanId: { type: "string" },
-                  p95RegressionPct: { type: "number" },
-                  thresholdPct: { type: "number", default: 20 },
-                },
-                required: ["changePlanId", "p95RegressionPct"],
-              },
-            },
-          },
-        },
-        responses: {
-          200: { description: "Evaluation result: PASS or FAIL" },
-        },
-      },
-    },
   },
 };
 
@@ -327,6 +285,12 @@ export function getFullOpenApiSpec() {
   registry.route("/v1/change-plans", changePlanRoutes);
   registry.route("/v1/incidents", incidentRoutes);
   registry.route("/v1/policies", policyRoutes);
+  registry.route("/v1/ai", aiRoutes);
+  registry.route("/v1/integrations", integrationRoutes);
+  registry.route("/v1/billing", billingRoutes);
+  registry.route("/v1/retention", retentionRoutes);
+  registry.route("/v1/sso", ssoRoutes);
+  registry.route("/v1/chaos", chaosRoutes);
 
   const generated = registry.getOpenAPIDocument({
     openapi: "3.1.0",
