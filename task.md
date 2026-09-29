@@ -7,7 +7,7 @@ Last Updated: 2026-09-29
 
 ## 📌 Roadmap Overview
 - [x] **Phase 1**: Foundations, Single `.env`, Auth (Google OAuth + Password) & Multi-Tenancy Core
-- [ ] **Phase 2**: Runtime Observability & Ingestion Hardening (Anti-DDoS, Health 0-100, Topology)
+- [x] **Phase 2**: Runtime Observability & Ingestion Hardening (Anti-DDoS, Health 0-100, Topology)
 - [ ] **Phase 3**: Configuration, Cache & Safe Replay (SSRF Protection, Sanitization)
 - [ ] **Phase 4**: Simulations, Load Testing & What-If Engine (Breaking Point Analysis)
 - [ ] **Phase 5**: Change Plans, Guardrails, Incidents & 1-Click Rollback
@@ -65,34 +65,34 @@ Last Updated: 2026-09-29
 ## 📂 Phase 2: Runtime Observability & Ingestion Hardening
 *Test Guide: `test-phase-2.md`*
 
-- [ ] **Module: `ingest` (Anti-DDoS & Bombardment Defense)**
-  - [ ] `schemas.ts`: Telemetry batch envelope schemas
-  - [ ] `routes.ts`: Ingestion route contracts
-  - [ ] `handlers.ts`: 500KB payload limit, fail-open `429 Too Many Requests` shedding
-  - [ ] `service.ts`: Ingest buffer, Redis sliding-window rate limiter, async queuing
-  - [ ] `types.ts`, `index.ts`
-- [ ] **Module: `runtime`**
-  - [ ] `schemas.ts`: Health query, metrics query, snapshot schemas
-  - [ ] `routes.ts`: OpenAPI route definitions
-  - [ ] `handlers.ts`: Health & overview controller
-  - [ ] `service.ts`: 0–100 health score calculation with full breakdown (P95, P99, error rate, anomaly delta)
-  - [ ] `types.ts`, `index.ts`
-- [ ] **Module: `requests`**
-  - [ ] `schemas.ts`: Request search, trace lookup, session group schemas
-  - [ ] `routes.ts`: OpenAPI contracts
-  - [ ] `handlers.ts`: Controllers
-  - [ ] `service.ts`: Trace waterfall generator, span linker, session aggregator
-  - [ ] `types.ts`, `index.ts`
-- [ ] **Module: `topology`**
-  - [ ] `schemas.ts`: Topology nodes/edges and blast radius schemas
-  - [ ] `routes.ts`: OpenAPI contracts
-  - [ ] `handlers.ts`: Graph handlers
-  - [ ] `service.ts`: Dependency graph builder, manual annotation manager, blast radius engine
-  - [ ] `types.ts`, `index.ts`
-- [ ] **Phase 2 Testing & Commit**
-  - [ ] Create `test-phase-2.md`
-  - [ ] Verify in Swagger docs
-  - [ ] Git commit: `feat(runtime): phase 2 modular ingestion, health scoring, and topology`
+- [x] **Module: `ingest` (Anti-DDoS & Bombardment Defense)**
+  - [x] `schemas.ts`: Telemetry batch envelope schemas
+  - [x] `routes.ts`: Ingestion route contracts
+  - [x] `handlers.ts`: 500KB payload limit, fail-open `429 Too Many Requests` shedding
+  - [x] `service.ts`: Ingest buffer, Redis sliding-window rate limiter, async queuing
+  - [x] `types.ts`, `index.ts`
+- [x] **Module: `runtime`**
+  - [x] `schemas.ts`: Health query, metrics query, snapshot schemas
+  - [x] `routes.ts`: OpenAPI route definitions
+  - [x] `handlers.ts`: Health & overview controller
+  - [x] `service.ts`: 0–100 health score calculation with full breakdown (P95, P99, error rate, anomaly delta)
+  - [x] `types.ts`, `index.ts`
+- [x] **Module: `requests`**
+  - [x] `schemas.ts`: Request search, trace lookup, session group schemas
+  - [x] `routes.ts`: OpenAPI contracts
+  - [x] `handlers.ts`: Controllers
+  - [x] `service.ts`: Trace waterfall generator, span linker, session aggregator
+  - [x] `types.ts`, `index.ts`
+- [x] **Module: `topology`**
+  - [x] `schemas.ts`: Topology nodes/edges and blast radius schemas
+  - [x] `routes.ts`: OpenAPI contracts
+  - [x] `handlers.ts`: Graph handlers
+  - [x] `service.ts`: Dependency graph builder, manual annotation manager, blast radius engine
+  - [x] `types.ts`, `index.ts`
+- [x] **Phase 2 Testing & Commit**
+  - [x] Create `test-phase-2.md`
+  - [x] Verify in Swagger docs
+  - [x] Git commit: `feat(runtime): phase 2 modular ingestion, health scoring, and topology`
 
 ---
 
