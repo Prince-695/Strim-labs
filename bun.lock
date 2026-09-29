@@ -9,18 +9,6 @@
         "typescript": "5.8.3",
       },
     },
-    "apps/demo-checkout": {
-      "name": "@strim/demo-checkout",
-      "version": "0.0.1",
-      "dependencies": {
-        "@strim/sdk": "workspace:*",
-        "hono": "4.7.11",
-      },
-      "devDependencies": {
-        "@strim/tsconfig": "workspace:*",
-        "typescript": "5.8.3",
-      },
-    },
     "apps/ingest": {
       "name": "@strim/ingest",
       "version": "0.0.1",
@@ -467,8 +455,6 @@
     "@standard-schema/utils": ["@standard-schema/utils@0.3.0", "", {}, "sha512-e7Mew686owMaPJVNNLs55PUvgz371nKgwsc4vxE49zsODpJEnxgxRo2y/OKrqueavXgZNMDVj3DdHFlaSAeU8g=="],
 
     "@strim/db": ["@strim/db@workspace:packages/db"],
-
-    "@strim/demo-checkout": ["@strim/demo-checkout@workspace:apps/demo-checkout"],
 
     "@strim/eslint-config": ["@strim/eslint-config@workspace:packages/eslint-config"],
 

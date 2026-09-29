@@ -10,7 +10,6 @@ Bun workspaces (`apps/*`, `packages/*`).
 |------|---------|------|
 | `apps/server` | `@strim/server` | Hono modular monolith |
 | `apps/web` | `@strim/web` | Next.js dashboard |
-| `apps/demo-checkout` | `@strim/demo-checkout` | Sample customer app |
 | `apps/ingest` | `@strim/ingest` | Extracted telemetry ingest (Phase 10) |
 | `apps/worker` | `@strim/worker` | Extracted async workers (Phase 10) |
 | `packages/shared` | `@strim/shared` | Types, events, RBAC, engines |
@@ -34,7 +33,6 @@ bun run dev
 
 - Web: http://localhost:3000
 - API: http://localhost:3001
-- Demo checkout: http://localhost:3002
 
 Seeded login: `priya@acme.test` / `password123` (Acme) and `marcus@globex.test` / `password123` (Globex).
 

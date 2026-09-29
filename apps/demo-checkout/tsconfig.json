@@ -1,5 +1,0 @@
-{
-  "extends": "@strim/tsconfig/base.json",
-  "compilerOptions": { "rootDir": "src", "types": ["bun-types"] },
-  "include": ["src"]
-}

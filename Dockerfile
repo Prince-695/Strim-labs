@@ -9,7 +9,6 @@ RUN apk add --no-cache openssl libc6-compat ca-certificates
 COPY package.json bun.lock* bunfig.toml ./
 COPY apps/server/package.json ./apps/server/
 COPY apps/web/package.json ./apps/web/
-COPY apps/demo-checkout/package.json ./apps/demo-checkout/
 COPY packages/db/package.json ./packages/db/
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/sdk/package.json ./packages/sdk/
