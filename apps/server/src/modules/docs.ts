@@ -7,6 +7,11 @@ import { authRoutes } from "./auth";
 import { directoryRoutes } from "./directory";
 import { keyRoutes } from "./keys";
 import { auditRoutes } from "./audit";
+import { ingestRoutes } from "./ingest";
+import { runtimeRoutes } from "./runtime";
+import { requestRoutes } from "./requests";
+import { topologyRoutes } from "./topology";
+import { replayRoutes } from "./replay";
 
 export const docsRoutes = new Hono<AppEnv>();
 
@@ -584,6 +589,11 @@ function getFullOpenApiSpec() {
   registry.route("/v1/org", directoryRoutes);
   registry.route("/v1/api-keys", keyRoutes);
   registry.route("/v1/audit", auditRoutes);
+  registry.route("/", ingestRoutes);
+  registry.route("/v1/runtime", runtimeRoutes);
+  registry.route("/v1/requests", requestRoutes);
+  registry.route("/v1/topology", topologyRoutes);
+  registry.route("/v1/replay", replayRoutes);
 
   const generated = registry.getOpenAPIDocument({
     openapi: "3.1.0",
