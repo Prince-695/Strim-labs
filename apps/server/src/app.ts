@@ -19,6 +19,7 @@ import { policyRoutes } from "./modules/policies";
 import { aiRoutes } from "./modules/ai";
 import { integrationRoutes } from "./modules/integrations";
 import { billingRoutes, chaosRoutes, retentionRoutes, ssoRoutes } from "./modules/billing";
+import { docsRoutes } from "./modules/docs";
 import { queue } from "./lib/queue";
 
 export function createApp(db: PrismaClient) {
@@ -33,6 +34,9 @@ export function createApp(db: PrismaClient) {
   app.use("*", apiKeyAuth);
 
   app.get("/health", (c) => c.json({ ok: true, service: "strim-server" }));
+  app.route("/v1", docsRoutes);
+  app.get("/docs", (c) => c.redirect("/v1/docs"));
+  app.get("/swagger", (c) => c.redirect("/v1/swagger"));
 
   app.route("/v1/auth", authRoutes);
   app.route("/v1/org", directoryRoutes);

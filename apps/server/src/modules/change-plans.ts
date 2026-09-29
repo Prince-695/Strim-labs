@@ -251,25 +251,120 @@ changePlanRoutes.post("/:id/rollout", requireProductionTier(), async (c) => {
   return c.json({ ...updated, rolloutPercent: next });
 });
 
-changePlanRoutes.post("/:id/guardrail-check", async (c) => {
-  const body = z.object({ errorRate: z.number(), p95Ms: z.number(), availability: z.number() }).parse(await c.req.json());
+changePlanRoutes.patch("/:id", async (c) => {
+  const id = c.req.param("id");
+  const body = z
+    .object({
+      title: z.string().optional(),
+      description: z.string().optional(),
+      objective: z.string().optional(),
+      gitCommit: z.string().optional(),
+      gitBranch: z.string().optional(),
+      gitPullRequest: z.string().optional(),
+    })
+    .parse(await c.req.json());
+
   const db = c.get("db");
+  const organizationId = c.get("organizationId")!;
+  const plan = await db.changePlan.findFirst({ where: { id, organizationId } });
+  if (!plan) return c.json({ error: "NOT_FOUND" }, 404);
+
+  if (["APPROVED", "ROLLING_OUT", "MONITORING", "COMPLETED"].includes(plan.state)) {
+    return c.json({ error: "CONFLICT", message: "Cannot edit change plan once approved or in rollout" }, 409);
+  }
+
+  const updated = await db.changePlan.update({
+    where: { id },
+    data: body,
+  });
+
+  await writeAudit(db, {
+    organizationId,
+    actorId: c.get("userId"),
+    action: "change_plan.update",
+    resourceType: "change_plan",
+    resourceId: id,
+    environmentId: plan.environmentId,
+    oldValue: plan,
+    newValue: updated,
+  });
+
+  return c.json(updated);
+});
+
+changePlanRoutes.delete("/:id", async (c) => {
+  const id = c.req.param("id");
+  const db = c.get("db");
+  const organizationId = c.get("organizationId")!;
+  const plan = await db.changePlan.findFirst({ where: { id, organizationId } });
+  if (!plan) return c.json({ error: "NOT_FOUND" }, 404);
+
+  if (["ROLLING_OUT", "MONITORING"].includes(plan.state)) {
+    return c.json({ error: "CONFLICT", message: "Cannot delete change plan during active rollout" }, 409);
+  }
+
+  // Delete dependencies first
+  await db.changePlanApproval.deleteMany({ where: { changePlanId: id } });
+  await db.changePlanStateTransition.deleteMany({ where: { changePlanId: id } });
+  await db.rollout.deleteMany({ where: { changePlanId: id } });
+  await db.rollback.deleteMany({ where: { changePlanId: id } });
+  await db.changePlan.delete({ where: { id } });
+
+  await writeAudit(db, {
+    organizationId,
+    actorId: c.get("userId"),
+    action: "change_plan.delete",
+    resourceType: "change_plan",
+    resourceId: id,
+    environmentId: plan.environmentId,
+  });
+
+  return c.json({ ok: true });
+});
+
+changePlanRoutes.post("/:id/guardrail-check", async (c) => {
+  const rawBody = await c.req.json().catch(() => ({}));
+  const body = z
+    .object({
+      errorRate: z.number().optional(),
+      p95Ms: z.number().optional(),
+      availability: z.number().optional(),
+    })
+    .parse(rawBody);
+
+  const db = c.get("db");
+  const organizationId = c.get("organizationId")!;
   const plan = await db.changePlan.findFirst({
-    where: { id: c.req.param("id"), organizationId: c.get("organizationId")! },
+    where: { id: c.req.param("id"), organizationId },
   });
   if (!plan) return c.json({ error: "NOT_FOUND" }, 404);
+
+  let errorRate = body.errorRate;
+  let p95Ms = body.p95Ms;
+  let availability = body.availability;
+
+  // Auto-query real metrics if not explicitly passed
+  if (errorRate === undefined || p95Ms === undefined) {
+    const { queryMetrics } = await import("../lib/clickhouse");
+    const metrics = await queryMetrics(db, { organizationId, environmentId: plan.environmentId, minutesBack: 5 });
+    errorRate = metrics.errorRate;
+    p95Ms = metrics.p95Ms;
+    availability = 1 - errorRate;
+  }
+
   let action: "continue" | "pause" | "stop" | "rollback" = "continue";
-  if (body.errorRate > 0.05) action = "stop";
-  else if (body.p95Ms > 2000) action = "pause";
-  else if (body.availability < 0.99) action = "rollback";
+  if (errorRate > 0.05) action = "stop";
+  else if (p95Ms > 2000) action = "pause";
+  else if ((availability ?? 1) < 0.99) action = "rollback";
+
   if (action === "pause") {
-    await transition(db, plan.id, c.get("organizationId")!, "ROLLOUT_PAUSED");
-    queue.publish("ROLLOUT_PAUSED", { changePlanId: plan.id });
+    await transition(db, plan.id, organizationId, "ROLLOUT_PAUSED");
+    queue.publish("ROLLOUT_PAUSED", { changePlanId: plan.id, metrics: { errorRate, p95Ms } });
   }
   if (action === "rollback" || action === "stop") {
     return rollbackPlan(c, plan.id);
   }
-  return c.json({ action });
+  return c.json({ action, metrics: { errorRate, p95Ms, availability } });
 });
 
 changePlanRoutes.post("/:id/rollback", requireProductionTier(), async (c) => rollbackPlan(c, c.req.param("id")));

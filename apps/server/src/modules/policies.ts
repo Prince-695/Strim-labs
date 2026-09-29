@@ -40,9 +40,103 @@ policyRoutes.post("/", async (c) => {
 policyRoutes.get("/", async (c) => {
   const policies = await c.get("db").policy.findMany({
     where: { organizationId: c.get("organizationId")! },
-    include: { versions: true },
+    include: { versions: { orderBy: { createdAt: "desc" }, take: 5 } },
   });
   return c.json({ policies });
+});
+
+policyRoutes.get("/drift", async (c) => {
+  const environmentId = c.req.query("environmentId");
+  const reports = await c.get("db").driftReport.findMany({
+    where: {
+      organizationId: c.get("organizationId")!,
+      environmentId: environmentId || undefined,
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  return c.json({ reports });
+});
+
+policyRoutes.get("/:id", async (c) => {
+  const id = c.req.param("id");
+  const policy = await c.get("db").policy.findFirst({
+    where: { id, organizationId: c.get("organizationId")! },
+    include: { versions: { orderBy: { createdAt: "desc" } } },
+  });
+  if (!policy) return c.json({ error: "NOT_FOUND" }, 404);
+  return c.json(policy);
+});
+
+policyRoutes.patch("/:id", async (c) => {
+  const id = c.req.param("id");
+  const body = z
+    .object({
+      name: z.string().optional(),
+      body: z.record(z.unknown()).optional(),
+      environmentId: z.string().optional(),
+    })
+    .parse(await c.req.json());
+
+  const db = c.get("db");
+  const organizationId = c.get("organizationId")!;
+  const existing = await db.policy.findFirst({ where: { id, organizationId } });
+  if (!existing) return c.json({ error: "NOT_FOUND" }, 404);
+
+  const updated = await db.policy.update({
+    where: { id },
+    data: {
+      name: body.name ?? existing.name,
+      environmentId: body.environmentId ?? existing.environmentId,
+      body: (body.body ? (body.body as object) : existing.body) as object,
+    },
+  });
+
+  if (body.body) {
+    await db.policyVersion.create({
+      data: { policyId: id, body: body.body as object, actorId: c.get("userId") },
+    });
+  }
+
+  await writeAudit(db, {
+    organizationId,
+    actorId: c.get("userId"),
+    action: "policy.update",
+    resourceType: "policy",
+    resourceId: id,
+    oldValue: existing,
+    newValue: updated,
+  });
+
+  return c.json(updated);
+});
+
+policyRoutes.delete("/:id", async (c) => {
+  const id = c.req.param("id");
+  const db = c.get("db");
+  const organizationId = c.get("organizationId")!;
+  const existing = await db.policy.findFirst({ where: { id, organizationId } });
+  if (!existing) return c.json({ error: "NOT_FOUND" }, 404);
+
+  await db.policyVersion.deleteMany({ where: { policyId: id } });
+  await db.policy.delete({ where: { id } });
+
+  await writeAudit(db, {
+    organizationId,
+    actorId: c.get("userId"),
+    action: "policy.delete",
+    resourceType: "policy",
+    resourceId: id,
+    oldValue: existing,
+  });
+
+  return c.json({ ok: true });
+});
+
+policyRoutes.get("/rate-limits", async (c) => {
+  const limits = await c.get("db").rateLimit.findMany({
+    where: { organizationId: c.get("organizationId")! },
+  });
+  return c.json({ rateLimits: limits });
 });
 
 policyRoutes.post("/rate-limits", async (c) => {
@@ -58,6 +152,40 @@ policyRoutes.post("/rate-limits", async (c) => {
     data: { organizationId: c.get("organizationId")!, ...body },
   });
   return c.json(rl, 201);
+});
+
+policyRoutes.patch("/rate-limits/:id", async (c) => {
+  const id = c.req.param("id");
+  const body = z
+    .object({
+      scope: z.enum(["organization", "workspace", "application", "environment", "api_key", "user", "ip", "endpoint"]).optional(),
+      scopeId: z.string().optional(),
+      limit: z.number().optional(),
+      windowSeconds: z.number().optional(),
+    })
+    .parse(await c.req.json());
+
+  const db = c.get("db");
+  const organizationId = c.get("organizationId")!;
+  const existing = await db.rateLimit.findFirst({ where: { id, organizationId } });
+  if (!existing) return c.json({ error: "NOT_FOUND" }, 404);
+
+  const updated = await db.rateLimit.update({
+    where: { id },
+    data: body,
+  });
+  return c.json(updated);
+});
+
+policyRoutes.delete("/rate-limits/:id", async (c) => {
+  const id = c.req.param("id");
+  const db = c.get("db");
+  const organizationId = c.get("organizationId")!;
+  const existing = await db.rateLimit.findFirst({ where: { id, organizationId } });
+  if (!existing) return c.json({ error: "NOT_FOUND" }, 404);
+
+  await db.rateLimit.delete({ where: { id } });
+  return c.json({ ok: true });
 });
 
 policyRoutes.get("/rate-limits/evaluate", async (c) => {

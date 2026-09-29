@@ -7,6 +7,7 @@ import { requireOrg } from "../middleware/tenant";
 import { requireProductionTier } from "../middleware/rbac";
 import { writeAudit } from "../lib/audit";
 import { queue } from "../lib/queue";
+import { queryCacheStats } from "../lib/clickhouse";
 
 export const configRoutes = new Hono<AppEnv>();
 configRoutes.use("*", requireAuth, requireOrg);
@@ -18,6 +19,21 @@ configRoutes.get("/", async (c) => {
     include: { versions: { orderBy: { createdAt: "desc" }, take: 5 } },
   });
   return c.json({ configurations: items });
+});
+
+configRoutes.get("/:key", async (c) => {
+  const key = c.req.param("key");
+  const environmentId = c.req.query("environmentId");
+  if (!environmentId) return c.json({ error: "VALIDATION", message: "environmentId required" }, 400);
+
+  const config = await c.get("db").configuration.findUnique({
+    where: { environmentId_key: { environmentId, key } },
+    include: { versions: { orderBy: { createdAt: "desc" }, take: 20 } },
+  });
+  if (!config || config.organizationId !== c.get("organizationId")) {
+    return c.json({ error: "NOT_FOUND" }, 404);
+  }
+  return c.json({ configuration: config });
 });
 
 configRoutes.put("/", requireProductionTier(), async (c) => {
@@ -75,8 +91,71 @@ configRoutes.put("/", requireProductionTier(), async (c) => {
     oldValue: existing?.value,
     newValue: body.value,
   });
-  queue.publish("CONFIG_CHANGED", { organizationId, environmentId: body.environmentId, key: body.key });
+  queue.publish("CONFIG_CHANGED", { organizationId, environmentId: body.environmentId, key: body.key, values });
   return c.json({ configuration: config, runtimeVersion: version });
+});
+
+configRoutes.delete("/:key", requireProductionTier(), async (c) => {
+  const key = c.req.param("key");
+  const environmentId = c.req.query("environmentId");
+  const reason = c.req.query("reason") ?? "Deleted via API";
+  if (!environmentId) return c.json({ error: "VALIDATION", message: "environmentId required" }, 400);
+
+  const db = c.get("db");
+  const organizationId = c.get("organizationId")!;
+  const env = await db.environment.findFirst({ where: { id: environmentId, organizationId } });
+  if (!env) return c.json({ error: "NOT_FOUND" }, 404);
+
+  const existing = await db.configuration.findUnique({
+    where: { environmentId_key: { environmentId, key } },
+  });
+  if (!existing || existing.organizationId !== organizationId) {
+    return c.json({ error: "NOT_FOUND" }, 404);
+  }
+
+  await db.configurationVersion.create({
+    data: {
+      configurationId: existing.id,
+      actorId: c.get("userId"),
+      reason,
+      oldValue: existing.value as object,
+      newValue: null as unknown as object,
+    },
+  });
+
+  await db.configuration.delete({
+    where: { id: existing.id },
+  });
+
+  const all = await db.configuration.findMany({ where: { environmentId } });
+  const values = Object.fromEntries(all.map((x) => [x.key, x.value]));
+  const last = await db.runtimeVersion.findFirst({
+    where: { environmentId },
+    orderBy: { seq: "desc" },
+  });
+  const version = await db.runtimeVersion.create({
+    data: {
+      organizationId,
+      environmentId,
+      seq: (last?.seq ?? 0) + 1,
+      values: values as object,
+      approved: true,
+    },
+  });
+
+  await writeAudit(db, {
+    organizationId,
+    actorId: c.get("userId"),
+    action: "configuration.delete",
+    resourceType: "configuration",
+    resourceId: existing.id,
+    environmentId,
+    oldValue: existing.value,
+    newValue: null,
+  });
+
+  queue.publish("CONFIG_CHANGED", { organizationId, environmentId, key, values });
+  return c.json({ ok: true, deletedKey: key, runtimeVersion: version });
 });
 
 configRoutes.get("/versions", async (c) => {
@@ -153,6 +232,48 @@ sdkConfigRoutes.get("/v1/sdk/config", async (c) => {
   });
 });
 
+sdkConfigRoutes.get("/v1/sdk/config/stream", async (c) => {
+  const organizationId = c.get("organizationId");
+  const project = c.req.header("x-strim-project") || c.req.query("project");
+  const envName = c.req.header("x-strim-environment") || c.req.query("environment");
+
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    start(controller) {
+      const send = (data: string) => {
+        try {
+          const parsed = JSON.parse(data) as {
+            topic?: string;
+            payload?: { organizationId?: string; environmentId?: string; values?: Record<string, unknown> };
+          };
+          if (organizationId && parsed.payload?.organizationId && parsed.payload.organizationId !== organizationId) {
+            return;
+          }
+          if (parsed.topic === "CONFIG_CHANGED" || parsed.topic === "CHANGE_PLAN_ROLLOUT") {
+            controller.enqueue(encoder.encode(`event: config\ndata: ${JSON.stringify(parsed.payload)}\n\n`));
+          }
+        } catch {
+          // ignore parsing error
+        }
+      };
+      const unsub = queue.subscribe(send);
+      const ping = setInterval(() => controller.enqueue(encoder.encode(`: ping\n\n`)), 15000);
+      return () => {
+        unsub();
+        clearInterval(ping);
+      };
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "content-type": "text/event-stream",
+      "cache-control": "no-cache",
+      connection: "keep-alive",
+    },
+  });
+});
+
 export const cacheRoutes = new Hono<AppEnv>();
 cacheRoutes.use("*", requireAuth, requireOrg);
 
@@ -189,6 +310,64 @@ cacheRoutes.post("/rules", async (c) => {
   return c.json(rule, 201);
 });
 
+cacheRoutes.patch("/rules/:id", async (c) => {
+  const id = c.req.param("id");
+  const body = z
+    .object({
+      endpoint: z.string().optional(),
+      method: z.string().optional(),
+      ttlSeconds: z.number().optional(),
+      enabled: z.boolean().optional(),
+      tags: z.array(z.string()).optional(),
+    })
+    .parse(await c.req.json());
+
+  const db = c.get("db");
+  const organizationId = c.get("organizationId")!;
+  const existing = await db.cacheRule.findFirst({ where: { id, organizationId } });
+  if (!existing) return c.json({ error: "NOT_FOUND" }, 404);
+
+  const updated = await db.cacheRule.update({
+    where: { id },
+    data: body,
+  });
+
+  await writeAudit(db, {
+    organizationId,
+    actorId: c.get("userId"),
+    action: "cache_rule.update",
+    resourceType: "cache_rule",
+    resourceId: id,
+    environmentId: existing.environmentId,
+    oldValue: existing,
+    newValue: updated,
+  });
+
+  return c.json(updated);
+});
+
+cacheRoutes.delete("/rules/:id", async (c) => {
+  const id = c.req.param("id");
+  const db = c.get("db");
+  const organizationId = c.get("organizationId")!;
+  const existing = await db.cacheRule.findFirst({ where: { id, organizationId } });
+  if (!existing) return c.json({ error: "NOT_FOUND" }, 404);
+
+  await db.cacheRule.delete({ where: { id } });
+
+  await writeAudit(db, {
+    organizationId,
+    actorId: c.get("userId"),
+    action: "cache_rule.delete",
+    resourceType: "cache_rule",
+    resourceId: id,
+    environmentId: existing.environmentId,
+    oldValue: existing,
+  });
+
+  return c.json({ ok: true });
+});
+
 cacheRoutes.post("/invalidate", async (c) => {
   const body = z
     .object({ kind: z.enum(["manual", "tag", "endpoint"]), cacheRuleId: z.string().optional() })
@@ -202,18 +381,15 @@ cacheRoutes.post("/invalidate", async (c) => {
 
 cacheRoutes.get("/analytics", async (c) => {
   const environmentId = c.req.query("environmentId");
-  const rules = await c.get("db").cacheRule.findMany({
-    where: { environmentId: environmentId || undefined, organizationId: c.get("organizationId")! },
+  const organizationId = c.get("organizationId")!;
+  const db = c.get("db");
+
+  const stats = await queryCacheStats(db, {
+    organizationId,
+    environmentId: environmentId || "",
   });
-  const enabled = rules.some((r) => r.enabled);
-  return c.json({
-    totalRequests: 1000,
-    hits: enabled ? 700 : 0,
-    misses: enabled ? 300 : 1000,
-    hitRate: enabled ? 0.7 : 0,
-    originReductionPct: enabled ? 70 : 0,
-    bandwidthSaved: enabled ? "12MB" : "0",
-  });
+
+  return c.json(stats);
 });
 
 cacheRoutes.get("/recommendations", async (c) => {
@@ -275,3 +451,4 @@ cacheRoutes.post("/snapshots/traffic", async (c) => {
   });
   return c.json(snap, 201);
 });
+
