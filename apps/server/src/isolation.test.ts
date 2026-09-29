@@ -66,3 +66,56 @@ describe("production replay gate", () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe("production simulation & load test isolation gates", () => {
+  test("simulation rejects direct production mutation", async () => {
+    const app = new Hono();
+    app.post("/v1/simulations", async (c) => {
+      const body = (await c.req.json()) as { envType: string };
+      if (body.envType === "PRODUCTION") {
+        return c.json({ error: "FORBIDDEN", message: "Simulations must not mutate production runtime state" }, 403);
+      }
+      return c.json({ status: "completed" }, 201);
+    });
+
+    const denied = await app.request("/v1/simulations", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ envType: "PRODUCTION" }),
+    });
+    expect(denied.status).toBe(403);
+
+    const allowed = await app.request("/v1/simulations", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ envType: "STAGING" }),
+    });
+    expect(allowed.status).toBe(201);
+  });
+
+  test("load testing rejects direct production stress runs", async () => {
+    const app = new Hono();
+    app.post("/v1/load-tests", async (c) => {
+      const body = (await c.req.json()) as { envType: string };
+      if (body.envType === "PRODUCTION") {
+        return c.json({ error: "FORBIDDEN", message: "Load tests must not target live production environments directly" }, 403);
+      }
+      return c.json({ status: "completed" }, 201);
+    });
+
+    const denied = await app.request("/v1/load-tests", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ envType: "PRODUCTION" }),
+    });
+    expect(denied.status).toBe(403);
+
+    const allowed = await app.request("/v1/load-tests", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ envType: "STAGING" }),
+    });
+    expect(allowed.status).toBe(201);
+  });
+});
+
