@@ -205,16 +205,16 @@ Last Updated: 2026-09-29
 ## 📂 Phase 7: Production-Grade SDK Hardening
 *Test Guide: `test-phase-7.md`*
 
-- [ ] **SDK Core Hardening (`packages/sdk`)**
-  - [ ] Implement fail-open guarantee (zero unhandled exceptions or latency overhead)
-  - [ ] Bounded in-memory ring buffer (max 500 items) with drop-oldest shedding
-  - [ ] Source-level PII, token, and auth header redaction
-  - [ ] Deterministic user rollout evaluation (`inRollout`)
-  - [ ] Runtime config streaming with disk/memory fallback cache
-- [ ] **Phase 7 Testing & Commit**
-  - [ ] Create `test-phase-7.md`
-  - [ ] Unit & integration tests for SDK under network failure
-  - [ ] Git commit: `feat(sdk): phase 7 hardened client sdk with fail-open and local rollout`
+- [x] **SDK Core Hardening (`packages/sdk`)**
+  - [x] Implement fail-open guarantee (zero unhandled exceptions or latency overhead)
+  - [x] Bounded in-memory ring buffer (max 500 items) with drop-oldest shedding
+  - [x] Source-level PII, token, and auth header redaction
+  - [x] Deterministic user rollout evaluation (`inRollout`)
+  - [x] Runtime config streaming with disk/memory fallback cache
+- [x] **Phase 7 Testing & Commit**
+  - [x] Create `test-phase-7.md`
+  - [x] Unit & integration tests for SDK under network failure
+  - [x] Git commit: `feat(sdk): phase 7 hardened client sdk with fail-open and local rollout`
 
 ---
 
