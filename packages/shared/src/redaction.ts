@@ -57,7 +57,7 @@ export function redactJson(value: unknown, extra: RedactionRule[] = []): unknown
     const obj = value as Record<string, unknown>;
     const out: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(obj)) {
-      if (/password|secret|token|authorization|cookie|card|cvv|ssn/i.test(k)) {
+      if (/password|secret|token|authorization|cookie|card|cvv|ssn|api[_-]?key/i.test(k)) {
         out[k] = REDACTED;
       } else {
         out[k] = redactJson(v, extra);
