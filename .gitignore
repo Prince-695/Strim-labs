@@ -15,6 +15,8 @@ apps/web/out
 **/*.tsbuildinfo
 .DS_Store
 sdk-config-cache.json
+.strim-config-cache.json
+*.cache.json
 infra/minio-data
 infra/clickhouse-data
 infra/postgres-data
