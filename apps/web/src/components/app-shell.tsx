@@ -180,15 +180,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     className={cn(
                       "flex items-center justify-between rounded-xl px-2.5 py-2 text-xs font-medium transition-all group",
                       active
-                        ? "bg-brand-pink text-white shadow-sm shadow-brand-pink/30 font-semibold"
-                        : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        ? "bg-secondary text-foreground font-bold border border-border/80 shadow-2xs"
+                        : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
                     )}
                   >
                     <div className="flex items-center gap-2.5">
                       <Icon
                         className={cn(
                           "size-4 shrink-0 transition-transform group-hover:scale-110",
-                          active ? "text-white" : "text-muted-foreground group-hover:text-foreground"
+                          active ? "text-brand-pink" : "text-muted-foreground group-hover:text-foreground"
                         )}
                       />
                       <span>{item.label}</span>
@@ -197,8 +197,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     <div className="flex items-center gap-1.5">
                       {item.pulse && (
                         <span className="relative flex size-2">
-                          <span className={cn("animate-ping absolute inline-flex h-full w-full rounded-full opacity-75", active ? "bg-white" : "bg-emerald-400")} />
-                          <span className={cn("relative inline-flex rounded-full size-2", active ? "bg-white" : "bg-emerald-500")} />
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-emerald-400" />
+                          <span className="relative inline-flex rounded-full size-2 bg-emerald-500" />
                         </span>
                       )}
                       {item.badge && (
@@ -206,7 +206,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                           className={cn(
                             "text-[9px] font-bold uppercase px-1.5 py-0.2 rounded-full",
                             active
-                              ? "bg-white/20 text-white"
+                              ? "bg-brand-pink/10 text-brand-pink border border-brand-pink/30"
                               : "bg-secondary text-muted-foreground border border-border"
                           )}
                         >
@@ -238,7 +238,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   {currentOrg?.role || "Member"}
                 </span>
                 <span className="text-[10px] text-muted-foreground">•</span>
-                <span className="text-[10px] text-brand-pink font-semibold">Active</span>
+                <span className="text-[10px] text-emerald-600 font-semibold">Active</span>
               </div>
             </div>
           </div>
@@ -283,7 +283,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Main Workspace Frame */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top Header Bar */}
-        <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-card/90 backdrop-blur-md px-4 py-2.5">
+        <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-card/95 backdrop-blur-md px-4 py-2.5">
           <div className="flex items-center gap-2 min-w-0 flex-wrap">
             {/* Mobile Hamburger */}
             <button
@@ -298,8 +298,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="flex items-center gap-1.5 flex-wrap">
               {/* Org Select */}
               <Select value={s.orgId ?? ""} onValueChange={onSelect(s.setOrgId)}>
-                <SelectTrigger size="sm" className="h-8 max-w-[140px] text-xs font-semibold rounded-lg bg-secondary/50 border-border/80 hover:bg-secondary">
-                  <SelectValue placeholder="Org" />
+                <SelectTrigger size="sm" className="h-8 max-w-[150px] text-xs font-semibold rounded-lg bg-secondary/50 border-border/80 hover:bg-secondary">
+                  <span className="truncate">{currentOrg?.name || "Organization"}</span>
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border border-border bg-card shadow-lg text-xs">
                   {s.orgs.map((o) => (
@@ -314,8 +314,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {/* Workspace Select */}
               <Select value={s.workspaceId ?? ""} onValueChange={onSelect(s.setWorkspaceId)}>
-                <SelectTrigger size="sm" className="h-8 max-w-[130px] text-xs rounded-lg bg-secondary/50 border-border/80 hover:bg-secondary">
-                  <SelectValue placeholder="Workspace" />
+                <SelectTrigger size="sm" className="h-8 max-w-[140px] text-xs font-medium rounded-lg bg-secondary/50 border-border/80 hover:bg-secondary">
+                  <span className="truncate">{currentWorkspace?.name || "Workspace"}</span>
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border border-border bg-card shadow-lg text-xs">
                   {workspaces.map((w) => (
@@ -330,8 +330,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
               {/* Project Select */}
               <Select value={s.projectId ?? ""} onValueChange={onSelect(s.setProjectId)}>
-                <SelectTrigger size="sm" className="h-8 max-w-[130px] text-xs rounded-lg bg-secondary/50 border-border/80 hover:bg-secondary">
-                  <SelectValue placeholder="Project" />
+                <SelectTrigger size="sm" className="h-8 max-w-[140px] text-xs font-medium rounded-lg bg-secondary/50 border-border/80 hover:bg-secondary">
+                  <span className="truncate">{currentProject?.name || "Project"}</span>
                 </SelectTrigger>
                 <SelectContent className="rounded-xl border border-border bg-card shadow-lg text-xs">
                   {projects.map((p) => (
@@ -347,8 +347,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {/* App Select */}
               <div className="hidden sm:block">
                 <Select value={s.applicationId ?? ""} onValueChange={onSelect(s.setApplicationId)}>
-                  <SelectTrigger size="sm" className="h-8 max-w-[140px] text-xs rounded-lg bg-secondary/50 border-border/80 hover:bg-secondary">
-                    <SelectValue placeholder="Application" />
+                  <SelectTrigger size="sm" className="h-8 max-w-[150px] text-xs font-medium rounded-lg bg-secondary/50 border-border/80 hover:bg-secondary">
+                    <span className="truncate">{currentApp?.name || "Application"}</span>
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border border-border bg-card shadow-lg text-xs">
                     {apps.map((a) => (
@@ -365,8 +365,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               {/* Env Select */}
               <div className="hidden lg:block">
                 <Select value={s.environmentId ?? ""} onValueChange={onSelect(s.setEnvironmentId)}>
-                  <SelectTrigger size="sm" className="h-8 max-w-[120px] text-xs rounded-lg bg-secondary/50 border-border/80 hover:bg-secondary">
-                    <SelectValue placeholder="Environment" />
+                  <SelectTrigger size="sm" className="h-8 max-w-[130px] text-xs font-medium rounded-lg bg-secondary/50 border-border/80 hover:bg-secondary">
+                    <span className="truncate">{currentEnv?.name || "Environment"}</span>
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border border-border bg-card shadow-lg text-xs">
                     {envs.map((e) => (

@@ -44,8 +44,10 @@ function getSnapshot(): Stored {
   return memory;
 }
 
+const SERVER_SNAPSHOT: Stored = { token: null, orgs: [] };
+
 function getServerSnapshot(): Stored {
-  return { token: null, orgs: [] };
+  return SERVER_SNAPSHOT;
 }
 
 function writeStored(next: Stored) {

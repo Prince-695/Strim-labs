@@ -93,7 +93,7 @@ export default function LandingPage() {
                 href="/runtime"
                 className={cn(
                   buttonVariants({ size: "sm" }),
-                  "h-9 rounded-full px-5 font-bold text-xs bg-brand-pink text-white hover:bg-brand-pink/90",
+                  "h-9 rounded-full px-5 font-bold text-xs bg-[#0D0C22] text-white hover:bg-[#1E1D38] transition-all",
                 )}
               >
                 Open Dashboard
@@ -154,7 +154,7 @@ export default function LandingPage() {
               href="/signup"
               className={cn(
                 buttonVariants({ size: "lg" }),
-                "h-11 rounded-full px-7 font-bold text-sm bg-brand-pink text-white hover:bg-brand-pink/90 shadow-md shadow-brand-pink/20",
+                "h-11 rounded-full px-7 font-bold text-sm bg-[#0D0C22] text-white hover:bg-[#1E1D38] shadow-md transition-all",
               )}
             >
               Start Free Trial <ArrowRight className="size-4 ml-2" />
