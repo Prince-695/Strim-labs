@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@base-ui/react": "1.7.0",
+    "@fontsource/mona-sans": "5.3.0",
     "@strim/shared": "workspace:*",
     "@tanstack/react-query": "5.90.2",
     "@xyflow/react": "12.8.6",

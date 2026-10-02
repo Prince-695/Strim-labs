@@ -1,33 +1,23 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
-import { cn } from "@/lib/utils";
 import { Providers } from "@/components/providers";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "Strim",
-  description: "Know what a change will do before production finds out.",
+  title: "Strim — Runtime Intelligence & Controlled Change Platform",
+  description: "Know what a change will do before production finds out. Simulation, verification, and automated rollback for production infrastructure.",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html
-      lang="en"
-      className={cn("dark h-full antialiased font-sans", geistSans.variable, geistMono.variable, inter.variable)}
-    >
-      <body className="min-h-full flex flex-col">
+    <html lang="en" className="dark h-full antialiased" suppressHydrationWarning>
+      <body className="min-h-full flex flex-col bg-background text-foreground font-sans selection:bg-brand-pink/20 selection:text-brand-pink">
         <Providers>{children}</Providers>
       </body>
     </html>

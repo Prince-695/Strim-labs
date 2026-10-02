@@ -1,120 +1,147 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "@fontsource/mona-sans/400.css";
+@import "@fontsource/mona-sans/500.css";
+@import "@fontsource/mona-sans/600.css";
+@import "@fontsource/mona-sans/700.css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  --font-sans: "Mona Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-heading: "Mona Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* Dribbble Modern Brand Tokens */
+  --color-brand-pink: var(--brand-pink);
+  --color-brand-lime: var(--brand-lime);
+  --color-brand-blush: var(--brand-blush);
+  --color-brand-border: var(--brand-border);
+  --color-brand-ink: var(--brand-ink);
+  --color-brand-slate: var(--brand-slate);
+  --color-brand-tertiary: var(--brand-tertiary);
+  --color-brand-gold: var(--brand-gold);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Light theme: Pure bright gallery canvas with dark ink */
+  --background: #FFFFFF;
+  --foreground: #0D0C22;
+  --card: #FFFFFF;
+  --card-foreground: #0D0C22;
+  --popover: #FFFFFF;
+  --popover-foreground: #0D0C22;
+  --primary: #0D0C22;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F4F4F6;
+  --secondary-foreground: #0D0C22;
+  --muted: #F4F4F6;
+  --muted-foreground: #6E6D7A;
+  --accent: #F4F4F6;
+  --accent-foreground: #0D0C22;
+  --destructive: #E5484D;
+  --destructive-foreground: #FFFFFF;
+  --border: #E7E7E9;
+  --input: #E7E7E9;
+  --ring: #0D0C22;
+
+  /* Dribbble Brand Palette */
+  --brand-pink: #EA4C89;
+  --brand-lime: #CDE36B;
+  --brand-blush: #FFF1F7;
+  --brand-border: #E5E7EB;
+  --brand-ink: #0D0C22;
+  --brand-slate: #6E6D7A;
+  --brand-tertiary: #F4F4F6;
+  --brand-gold: #FFAD48;
+
+  --sidebar: #FAFAFC;
+  --sidebar-foreground: #0D0C22;
+  --sidebar-primary: #0D0C22;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #F4F4F6;
+  --sidebar-accent-foreground: #0D0C22;
+  --sidebar-border: #E7E7E9;
+  --sidebar-ring: #0D0C22;
+
+  --radius: 0.5rem;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Dark theme: Deep midnight indigo with crisp ink contrast & glowing accents */
+  --background: #0A0915;
+  --foreground: #F4F4F6;
+  --card: #121124;
+  --card-foreground: #F4F4F6;
+  --popover: #16152C;
+  --popover-foreground: #F4F4F6;
+  --primary: #FFFFFF;
+  --primary-foreground: #0D0C22;
+  --secondary: #1E1D38;
+  --secondary-foreground: #F4F4F6;
+  --muted: #1A1932;
+  --muted-foreground: #8E8D9F;
+  --accent: #1E1D38;
+  --accent-foreground: #F4F4F6;
+  --destructive: #E5484D;
+  --destructive-foreground: #FFFFFF;
+  --border: #232242;
+  --input: #232242;
+  --ring: #EA4C89;
+
+  /* Dark mode brand tokens */
+  --brand-pink: #EA4C89;
+  --brand-lime: #CDE36B;
+  --brand-blush: #261324;
+  --brand-border: #232242;
+  --brand-ink: #FFFFFF;
+  --brand-slate: #8E8D9F;
+  --brand-tertiary: #1A1932;
+  --brand-gold: #FFAD48;
+
+  --sidebar: #0E0D1E;
+  --sidebar-foreground: #F4F4F6;
+  --sidebar-primary: #EA4C89;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #1A1932;
+  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-border: #232242;
+  --sidebar-ring: #EA4C89;
 }
 
 @layer base {
@@ -122,9 +149,88 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased selection:bg-brand-pink/20 selection:text-brand-pink;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
   html {
-    @apply font-sans;
+    font-family: var(--font-sans);
+  }
+}
+
+@layer utilities {
+  .text-headline-display {
+    font-family: var(--font-heading);
+    font-size: 52px;
+    font-weight: 600;
+    line-height: 62.4px;
+    letter-spacing: -0.02em;
+  }
+  .text-headline-lg {
+    font-family: var(--font-heading);
+    font-size: 40px;
+    font-weight: 600;
+    line-height: 48px;
+    letter-spacing: -0.015em;
+  }
+  .text-headline-md {
+    font-family: var(--font-heading);
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 29px;
+    letter-spacing: -0.01em;
+  }
+  .text-headline-sm {
+    font-family: var(--font-heading);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 24px;
+  }
+  .text-headline-xs {
+    font-family: var(--font-heading);
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 22px;
+  }
+  .text-body-lg {
+    font-family: var(--font-sans);
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 24px;
+  }
+  .text-body-md {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 19.6px;
+  }
+  .text-body-sm {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
+  }
+  .text-label-lg {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 16px;
+  }
+  .text-label-md {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 14px;
+  }
+  .text-label-sm {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 14px;
+  }
+  .text-caption {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 14px;
   }
 }
