@@ -80,18 +80,18 @@ export default function KeysPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">API Keys</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl font-heading font-extrabold tracking-tight text-foreground">API Keys</h1>
+          <p className="text-xs text-muted-foreground mt-1">
             Manage authentication credentials for telemetry ingestion, CI/CD gates, and SDK runtime synchronization.
           </p>
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="cursor-pointer gap-2">
+        <Button onClick={() => setCreateOpen(true)} className="rounded-xl bg-brand-pink hover:bg-brand-pink/90 text-white cursor-pointer gap-2 text-xs font-semibold shadow-xs">
           <Plus className="size-4" />
           Generate API Key
         </Button>
       </div>
 
-      <Card className="border-border/60 shadow-xs">
+      <Card className="rounded-2xl border-border/70 shadow-xs overflow-hidden">
         <CardHeader>
           <CardTitle>Active Organization Credentials</CardTitle>
           <CardDescription>

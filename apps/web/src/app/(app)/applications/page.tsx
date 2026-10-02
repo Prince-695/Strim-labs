@@ -129,18 +129,18 @@ app.use("*", strim.middleware());`
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Applications & Services</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-2xl font-heading font-extrabold tracking-tight text-foreground">Applications & Services</h1>
+          <p className="text-xs text-muted-foreground mt-1">
             Microservices, API gateways, serverless workers, and distributed topologies.
           </p>
         </div>
-        <Button onClick={() => setWizardOpen(true)} className="cursor-pointer gap-2">
+        <Button onClick={() => setWizardOpen(true)} className="rounded-xl bg-brand-pink hover:bg-brand-pink/90 text-white cursor-pointer gap-2 text-xs font-semibold shadow-xs">
           <Plus className="size-4" />
           Onboard Application
         </Button>
       </div>
 
-      <Card className="border-border/60 shadow-xs">
+      <Card className="rounded-2xl border-border/70 shadow-xs overflow-hidden">
         <CardHeader>
           <CardTitle>Connected Systems Directory</CardTitle>
           <CardDescription>
