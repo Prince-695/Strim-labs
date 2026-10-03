@@ -7,6 +7,7 @@ import { useSession } from "@/lib/session";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 import {
   Activity,
@@ -120,6 +121,8 @@ export default function LandingPage() {
                 </Link>
               </>
             )}
+
+            <ThemeToggle />
           </div>
         </div>
       </header>

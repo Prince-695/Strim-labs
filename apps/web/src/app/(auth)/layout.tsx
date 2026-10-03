@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Activity, ShieldCheck, Zap, ArrowLeft } from "lucide-react";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function AuthLayout({
   children,
@@ -78,6 +79,9 @@ export default function AuthLayout({
 
       {/* Right Form Container */}
       <div className="flex flex-col justify-center items-center p-6 sm:p-12 relative">
+        <div className="absolute top-6 right-6">
+          <ThemeToggle />
+        </div>
         <div className="w-full max-w-md mx-auto">
           {children}
         </div>

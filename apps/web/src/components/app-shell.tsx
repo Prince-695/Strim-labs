@@ -39,6 +39,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { CommandPalette } from "@/components/command-palette";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
 type NavGroup = {
@@ -427,6 +428,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span>API Docs</span>
               <ExternalLink className="size-3" />
             </a>
+
+            {/* Dark / Light Theme Toggle */}
+            <ThemeToggle />
           </div>
         </header>
 
