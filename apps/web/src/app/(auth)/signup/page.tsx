@@ -11,10 +11,16 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { useGsap } from "@/hooks/use-gsap";
+import gsap from "gsap";
 
 export default function SignupPage() {
   const router = useRouter();
   const { setSession, token, loading } = useSession();
+
+  const containerRef = useGsap<HTMLDivElement>((el) => {
+    gsap.from(el, { y: 20, autoAlpha: 0, duration: 0.5, ease: "power2.out" });
+  });
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -82,16 +88,17 @@ export default function SignupPage() {
   }
 
   return (
-    <Card className="border border-border/80 shadow-md rounded-2xl bg-card">
-      <CardHeader className="space-y-1.5 pb-4">
-        <CardTitle className="text-2xl font-bold tracking-tight">Create your account</CardTitle>
-        <CardDescription className="text-xs">
-          Get started with Strim to protect your production infrastructure.
-        </CardDescription>
-      </CardHeader>
+    <div ref={containerRef}>
+      <Card className="border border-border/80 shadow-md rounded-2xl bg-card">
+        <CardHeader className="space-y-1.5 pb-4">
+          <CardTitle className="text-2xl font-bold tracking-tight">Start your free trial</CardTitle>
+          <CardDescription className="text-xs">
+            No credit card needed • 5-minute setup • Free for 14 days
+          </CardDescription>
+        </CardHeader>
 
-      <CardContent className="space-y-4">
-        {/* Google OAuth Button */}
+        <CardContent className="space-y-4">
+          {/* Google OAuth Button */}
         <Button
           type="button"
           variant="outline"
@@ -198,15 +205,15 @@ export default function SignupPage() {
 
           <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
             <CheckCircle2 className="size-3 text-brand-lime shrink-0" />
-            <span>Includes 14-day full platform trial with unlimited What-If simulations</span>
+            <span>Includes 14-day free trial with unlimited simulations</span>
           </div>
 
           <Button
             type="submit"
             disabled={pending}
-            className="w-full h-10 rounded-full font-bold bg-[#0D0C22] text-white hover:opacity-90 dark:bg-white dark:text-[#0D0C22] text-xs shadow-xs"
+            className="w-full h-10 rounded-full font-bold bg-[#0D0C22] text-white hover:opacity-90 dark:bg-white dark:text-[#0D0C22] text-xs shadow-xs cursor-pointer"
           >
-            {pending ? "Creating account…" : "Create Account & Workspace"}
+            {pending ? "Creating account…" : "Create Free Account"}
             <ArrowRight className="size-3.5 ml-1.5" />
           </Button>
         </form>
@@ -221,5 +228,6 @@ export default function SignupPage() {
         </div>
       </CardContent>
     </Card>
+    </div>
   );
 }

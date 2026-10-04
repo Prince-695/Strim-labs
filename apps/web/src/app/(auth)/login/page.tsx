@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowRight, Sparkles } from "lucide-react";
+import { useGsap } from "@/hooks/use-gsap";
+import gsap from "gsap";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,6 +21,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState("password123");
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+
+  const containerRef = useGsap<HTMLDivElement>((el) => {
+    gsap.from(el, { y: 20, autoAlpha: 0, duration: 0.5, ease: "power2.out" });
+  });
 
   useEffect(() => {
     if (!loading && token) router.replace("/runtime");
@@ -62,41 +68,42 @@ export default function LoginPage() {
   }
 
   return (
-    <Card className="border border-border/80 shadow-md rounded-2xl bg-card">
-      <CardHeader className="space-y-1.5 pb-4">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-2xl font-bold tracking-tight">Sign in to Strim</CardTitle>
-          <span className="text-xs text-muted-foreground">Production</span>
-        </div>
-        <CardDescription className="text-xs">
-          Enter your credentials to access your organization's runtime model.
-        </CardDescription>
-      </CardHeader>
+    <div ref={containerRef}>
+      <Card className="border border-border/80 shadow-md rounded-2xl bg-card">
+        <CardHeader className="space-y-1.5 pb-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-2xl font-bold tracking-tight">Welcome back</CardTitle>
+            <span className="text-xs text-muted-foreground">Sign In</span>
+          </div>
+          <CardDescription className="text-xs">
+            Enter your details to access your dashboard.
+          </CardDescription>
+        </CardHeader>
 
-      <CardContent className="space-y-4">
-        {/* Quick Demo Switcher */}
-        <div className="p-3 rounded-xl bg-secondary/50 border border-border/60 space-y-2">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-            <Sparkles className="size-3 text-brand-pink" />
-            <span>Quick-Fill Seeded Demo Personas:</span>
+        <CardContent className="space-y-4">
+          {/* Quick Demo Switcher */}
+          <div className="p-3 rounded-xl bg-secondary/50 border border-border/60 space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+              <Sparkles className="size-3 text-brand-pink" />
+              <span>Quick Demo Accounts:</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setDemoPersona("priya@acme.test", "password123")}
+                className="text-xs px-2.5 py-1 rounded-full bg-card hover:bg-card/80 border border-border/70 text-foreground transition-colors font-medium shadow-2xs cursor-pointer"
+              >
+                Priya (Acme Corp Owner)
+              </button>
+              <button
+                type="button"
+                onClick={() => setDemoPersona("marcus@globex.test", "password123")}
+                className="text-xs px-2.5 py-1 rounded-full bg-card hover:bg-card/80 border border-border/70 text-foreground transition-colors font-medium shadow-2xs cursor-pointer"
+              >
+                Marcus (Globex Admin)
+              </button>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setDemoPersona("priya@acme.test", "password123")}
-              className="text-xs px-2.5 py-1 rounded-full bg-card hover:bg-card/80 border border-border/70 text-foreground transition-colors font-medium shadow-2xs"
-            >
-              Priya (Acme Corp Owner)
-            </button>
-            <button
-              type="button"
-              onClick={() => setDemoPersona("marcus@globex.test", "password123")}
-              className="text-xs px-2.5 py-1 rounded-full bg-card hover:bg-card/80 border border-border/70 text-foreground transition-colors font-medium shadow-2xs"
-            >
-              Marcus (Globex Admin)
-            </button>
-          </div>
-        </div>
 
         {/* Google OAuth Button */}
         <Button
@@ -183,9 +190,9 @@ export default function LoginPage() {
           <Button
             type="submit"
             disabled={pending}
-            className="w-full h-10 rounded-full font-bold bg-[#0D0C22] text-white hover:opacity-90 dark:bg-white dark:text-[#0D0C22] text-xs shadow-xs"
+            className="w-full h-10 rounded-full font-bold bg-[#0D0C22] text-white hover:opacity-90 dark:bg-white dark:text-[#0D0C22] text-xs shadow-xs cursor-pointer"
           >
-            {pending ? "Signing in…" : "Sign In to Platform"}
+            {pending ? "Signing in…" : "Sign In"}
             <ArrowRight className="size-3.5 ml-1.5" />
           </Button>
         </form>
@@ -200,5 +207,6 @@ export default function LoginPage() {
         </div>
       </CardContent>
     </Card>
+    </div>
   );
 }

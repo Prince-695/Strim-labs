@@ -35,15 +35,15 @@ export default function AuthLayout({
         <div className="relative z-10 my-auto py-8 max-w-lg space-y-6">
           <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-brand-pink/15 border border-brand-pink/30 text-brand-pink text-xs font-semibold">
             <Activity className="size-3.5" />
-            <span>Runtime Intelligence & Change Platform</span>
+            <span>Deploy With Confidence</span>
           </div>
 
           <h1 className="font-heading text-4xl xl:text-5xl font-bold leading-tight tracking-tight">
-            Know what a change will do before production finds out.
+            Ship changes without the fear.
           </h1>
 
           <p className="text-[#8E8D9F] text-base leading-relaxed">
-            Eliminate deployment blind spots. Simulate traffic, verify blast radius, and execute staged canary rollouts with automated circuit breakers and 1-click rollback.
+            Test your changes before they go live, roll out gradually, and roll back in one click if anything goes wrong. No more 2 AM fire drills.
           </p>
 
           {/* Interactive Feature Highlights */}
@@ -53,8 +53,8 @@ export default function AuthLayout({
                 <Zap className="size-4" />
               </div>
               <div>
-                <div className="text-sm font-semibold">What-If Simulations</div>
-                <div className="text-xs text-[#8E8D9F]">Simulate 2x traffic, cache invalidations, and latency deltas prior to merge.</div>
+                <div className="text-sm font-semibold">What-If Testing</div>
+                <div className="text-xs text-[#8E8D9F]">See how your app handles 2x traffic or slow APIs before merging.</div>
               </div>
             </div>
 
@@ -63,8 +63,8 @@ export default function AuthLayout({
                 <ShieldCheck className="size-4" />
               </div>
               <div>
-                <div className="text-sm font-semibold">Staged Canary Rollouts & Automated Guardrails</div>
-                <div className="text-xs text-[#8E8D9F]">10% → 25% → 50% → 100% rollout with instant circuit breaker rollbacks.</div>
+                <div className="text-sm font-semibold">Safe Gradual Rollouts</div>
+                <div className="text-xs text-[#8E8D9F]">Release to 10% → 25% → 50% → 100% with automatic rollbacks if errors spike.</div>
               </div>
             </div>
           </div>
@@ -72,8 +72,8 @@ export default function AuthLayout({
 
         {/* Bottom Social Proof */}
         <div className="relative z-10 text-xs text-[#8E8D9F] flex items-center justify-between border-t border-[#232242] pt-6">
-          <span>Fail-Open Guarantee • SOC 2 Ready</span>
-          <span>Port 8080 Unified Engine</span>
+          <span>99.9% Uptime Guarantee</span>
+          <span>5-Minute Setup • 500+ Teams</span>
         </div>
       </div>
 
