@@ -26,6 +26,8 @@ import {
   Menu,
   X,
   Zap,
+  User,
+  Users,
 } from "lucide-react";
 import { useSession } from "@/lib/session";
 import { Button } from "@/components/ui/button";
@@ -82,6 +84,8 @@ const NAV_GROUPS: NavGroup[] = [
   {
     title: "Settings",
     items: [
+      { href: "/settings", label: "Profile & Settings", icon: User },
+      { href: "/organization", label: "Organization & Team", icon: Users },
       { href: "/applications", label: "Apps", icon: AppWindow },
       { href: "/keys", label: "API Keys", icon: KeyRound },
       { href: "/billing", label: "Billing", icon: CreditCard },
