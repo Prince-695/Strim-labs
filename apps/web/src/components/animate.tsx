@@ -45,7 +45,12 @@ export function Animate({
   as: Tag = "div",
 }: AnimateProps) {
   const ref = useGsap<HTMLElement>((container) => {
-    const targets = container.querySelectorAll(selector);
+    const targets =
+      selector === "> *"
+        ? Array.from(container.children)
+        : container.querySelectorAll(
+            selector.startsWith(">") ? `:scope ${selector}` : selector
+          );
     if (!targets.length) return;
     gsap.from(targets, {
       y,
