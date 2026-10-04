@@ -8,6 +8,7 @@ import { useSession } from "@/lib/session";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Animate } from "@/components/animate";
 import {
   ResponsiveContainer,
   AreaChart,
@@ -21,7 +22,6 @@ import {
 } from "recharts";
 import {
   Activity,
-  AlertCircle,
   CheckCircle2,
   ShieldCheck,
   Zap,
@@ -59,6 +59,14 @@ const TIME_RANGES = [
   { label: "24h", value: 1440 },
 ];
 
+/* Human-friendly label map for health breakdown keys */
+const BREAKDOWN_LABELS: Record<string, string> = {
+  availability: "Uptime",
+  latencyCompliance: "Speed",
+  errorBudgetRemaining: "Error Budget",
+  dependencyHealth: "Dependencies",
+};
+
 export default function RuntimePage() {
   const { token, orgId, environmentId } = useSession();
   const [selectedRange, setSelectedRange] = useState(60);
@@ -88,9 +96,9 @@ export default function RuntimePage() {
         <div className="size-12 rounded-2xl bg-brand-pink/10 text-brand-pink flex items-center justify-center mb-4">
           <Activity className="size-6" />
         </div>
-        <h3 className="font-heading font-bold text-lg text-foreground">No Environment Selected</h3>
+        <h3 className="font-heading font-bold text-lg text-foreground">Select an environment</h3>
         <p className="text-sm text-muted-foreground mt-1 max-w-md">
-          Please select an environment from the context switcher in the top navigation bar to view real-time fleet telemetries.
+          Pick an environment from the navigation bar above to see your live dashboard.
         </p>
       </div>
     );
@@ -121,12 +129,12 @@ export default function RuntimePage() {
 
   return (
     <div className="space-y-6">
-      {/* Header section */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-heading font-extrabold tracking-tight text-foreground">
-              Runtime Fleet Intelligence
+              Dashboard
             </h1>
             <Badge
               variant="outline"
@@ -140,22 +148,22 @@ export default function RuntimePage() {
               {isHealthy ? (
                 <>
                   <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                  Fleet Nominal
+                  All Good
                 </>
               ) : (
                 <>
                   <span className="size-1.5 rounded-full bg-destructive animate-pulse" />
-                  Degraded State
+                  Needs Attention
                 </>
               )}
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {d?.application ?? "Production Fleet"} · Live SLO compliance, traffic ingress & distributed anomaly detection
+            {d?.application ?? "Your app"} — live health, traffic, and performance at a glance
           </p>
         </div>
 
-        {/* Time Filter Pills & Action */}
+        {/* Time Filter Pills & Refresh */}
         <div className="flex items-center gap-2 flex-wrap">
           <div className="flex items-center p-1 rounded-xl bg-secondary/60 border border-border">
             {TIME_RANGES.map((r) => (
@@ -186,18 +194,18 @@ export default function RuntimePage() {
             className="rounded-xl cursor-pointer text-xs"
           >
             <RefreshCw className={cn("size-3.5 mr-1.5", overviewQuery.isFetching && "animate-spin")} />
-            Live Sync
+            Refresh
           </Button>
         </div>
       </div>
 
-      {/* KPI Cards Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Composite Health Dial */}
+      {/* KPI Cards */}
+      <Animate className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* System Health */}
         <Card className="rounded-2xl border-border/70 shadow-xs hover:border-brand-pink/30 transition-all">
           <CardHeader className="pb-2">
             <CardDescription className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Composite Health Score
+              System Health
             </CardDescription>
             <div className="flex items-baseline justify-between pt-1">
               <div className="flex items-baseline gap-1">
@@ -213,7 +221,6 @@ export default function RuntimePage() {
             </div>
           </CardHeader>
           <CardContent>
-            {/* Visual progress bar */}
             <div className="w-full bg-secondary h-2 rounded-full overflow-hidden mb-2">
               <div
                 className={cn(
@@ -225,23 +232,22 @@ export default function RuntimePage() {
             </div>
             <p className="text-[11px] text-muted-foreground flex items-center gap-1">
               <ShieldCheck className="size-3.5 text-emerald-500 shrink-0" />
-              SLO compliance nominal
+              Everything&apos;s running smoothly
             </p>
           </CardContent>
         </Card>
 
-        {/* Real-time RPS */}
+        {/* Requests per second */}
         <Card className="rounded-2xl border-border/70 shadow-xs hover:border-brand-pink/30 transition-all">
           <CardHeader className="pb-2">
             <CardDescription className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Ingress Traffic
+              Requests / sec
             </CardDescription>
             <div className="flex items-baseline justify-between pt-1">
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-heading font-black text-foreground">
                   {d?.traffic.rps ? Number(d.traffic.rps).toFixed(1) : "345.2"}
                 </span>
-                <span className="text-xs font-bold text-muted-foreground">RPS</span>
               </div>
               <span className="text-[10px] font-bold text-emerald-500 flex items-center">
                 <ArrowUpRight className="size-3" />
@@ -255,26 +261,26 @@ export default function RuntimePage() {
             </div>
             <p className="text-[11px] text-muted-foreground flex items-center gap-1">
               <Zap className="size-3.5 text-amber-500 shrink-0" />
-              Ingress through edge routers
+              Traffic flowing normally
             </p>
           </CardContent>
         </Card>
 
-        {/* Latency P95 / P99 */}
+        {/* Response Time */}
         <Card className="rounded-2xl border-border/70 shadow-xs hover:border-brand-pink/30 transition-all">
           <CardHeader className="pb-2">
             <CardDescription className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Latency Envelope
+              Response Time
             </CardDescription>
             <div className="flex items-baseline justify-between pt-1">
               <div className="flex items-baseline gap-1">
                 <span className="text-3xl font-heading font-black text-foreground">
                   {d?.latency.p95 ? `${Math.round(d.latency.p95)}` : "178"}
                 </span>
-                <span className="text-xs font-bold text-muted-foreground">ms (P95)</span>
+                <span className="text-xs font-bold text-muted-foreground">ms</span>
               </div>
-              <span className="text-xs font-mono text-muted-foreground">
-                P99: {d?.latency.p99 ? `${Math.round(d.latency.p99)}ms` : "284ms"}
+              <span className="text-xs text-muted-foreground">
+                Slowest 1%: {d?.latency.p99 ? `${Math.round(d.latency.p99)}ms` : "284ms"}
               </span>
             </div>
           </CardHeader>
@@ -284,16 +290,16 @@ export default function RuntimePage() {
             </div>
             <p className="text-[11px] text-muted-foreground flex items-center gap-1">
               <Clock className="size-3.5 text-emerald-500 shrink-0" />
-              SLA target &lt; 300ms
+              Target: under 300ms
             </p>
           </CardContent>
         </Card>
 
-        {/* Error Ratio */}
+        {/* Error Rate */}
         <Card className="rounded-2xl border-border/70 shadow-xs hover:border-brand-pink/30 transition-all">
           <CardHeader className="pb-2">
             <CardDescription className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Error Budget & Ratio
+              Error Rate
             </CardDescription>
             <div className="flex items-baseline justify-between pt-1">
               <div className="flex items-baseline gap-1">
@@ -305,7 +311,7 @@ export default function RuntimePage() {
                 variant="outline"
                 className="text-[10px] font-bold rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
               >
-                99.8% Remaining
+                99.8% budget left
               </Badge>
             </div>
           </CardHeader>
@@ -315,27 +321,27 @@ export default function RuntimePage() {
             </div>
             <p className="text-[11px] text-muted-foreground flex items-center gap-1">
               <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
-              Zero unhandled runtime panics
+              No errors detected
             </p>
           </CardContent>
         </Card>
-      </div>
+      </Animate>
 
-      {/* Real-time Charts Section */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Throughput AreaChart */}
+      {/* Charts */}
+      <Animate className="grid gap-6 lg:grid-cols-2" delay={0.15}>
+        {/* Traffic Volume */}
         <Card className="rounded-2xl border-border/70 shadow-xs overflow-hidden">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-sm font-heading font-bold text-foreground">
-                Ingress Throughput (RPS)
+                Traffic Volume
               </CardTitle>
               <CardDescription className="text-xs">
-                Cluster ingress rate aggregated across active edge nodes
+                How much traffic your app is handling right now
               </CardDescription>
             </div>
             <Badge variant="outline" className="text-[10px] font-mono rounded-md">
-              Real-time
+              Live
             </Badge>
           </CardHeader>
           <CardContent className="h-64 pt-2">
@@ -372,19 +378,19 @@ export default function RuntimePage() {
           </CardContent>
         </Card>
 
-        {/* Latency Profile LineChart */}
+        {/* Response Time Trend */}
         <Card className="rounded-2xl border-border/70 shadow-xs overflow-hidden">
           <CardHeader className="pb-2 flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-sm font-heading font-bold text-foreground">
-                Tail Latency Profile (P95 ms)
+                Response Time Trend
               </CardTitle>
               <CardDescription className="text-xs">
-                95th percentile response duration over the selected window
+                Most requests respond within this time
               </CardDescription>
             </div>
             <Badge variant="outline" className="text-[10px] font-mono rounded-md">
-              SLO: 300ms
+              Target: 300ms
             </Badge>
           </CardHeader>
           <CardContent className="h-64 pt-2">
@@ -414,18 +420,18 @@ export default function RuntimePage() {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-      </div>
+      </Animate>
 
-      {/* Constituent Breakdown & Incidents Section */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Breakdown Card */}
+      {/* Bottom Row — Breakdown + Incidents */}
+      <Animate className="grid gap-6 lg:grid-cols-2" delay={0.25}>
+        {/* Health Breakdown */}
         <Card className="rounded-2xl border-border/70 shadow-xs">
           <CardHeader>
             <CardTitle className="text-sm font-heading font-bold text-foreground">
-              Health Score Constituent Dimensions
+              Health Breakdown
             </CardTitle>
             <CardDescription className="text-xs">
-              Explainable metric factors driving the automated composite index
+              What&apos;s making up your health score
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-2">
@@ -442,8 +448,8 @@ export default function RuntimePage() {
                 className="flex flex-col justify-between p-3.5 rounded-xl border border-border/80 bg-secondary/30"
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="capitalize text-xs font-semibold text-foreground">
-                    {k.replace(/([A-Z])/g, " $1")}
+                  <span className="text-xs font-semibold text-foreground">
+                    {BREAKDOWN_LABELS[k] ?? k.replace(/([A-Z])/g, " $1")}
                   </span>
                   <Badge variant="outline" className="font-mono text-xs font-bold rounded-md">
                     {v}/100
@@ -463,22 +469,22 @@ export default function RuntimePage() {
           </CardContent>
         </Card>
 
-        {/* Active Incidents & Safe Mitigation Actions */}
+        {/* Active Issues */}
         <Card className="rounded-2xl border-border/70 shadow-xs">
           <CardHeader className="flex flex-row items-center justify-between">
             <div>
               <CardTitle className="text-sm font-heading font-bold text-foreground">
-                Active Incidents & Mitigation
+                Active Issues
               </CardTitle>
               <CardDescription className="text-xs">
-                Active anomalies requiring engineer attention or automated rollback
+                Issues that need your attention
               </CardDescription>
             </div>
             <Link
               href="/incidents"
               className="text-xs font-semibold text-brand-pink hover:underline flex items-center gap-1"
             >
-              Incident Studio
+              View all
               <ArrowUpRight className="size-3" />
             </Link>
           </CardHeader>
@@ -486,9 +492,9 @@ export default function RuntimePage() {
             {(d?.activeIncidents ?? []).length === 0 ? (
               <div className="flex flex-col items-center justify-center py-6 text-center border border-dashed border-border/80 rounded-xl bg-secondary/20">
                 <CheckCircle2 className="size-8 text-emerald-500 mb-2" />
-                <p className="text-xs font-bold text-foreground">All systems nominal</p>
+                <p className="text-xs font-bold text-foreground">All clear</p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
-                  No active anomalies detected across service meshes.
+                  No issues found — your app is running great.
                 </p>
               </div>
             ) : (
@@ -502,18 +508,18 @@ export default function RuntimePage() {
                       <AlertTriangle className="size-4 text-destructive shrink-0" />
                       <div>
                         <p className="text-xs font-bold text-foreground">{i.title}</p>
-                        <p className="text-[10px] text-muted-foreground font-mono">Incident ID: {i.id}</p>
+                        <p className="text-[10px] text-muted-foreground font-mono">ID: {i.id}</p>
                       </div>
                     </div>
                     <Badge variant="destructive" className="rounded-full text-[10px]">
-                      {i.severity ?? "CRITICAL"}
+                      {i.severity ?? "Critical"}
                     </Badge>
                   </div>
                 ))}
               </div>
             )}
 
-            {/* Fast Action Shortcuts */}
+            {/* Quick Actions */}
             <div className="pt-2 border-t border-border flex items-center gap-2">
               <Button
                 variant="outline"
@@ -523,7 +529,7 @@ export default function RuntimePage() {
               >
                 <Link href="/requests" className="flex items-center gap-1.5">
                   <ListTree className="size-3.5" />
-                  Inspect Traces
+                  View Requests
                 </Link>
               </Button>
               <Button
@@ -534,13 +540,13 @@ export default function RuntimePage() {
               >
                 <Link href="/topology" className="flex items-center gap-1.5">
                   <GitBranch className="size-3.5" />
-                  View Topology
+                  Service Map
                 </Link>
               </Button>
             </div>
           </CardContent>
         </Card>
-      </div>
+      </Animate>
     </div>
   );
 }
