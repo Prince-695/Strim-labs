@@ -19,6 +19,8 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useGsap } from "@/hooks/use-gsap";
+import gsap from "gsap";
 
 type Answer = {
   answer: string;
@@ -27,15 +29,19 @@ type Answer = {
 };
 
 const SUGGESTED_PROMPTS = [
-  "Which endpoints are good cache candidates?",
-  "What is the blast radius of Change Plan #01?",
+  "Which endpoints would benefit most from caching?",
+  "What services might be affected if we deploy the checkout update?",
   "Explain the latency spike on payment-service at 10:30",
-  "Is our staging cluster ready for a 1,000 RPS spike?",
+  "Can our setup handle a 2x traffic surge?",
 ];
 
 export default function AiPage() {
   const { token, orgId } = useSession();
-  const [question, setQuestion] = useState("Which endpoints are good cache candidates?");
+  const [question, setQuestion] = useState("Which endpoints would benefit most from caching?");
+
+  const containerRef = useGsap<HTMLDivElement>((el) => {
+    gsap.from(el, { y: 20, autoAlpha: 0, duration: 0.5, ease: "power2.out" });
+  });
 
   const ask = useMutation({
     mutationFn: () =>
@@ -52,33 +58,33 @@ export default function AiPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div ref={containerRef} className="space-y-6 max-w-4xl mx-auto">
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-heading font-extrabold tracking-tight text-foreground">
-              Grounded AI Reliability Copilot
+              AI Assistant
             </h1>
             <Badge variant="outline" className="text-[10px] font-bold rounded-full bg-brand-pink/10 text-brand-pink border-brand-pink/30">
-              Deterministic Twin
+              Live Context
             </Badge>
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Zero-hallucination runtime assistant grounded in your cluster traces, topology, and change plans.
+            Ask questions about your app performance, potential bottlenecks, and deployment safety in plain English.
           </p>
         </div>
 
         <div className="flex items-center gap-1.5 text-xs text-muted-foreground bg-secondary/50 px-3 py-1.5 rounded-full border border-border">
           <ShieldCheck className="size-3.5 text-emerald-500" />
-          <span>Read-only sandbox guardrails active</span>
+          <span>Read-only • 100% Safe</span>
         </div>
       </div>
 
       {/* Suggested Prompt Chips */}
       <div className="space-y-1.5">
         <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-          Suggested SRE Inquiries:
+          Try asking:
         </span>
         <div className="flex flex-wrap gap-2">
           {SUGGESTED_PROMPTS.map((p) => (
@@ -99,10 +105,10 @@ export default function AiPage() {
         <CardHeader className="py-3.5 px-5 bg-muted/20 border-b border-border/70">
           <CardTitle className="text-xs font-heading font-bold text-foreground flex items-center gap-2">
             <Bot className="size-4 text-brand-pink" />
-            Query Copilot Engine
+            Ask AI
           </CardTitle>
           <CardDescription className="text-[11px]">
-            Answers are computed exclusively from telemetry within your active organization scope.
+            Answers are grounded strictly in your live telemetry and deployment history.
           </CardDescription>
         </CardHeader>
 

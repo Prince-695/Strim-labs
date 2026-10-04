@@ -19,6 +19,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { KeyRound, Plus, Trash2, Copy, Check, ShieldAlert } from "lucide-react";
+import { useGsap } from "@/hooks/use-gsap";
+import gsap from "gsap";
 
 type ApiKey = {
   id: string;
@@ -31,6 +33,16 @@ type ApiKey = {
 export default function KeysPage() {
   const { token, orgId } = useSession();
   const qc = useQueryClient();
+
+  const containerRef = useGsap<HTMLDivElement>((el) => {
+    gsap.from(el.querySelectorAll(".key-box"), {
+      y: 15,
+      autoAlpha: 0,
+      stagger: 0.08,
+      duration: 0.4,
+      ease: "power2.out",
+    });
+  });
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createdKey, setCreatedKey] = useState<{ name: string; rawKey: string } | null>(null);
@@ -77,25 +89,25 @@ export default function KeysPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div ref={containerRef} className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-heading font-extrabold tracking-tight text-foreground">API Keys</h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Manage authentication credentials for telemetry ingestion, CI/CD gates, and SDK runtime synchronization.
+            Manage access keys for your SDK, CI/CD pipelines, and integrations.
           </p>
         </div>
         <Button onClick={() => setCreateOpen(true)} className="rounded-xl bg-brand-pink hover:bg-brand-pink/90 text-white cursor-pointer gap-2 text-xs font-semibold shadow-xs">
           <Plus className="size-4" />
-          Generate API Key
+          New API Key
         </Button>
       </div>
 
-      <Card className="rounded-2xl border-border/70 shadow-xs overflow-hidden">
+      <Card className="key-box rounded-2xl border-border/70 shadow-xs overflow-hidden">
         <CardHeader>
-          <CardTitle>Active Organization Credentials</CardTitle>
+          <CardTitle>Active API Keys</CardTitle>
           <CardDescription>
-            Scoped keys with role-based access control (Admin, Ingest, Read-only).
+            Keys used by your apps and team to authenticate with Strim.
           </CardDescription>
         </CardHeader>
         <CardContent>

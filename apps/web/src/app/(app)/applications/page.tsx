@@ -19,6 +19,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Plus, AppWindow, Copy, Check, Server, Terminal, Shield } from "lucide-react";
+import { useGsap } from "@/hooks/use-gsap";
+import gsap from "gsap";
 
 type Application = {
   id: string;
@@ -34,6 +36,16 @@ type Application = {
 export default function ApplicationsPage() {
   const { token, orgId, projectId, workspaces } = useSession();
   const qc = useQueryClient();
+
+  const containerRef = useGsap<HTMLDivElement>((el) => {
+    gsap.from(el.querySelectorAll(".app-box"), {
+      y: 15,
+      autoAlpha: 0,
+      stagger: 0.08,
+      duration: 0.4,
+      ease: "power2.out",
+    });
+  });
 
   const [wizardOpen, setWizardOpen] = useState(false);
   const [createdSnippet, setCreatedSnippet] = useState<{ appName: string; apiKey?: string } | null>(null);
@@ -126,25 +138,25 @@ app.use("*", strim.middleware());`
     : "";
 
   return (
-    <div className="space-y-6">
+    <div ref={containerRef} className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-heading font-extrabold tracking-tight text-foreground">Applications & Services</h1>
+          <h1 className="text-2xl font-heading font-extrabold tracking-tight text-foreground">Apps</h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Microservices, API gateways, serverless workers, and distributed topologies.
+            Manage your connected applications, services, and environments.
           </p>
         </div>
         <Button onClick={() => setWizardOpen(true)} className="rounded-xl bg-brand-pink hover:bg-brand-pink/90 text-white cursor-pointer gap-2 text-xs font-semibold shadow-xs">
           <Plus className="size-4" />
-          Onboard Application
+          Add New App
         </Button>
       </div>
 
-      <Card className="rounded-2xl border-border/70 shadow-xs overflow-hidden">
+      <Card className="app-box rounded-2xl border-border/70 shadow-xs overflow-hidden">
         <CardHeader>
-          <CardTitle>Connected Systems Directory</CardTitle>
+          <CardTitle>Connected Apps</CardTitle>
           <CardDescription>
-            Registered services reporting runtime telemetry and configuration states.
+            All apps reporting health and telemetry to Strim in this workspace.
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -25,6 +25,8 @@ import {
   FlaskConical,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useGsap } from "@/hooks/use-gsap";
+import gsap from "gsap";
 
 const Canvas = dynamic(() => import("@/components/topology-canvas"), { ssr: false });
 
@@ -35,6 +37,16 @@ export default function TopologyPage() {
   const { token, orgId, environmentId } = useSession();
   const [selectedNodeName, setSelectedNodeName] = useState<string | null>("checkout-service");
   const [filterKind, setFilterKind] = useState<string>("all");
+
+  const containerRef = useGsap<HTMLDivElement>((el) => {
+    gsap.from(el.querySelectorAll(".topo-box"), {
+      y: 15,
+      autoAlpha: 0,
+      stagger: 0.08,
+      duration: 0.4,
+      ease: "power2.out",
+    });
+  });
 
   const q = useQuery({
     queryKey: ["topology", orgId, environmentId],
@@ -174,15 +186,15 @@ export default function TopologyPage() {
   }, [selectedNodeName, displayEdges]);
 
   return (
-    <div className="space-y-6">
+    <div ref={containerRef} className="space-y-6">
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-heading font-extrabold tracking-tight text-foreground">
-            Distributed Service Topology
+            Service Map
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Real-time caller-callee dependency graph automatically reconstructed from distributed trace headers.
+            Visual map of all your services, databases, and caches, and how they connect to each other.
           </p>
         </div>
 
@@ -196,23 +208,23 @@ export default function TopologyPage() {
             className="rounded-xl text-xs gap-1.5 cursor-pointer"
           >
             <RefreshCw className={cn("size-3.5", q.isFetching && "animate-spin")} />
-            Resync Lineage
+            Refresh Map
           </Button>
         </div>
       </div>
 
       {/* Main Canvas & Inspector Layout */}
-      <div className="grid gap-6 lg:grid-cols-4 items-start">
+      <div className="topo-box grid gap-6 lg:grid-cols-4 items-start">
         {/* Left: 3-column Canvas Frame */}
         <div className="lg:col-span-3 space-y-3">
           {/* Filter Pills */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-semibold text-muted-foreground mr-1">Filter View:</span>
             {[
-              { id: "all", label: "All Nodes" },
-              { id: "service", label: "Microservices" },
+              { id: "all", label: "All Components" },
+              { id: "service", label: "Services" },
               { id: "gateway", label: "Gateways" },
-              { id: "database", label: "Storage & Caches" },
+              { id: "database", label: "Databases & Caches" },
             ].map((f) => (
               <button
                 key={f.id}

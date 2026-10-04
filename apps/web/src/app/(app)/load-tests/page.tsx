@@ -46,6 +46,8 @@ import {
   Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useGsap } from "@/hooks/use-gsap";
+import gsap from "gsap";
 
 type LoadTest = {
   id: string;
@@ -93,6 +95,16 @@ type LoadTest = {
 export default function LoadTestsPage() {
   const { token, orgId, environmentId } = useSession();
   const qc = useQueryClient();
+
+  const containerRef = useGsap<HTMLDivElement>((el) => {
+    gsap.from(el.querySelectorAll(".load-box"), {
+      y: 15,
+      autoAlpha: 0,
+      stagger: 0.08,
+      duration: 0.4,
+      ease: "power2.out",
+    });
+  });
 
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedTest, setSelectedTest] = useState<LoadTest | null>(null);
@@ -236,15 +248,15 @@ export default function LoadTestsPage() {
   const activeTest = selectedTest ?? rows[0];
 
   return (
-    <div className="space-y-6">
+    <div ref={containerRef} className="space-y-6">
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-heading font-extrabold tracking-tight text-foreground">
-            Load Stress & Breaking Point Analyzer
+            Load Tests
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Autonomous synthetic load generation, saturation knee detection, and cyber resilience backpressure auditing.
+            Stress-test your services with realistic traffic to find your app's limits before users do.
           </p>
         </div>
 
@@ -253,49 +265,49 @@ export default function LoadTestsPage() {
           className="rounded-xl bg-brand-pink hover:bg-brand-pink/90 text-white cursor-pointer gap-2 text-xs font-semibold shadow-xs"
         >
           <Play className="size-4" />
-          Execute Load Test
+          New Load Test
         </Button>
       </div>
 
       {/* Hero Overview Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Sustainable Capacity</p>
+        <div className="load-box p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Safe Traffic Limit</p>
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-2xl font-heading font-black text-emerald-500">
-              {activeTest?.breakingPoint?.sustainableRps ?? 480} RPS
+              {activeTest?.breakingPoint?.sustainableRps ?? 480} req/s
             </span>
             <Badge variant="outline" className="text-[9px] rounded-full text-emerald-600 border-emerald-500/30">
-              Zero Latency Drift
+              Optimal
             </Badge>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1">Safe production operating ceiling</p>
+          <p className="text-[11px] text-muted-foreground mt-1">Runs smoothly with fast responses</p>
         </div>
 
-        <div className="p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Degradation Onset Knee</p>
+        <div className="load-box p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Slowdown Starts At</p>
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-2xl font-heading font-black text-amber-500">
-              {activeTest?.breakingPoint?.degradationOnsetRps ?? 640} RPS
+              {activeTest?.breakingPoint?.degradationOnsetRps ?? 640} req/s
             </span>
             <Flame className="size-4 text-amber-500" />
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1">Point where P95 exceeds 250ms</p>
+          <p className="text-[11px] text-muted-foreground mt-1">Responses slow down past this</p>
         </div>
 
-        <div className="p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Critical Failure Boundary</p>
+        <div className="load-box p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">App Crash Limit</p>
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-2xl font-heading font-black text-destructive">
-              {activeTest?.breakingPoint?.criticalFailureRps ?? 880} RPS
+              {activeTest?.breakingPoint?.criticalFailureRps ?? 880} req/s
             </span>
             <ShieldAlert className="size-4 text-destructive" />
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1">Cluster connection pool collapse</p>
+          <p className="text-[11px] text-muted-foreground mt-1">Severe errors if traffic hits this</p>
         </div>
 
-        <div className="p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Resilience Grade</p>
+        <div className="load-box p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Stability Score</p>
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-2xl font-heading font-black text-foreground">
               {activeTest?.result?.defensivePosture?.resilienceScore ?? 92}/100
@@ -304,7 +316,7 @@ export default function LoadTestsPage() {
               Grade A
             </Badge>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1">Graceful 429 shedding validated</p>
+          <p className="text-[11px] text-muted-foreground mt-1">Graceful rate limiting verified</p>
         </div>
       </div>
 

@@ -17,6 +17,8 @@ import {
   FileCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useGsap } from "@/hooks/use-gsap";
+import gsap from "gsap";
 
 type Log = {
   id: string;
@@ -33,6 +35,16 @@ export default function AuditPage() {
   const { token, orgId } = useSession();
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("ALL");
+
+  const containerRef = useGsap<HTMLDivElement>((el) => {
+    gsap.from(el.querySelectorAll(".audit-box"), {
+      y: 15,
+      autoAlpha: 0,
+      stagger: 0.08,
+      duration: 0.4,
+      ease: "power2.out",
+    });
+  });
 
   const q = useQuery({
     queryKey: ["audit", orgId],
@@ -110,15 +122,15 @@ export default function AuditPage() {
   }, [logs, search, actionFilter]);
 
   return (
-    <div className="space-y-6">
+    <div ref={containerRef} className="space-y-6">
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-heading font-extrabold tracking-tight text-foreground">
-            Compliance & Governance Audit Trail
+            Activity Log
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Tamper-evident, cryptographically chained audit log recording all operational mutations, canary steps, and key generations.
+            A complete record of all actions taken in your workspace: deployments, approvals, and key changes.
           </p>
         </div>
 
@@ -128,13 +140,13 @@ export default function AuditPage() {
             className="text-xs font-semibold py-1 px-3 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
           >
             <Lock className="size-3 mr-1 text-emerald-500" />
-            SHA-256 HMAC Sealed
+            Securely Recorded
           </Badge>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="p-3 rounded-2xl border border-border/70 bg-card shadow-2xs flex flex-wrap items-center justify-between gap-3">
+      <div className="audit-box p-3 rounded-2xl border border-border/70 bg-card shadow-2xs flex flex-wrap items-center justify-between gap-3">
         <div className="relative flex-1 min-w-[240px]">
           <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -149,7 +161,7 @@ export default function AuditPage() {
         <div className="flex items-center p-0.5 rounded-xl bg-secondary/60 border border-border">
           {[
             { id: "ALL", label: "All Events" },
-            { id: "CHANGE", label: "Change Plans" },
+            { id: "CHANGE", label: "Deployments" },
             { id: "AUTH", label: "Auth & Keys" },
             { id: "CACHE", label: "Cache Rules" },
           ].map((a) => (
@@ -171,17 +183,17 @@ export default function AuditPage() {
       </div>
 
       {/* Main Table Card */}
-      <Card className="rounded-2xl border-border/70 shadow-xs overflow-hidden">
+      <Card className="audit-box rounded-2xl border-border/70 shadow-xs overflow-hidden">
         <CardHeader className="py-3 px-4 border-b border-border/70 bg-muted/20 flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
             <History className="size-4 text-brand-pink" />
             <CardTitle className="text-xs font-heading font-bold text-foreground">
-              Immutable Log Stream ({filteredLogs.length} events)
+              Activity History ({filteredLogs.length} events)
             </CardTitle>
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
             <CheckCircle2 className="size-3.5 text-emerald-500" />
-            <span>Cryptographic Merkle verification active</span>
+            <span>All activity is logged and verified</span>
           </div>
         </CardHeader>
 

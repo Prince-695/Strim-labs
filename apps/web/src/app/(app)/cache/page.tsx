@@ -34,6 +34,8 @@ import {
   Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useGsap } from "@/hooks/use-gsap";
+import gsap from "gsap";
 
 type Rule = {
   id: string;
@@ -63,6 +65,16 @@ type Rec = {
 export default function CachePage() {
   const { token, orgId, environmentId } = useSession();
   const qc = useQueryClient();
+
+  const containerRef = useGsap<HTMLDivElement>((el) => {
+    gsap.from(el.querySelectorAll(".cache-box"), {
+      y: 15,
+      autoAlpha: 0,
+      stagger: 0.08,
+      duration: 0.4,
+      ease: "power2.out",
+    });
+  });
 
   const [createOpen, setCreateOpen] = useState(false);
   const [invalidateOpen, setInvalidateOpen] = useState(false);
@@ -230,15 +242,15 @@ export default function CachePage() {
   const hitRatePct = Math.round(analytics.hitRate * 100);
 
   return (
-    <div className="space-y-6">
+    <div ref={containerRef} className="space-y-6">
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-heading font-extrabold tracking-tight text-foreground">
-            Edge Cache Intelligence
+            Cache Manager
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Distributed L2 in-memory cache acceleration, autonomous TTL tuning, and sub-millisecond atomic tag invalidation.
+            Speed up response times, reduce database load, and clear cached data anytime.
           </p>
         </div>
 
@@ -250,7 +262,7 @@ export default function CachePage() {
             className="rounded-xl text-xs gap-1.5 cursor-pointer text-destructive hover:bg-destructive/10"
           >
             <RefreshCw className="size-3.5" />
-            Purge Cache
+            Clear Cache
           </Button>
 
           <Button
@@ -258,7 +270,7 @@ export default function CachePage() {
             className="rounded-xl bg-brand-pink hover:bg-brand-pink/90 text-white cursor-pointer gap-2 text-xs font-semibold shadow-xs"
           >
             <Plus className="size-4" />
-            Add Cache Rule
+            New Cache Rule
           </Button>
         </div>
       </div>
@@ -266,10 +278,10 @@ export default function CachePage() {
       {/* Hero Analytics Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {/* Hit Rate Card */}
-        <Card className="rounded-2xl border-border/70 shadow-xs">
+        <Card className="cache-box rounded-2xl border-border/70 shadow-xs">
           <CardHeader className="pb-2">
             <CardDescription className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Global Hit Ratio
+              Cache Hit Rate
             </CardDescription>
             <div className="flex items-baseline justify-between pt-1">
               <div className="flex items-baseline gap-1">
@@ -288,16 +300,16 @@ export default function CachePage() {
               />
             </div>
             <p className="text-[11px] text-muted-foreground">
-              {analytics.hits.toLocaleString()} hits / {analytics.totalRequests.toLocaleString()} queries
+              {analytics.hits.toLocaleString()} hits / {analytics.totalRequests.toLocaleString()} requests
             </p>
           </CardContent>
         </Card>
 
         {/* Origin Relief */}
-        <Card className="rounded-2xl border-border/70 shadow-xs">
+        <Card className="cache-box rounded-2xl border-border/70 shadow-xs">
           <CardHeader className="pb-2">
             <CardDescription className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Database Offload Relief
+              Database Load Reduced
             </CardDescription>
             <div className="flex items-baseline justify-between pt-1">
               <div className="flex items-baseline gap-1">
@@ -312,15 +324,15 @@ export default function CachePage() {
             <div className="w-full bg-secondary h-2 rounded-full overflow-hidden mb-2">
               <div className="h-full bg-emerald-500 rounded-full w-2/5" />
             </div>
-            <p className="text-[11px] text-muted-foreground">Origins spared heavy SQL executions</p>
+            <p className="text-[11px] text-muted-foreground">Fewer direct database calls</p>
           </CardContent>
         </Card>
 
         {/* Bandwidth Saved */}
-        <Card className="rounded-2xl border-border/70 shadow-xs">
+        <Card className="cache-box rounded-2xl border-border/70 shadow-xs">
           <CardHeader className="pb-2">
             <CardDescription className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Egress Bandwidth Saved
+              Bandwidth Saved
             </CardDescription>
             <div className="flex items-baseline justify-between pt-1">
               <div className="flex items-baseline gap-1">
@@ -329,7 +341,7 @@ export default function CachePage() {
                 </span>
               </div>
               <Badge variant="outline" className="text-[10px] font-bold rounded-full">
-                Edge Compressed
+                Saved
               </Badge>
             </div>
           </CardHeader>
@@ -337,19 +349,19 @@ export default function CachePage() {
             <div className="w-full bg-secondary h-2 rounded-full overflow-hidden mb-2">
               <div className="h-full bg-sky-500 rounded-full w-3/5" />
             </div>
-            <p className="text-[11px] text-muted-foreground">Zero cloud egress transfer charges</p>
+            <p className="text-[11px] text-muted-foreground">Served instantly from memory</p>
           </CardContent>
         </Card>
 
         {/* Edge Cache Status */}
-        <Card className="rounded-2xl border-border/70 shadow-xs">
+        <Card className="cache-box rounded-2xl border-border/70 shadow-xs">
           <CardHeader className="pb-2">
             <CardDescription className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-              Active Tier Engine
+              Active Cache
             </CardDescription>
             <div className="flex items-baseline justify-between pt-1">
               <div className="flex items-baseline gap-1">
-                <span className="text-3xl font-heading font-black text-foreground">RAM L2</span>
+                <span className="text-3xl font-heading font-black text-foreground">Memory</span>
               </div>
               <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
             </div>
@@ -358,7 +370,7 @@ export default function CachePage() {
             <div className="w-full bg-secondary h-2 rounded-full overflow-hidden mb-2">
               <div className="h-full bg-emerald-500 rounded-full w-full" />
             </div>
-            <p className="text-[11px] text-muted-foreground">Sub-millisecond memory latency</p>
+            <p className="text-[11px] text-muted-foreground">Instant response times (&lt; 5ms)</p>
           </CardContent>
         </Card>
       </div>

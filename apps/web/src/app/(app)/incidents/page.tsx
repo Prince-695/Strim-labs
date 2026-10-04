@@ -21,6 +21,8 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useGsap } from "@/hooks/use-gsap";
+import gsap from "gsap";
 
 type Factor = { label: string; confidence: string };
 type Incident = {
@@ -37,6 +39,16 @@ export default function IncidentsPage() {
   const { token, orgId, environmentId } = useSession();
   const qc = useQueryClient();
   const [filter, setFilter] = useState<"ALL" | "ACTIVE" | "RESOLVED">("ALL");
+
+  const containerRef = useGsap<HTMLDivElement>((el) => {
+    gsap.from(el.querySelectorAll(".inc-box"), {
+      y: 15,
+      autoAlpha: 0,
+      stagger: 0.08,
+      duration: 0.4,
+      ease: "power2.out",
+    });
+  });
 
   const q = useQuery({
     queryKey: ["incidents", orgId, environmentId],
@@ -100,15 +112,15 @@ export default function IncidentsPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div ref={containerRef} className="space-y-6">
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-heading font-extrabold tracking-tight text-foreground">
-            Incidents & Mitigation Command
+            Incidents
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Real-time anomaly correlation, causal factor attribution, and 1-click circuit breaker rollbacks.
+            Track production issues, see why they happened, and roll back changes with one click.
           </p>
         </div>
 
@@ -121,44 +133,44 @@ export default function IncidentsPage() {
             className="rounded-xl text-xs gap-1.5 cursor-pointer"
           >
             <Flame className="size-3.5 text-amber-500" />
-            {evaluate.isPending ? "Evaluating..." : "Simulate Anomaly Spike"}
+            {evaluate.isPending ? "Testing…" : "Test Incident Alert"}
           </Button>
         </div>
       </div>
 
       {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Active Incidents</p>
+        <div className="inc-box p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Active Issues</p>
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-2xl font-heading font-black text-destructive">
               {incidents.filter((i) => i.status === "ACTIVE").length}
             </span>
             <span className="size-2 rounded-full bg-destructive animate-ping" />
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1">Under operator investigation</p>
+          <p className="text-[11px] text-muted-foreground mt-1">Requires engineer attention</p>
         </div>
 
-        <div className="p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Mean Time to Detection (MTTD)</p>
+        <div className="inc-box p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Detection Speed</p>
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-2xl font-heading font-black text-emerald-500">4.2s</span>
             <Badge variant="outline" className="text-[9px] rounded-full text-emerald-600 border-emerald-500/30">
-              P99 Real-time
+              Instant
             </Badge>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1">Automated eBPF telemetry tripwires</p>
+          <p className="text-[11px] text-muted-foreground mt-1">Issues spotted in seconds</p>
         </div>
 
-        <div className="p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Mean Time to Mitigation (MTTR)</p>
+        <div className="inc-box p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Resolution Speed</p>
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-2xl font-heading font-black text-foreground">1.8m</span>
             <Badge variant="outline" className="text-[9px] rounded-full text-sky-600 border-sky-500/30">
-              Canary Safety
+              1-Click Revert
             </Badge>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1">Instant rollback & shedding latency</p>
+          <p className="text-[11px] text-muted-foreground mt-1">Average time to roll back & recover</p>
         </div>
       </div>
 

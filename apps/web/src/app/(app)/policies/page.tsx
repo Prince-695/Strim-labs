@@ -18,6 +18,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useGsap } from "@/hooks/use-gsap";
+import gsap from "gsap";
 
 type Policy = {
   id: string;
@@ -33,6 +35,16 @@ type Policy = {
 export default function PoliciesPage() {
   const { token, orgId } = useSession();
   const [filter, setFilter] = useState<string>("ALL");
+
+  const containerRef = useGsap<HTMLDivElement>((el) => {
+    gsap.from(el.querySelectorAll(".pol-box"), {
+      y: 15,
+      autoAlpha: 0,
+      stagger: 0.08,
+      duration: 0.4,
+      ease: "power2.out",
+    });
+  });
 
   const q = useQuery({
     queryKey: ["policies", orgId],
@@ -108,15 +120,15 @@ export default function PoliciesPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div ref={containerRef} className="space-y-6">
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-heading font-extrabold tracking-tight text-foreground">
-            Architecture & Governance Policies
+            Rules
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Enforce automated reliability guardrails, change safety gates, and cryptographic multi-tenant isolation.
+            Automated guardrails: response time limits, required reviews, and safety gates for every deployment.
           </p>
         </div>
 
@@ -126,51 +138,51 @@ export default function PoliciesPage() {
             className="text-xs font-semibold py-1 px-3 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
           >
             <ShieldCheck className="size-3.5 mr-1 text-emerald-500" />
-            100% Fleet Compliant
+            All Rules Passing
           </Badge>
         </div>
       </div>
 
       {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Active Policy Rules</p>
+        <div className="pol-box p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Active Rules</p>
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-2xl font-heading font-black text-foreground">{policies.length}</span>
             <Shield className="size-4 text-brand-pink" />
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1">Evaluated on every canary rollout</p>
+          <p className="text-[11px] text-muted-foreground mt-1">Checked on every deployment</p>
         </div>
 
-        <div className="p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Policy Drift Rate</p>
+        <div className="pol-box p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Rule Compliance</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-2xl font-heading font-black text-emerald-500">0.0%</span>
+            <span className="text-2xl font-heading font-black text-emerald-500">100%</span>
             <CheckCircle2 className="size-4 text-emerald-500" />
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1">Zero unapproved parameter divergence</p>
+          <p className="text-[11px] text-muted-foreground mt-1">No violations detected</p>
         </div>
 
-        <div className="p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Enforcement Engine</p>
+        <div className="pol-box p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Safety Protection</p>
           <div className="flex items-baseline justify-between mt-1">
-            <span className="text-2xl font-heading font-black text-foreground">Active Gate</span>
+            <span className="text-2xl font-heading font-black text-foreground">Active</span>
             <Badge variant="outline" className="text-[9px] rounded-full text-emerald-600 border-emerald-500/30 font-bold">
-              Autonomous
+              Automatic
             </Badge>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1">Instant rollback on violation</p>
+          <p className="text-[11px] text-muted-foreground mt-1">Auto-rollback if any rule fails</p>
         </div>
       </div>
 
       {/* Filter Tabs */}
       <div className="flex items-center gap-1.5 p-1 rounded-xl bg-secondary/50 border border-border w-fit">
         {[
-          { id: "ALL", label: "All Policies" },
+          { id: "ALL", label: "All Rules" },
           { id: "reliability", label: "Reliability" },
-          { id: "change_safety", label: "Change Safety" },
+          { id: "change_safety", label: "Deployment Safety" },
           { id: "security", label: "Security" },
-          { id: "governance", label: "Governance" },
+          { id: "governance", label: "Team Review" },
         ].map((t) => (
           <button
             key={t.id}

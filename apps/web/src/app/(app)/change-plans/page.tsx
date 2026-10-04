@@ -38,6 +38,8 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useGsap } from "@/hooks/use-gsap";
+import gsap from "gsap";
 
 type Plan = {
   id: string;
@@ -60,8 +62,8 @@ type Plan = {
 const LIFECYCLE_STEPS = [
   { key: "DRAFT", label: "Draft" },
   { key: "SIMULATING", label: "Simulate" },
-  { key: "APPROVAL_PENDING", label: "Approve" },
-  { key: "ROLLING_OUT", label: "Canary" },
+  { key: "APPROVAL_PENDING", label: "Review" },
+  { key: "ROLLING_OUT", label: "Rollout" },
   { key: "MONITORING", label: "Monitor" },
   { key: "COMPLETED", label: "Complete" },
 ];
@@ -69,6 +71,16 @@ const LIFECYCLE_STEPS = [
 export default function ChangePlansPage() {
   const { token, orgId, environmentId } = useSession();
   const qc = useQueryClient();
+
+  const containerRef = useGsap<HTMLDivElement>((el) => {
+    gsap.from(el.querySelectorAll(".metric-box"), {
+      y: 15,
+      autoAlpha: 0,
+      stagger: 0.08,
+      duration: 0.4,
+      ease: "power2.out",
+    });
+  });
 
   const [createOpen, setCreateOpen] = useState(false);
   const [detailPlan, setDetailPlan] = useState<Plan | null>(null);
@@ -250,15 +262,15 @@ export default function ChangePlansPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div ref={containerRef} className="space-y-6">
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-heading font-extrabold tracking-tight text-foreground">
-            Change Plans & Canary Rollout Control
+            Deployments
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Enterprise change governance, 12-state progressive deployment machine, risk scoring, and 1-click rollback.
+            Release safely with staged rollouts (10% → 25% → 50% → 100%), automated checks, and 1-click rollbacks.
           </p>
         </div>
 
@@ -267,13 +279,13 @@ export default function ChangePlansPage() {
           className="rounded-xl bg-brand-pink hover:bg-brand-pink/90 text-white cursor-pointer gap-2 text-xs font-semibold shadow-xs"
         >
           <Plus className="size-4" />
-          Create Change Plan
+          New Deployment
         </Button>
       </div>
 
       {/* Top Metric Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
+        <div className="metric-box p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
           <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Active Rollouts</p>
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-2xl font-heading font-black text-brand-pink">
@@ -281,51 +293,51 @@ export default function ChangePlansPage() {
             </span>
             <span className="size-2 rounded-full bg-brand-pink animate-ping" />
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1">Canary traffic shifting live</p>
+          <p className="text-[11px] text-muted-foreground mt-1">Releasing to users now</p>
         </div>
 
-        <div className="p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Pre-flight Pass Rate</p>
+        <div className="metric-box p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Safety Checks</p>
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-2xl font-heading font-black text-foreground">100%</span>
             <Badge variant="outline" className="text-[9px] rounded-full text-emerald-600 border-emerald-500/30">
-              Verified
+              Passing
             </Badge>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1">Zero regression detected</p>
+          <p className="text-[11px] text-muted-foreground mt-1">All pre-deploy tests pass</p>
         </div>
 
-        <div className="p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Instant Rollback Latency</p>
+        <div className="metric-box p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Rollback Speed</p>
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-2xl font-heading font-black text-emerald-500">&lt; 180ms</span>
             <Zap className="size-4 text-emerald-500" />
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1">Edge router atomic switch</p>
+          <p className="text-[11px] text-muted-foreground mt-1">Instant 1-click revert</p>
         </div>
 
-        <div className="p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Pending Approvals</p>
+        <div className="metric-box p-4 rounded-2xl border border-border/70 bg-card shadow-2xs">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Needs Review</p>
           <div className="flex items-baseline justify-between mt-1">
             <span className="text-2xl font-heading font-black text-foreground">
               {rows.filter((r) => r.state === "APPROVAL_PENDING").length}
             </span>
             <Badge variant="outline" className="text-[9px] rounded-full text-amber-600 border-amber-500/30">
-              Action Req.
+              Pending
             </Badge>
           </div>
-          <p className="text-[11px] text-muted-foreground mt-1">Four-eyes governance rule</p>
+          <p className="text-[11px] text-muted-foreground mt-1">Waiting for team approval</p>
         </div>
       </div>
 
       {/* Filter Toolbar */}
       <div className="p-3 rounded-2xl border border-border/70 bg-card shadow-2xs flex items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs font-semibold text-muted-foreground mr-1">Filter Plans:</span>
+          <span className="text-xs font-semibold text-muted-foreground mr-1">Filter:</span>
           {[
-            { id: "ALL", label: "All Plans" },
+            { id: "ALL", label: "All Deployments" },
             { id: "ROLLING", label: "Active Rollouts" },
-            { id: "APPROVAL", label: "Awaiting Approval" },
+            { id: "APPROVAL", label: "Needs Review" },
             { id: "COMPLETED", label: "Completed" },
           ].map((f) => (
             <button
@@ -349,10 +361,10 @@ export default function ChangePlansPage() {
       <Card className="rounded-2xl border-border/70 shadow-xs overflow-hidden">
         <CardHeader className="py-3 px-4 border-b border-border/70 bg-muted/20 flex flex-row items-center justify-between">
           <CardTitle className="text-xs font-heading font-bold text-foreground">
-            Lifecycle Plans ({filteredRows.length})
+            Deployments ({filteredRows.length})
           </CardTitle>
           <p className="text-[11px] text-muted-foreground">
-            Enforced state machine: DRAFT → SIMULATE → APPROVE → CANARY → COMPLETE
+            Safety flow: Draft → Simulate → Review → Rollout → Complete
           </p>
         </CardHeader>
         <CardContent className="p-0">
@@ -360,22 +372,22 @@ export default function ChangePlansPage() {
             <TableHeader className="bg-secondary/20">
               <TableRow className="border-border hover:bg-transparent">
                 <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Title & Objective
+                  Deployment & Goal
                 </TableHead>
                 <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                  State
+                  Status
                 </TableHead>
                 <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                   Risk Level
                 </TableHead>
                 <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Canary Rollout
+                  Rollout Progress
                 </TableHead>
                 <TableHead className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
                   Created
                 </TableHead>
                 <TableHead className="text-right text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                  Controls
+                  Actions
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -570,18 +582,18 @@ export default function ChangePlansPage() {
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border-border bg-card p-6 shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="font-heading text-lg">Create Enterprise Change Plan</DialogTitle>
+            <DialogTitle className="font-heading text-lg">Create Deployment</DialogTitle>
             <DialogDescription className="text-xs">
-              Define your proposed configuration changes, execution objective, and safety constraints.
+              Set up your deployment details, goals, and configuration before testing and rollout.
             </DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-2">
             <div className="space-y-1.5">
-              <Label htmlFor="title" className="text-xs font-semibold">Change Plan Title</Label>
+              <Label htmlFor="title" className="text-xs font-semibold">Deployment Title</Label>
               <Input
                 id="title"
-                placeholder="e.g. Enable Redis L2 caching on product catalog"
+                placeholder="e.g. Enable Redis caching on product catalog"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 className="rounded-xl h-9 text-xs"
@@ -590,10 +602,10 @@ export default function ChangePlansPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="objective" className="text-xs font-semibold">Execution Objective</Label>
+                <Label htmlFor="objective" className="text-xs font-semibold">Goal / Objective</Label>
                 <Input
                   id="objective"
-                  placeholder="e.g. Reduce origin database load by 40%"
+                  placeholder="e.g. Reduce database load by 40%"
                   value={objective}
                   onChange={(e) => setObjective(e.target.value)}
                   className="rounded-xl h-9 text-xs"
@@ -612,11 +624,11 @@ export default function ChangePlansPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="description" className="text-xs font-semibold">Detailed Description & Fallback Contingency</Label>
+              <Label htmlFor="description" className="text-xs font-semibold">Description & Rollback Notes</Label>
               <Textarea
                 id="description"
                 rows={2}
-                placeholder="Details of the configuration changes, expected latency impact, and fallback contingencies..."
+                placeholder="Details of the changes, expected impact, and rollback plan..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="rounded-xl text-xs"
@@ -693,7 +705,7 @@ export default function ChangePlansPage() {
               disabled={!title.trim() || create.isPending}
               className="rounded-xl bg-brand-pink hover:bg-brand-pink/90 text-white cursor-pointer text-xs font-semibold"
             >
-              {create.isPending ? "Submitting..." : "Initialize Change Plan"}
+              {create.isPending ? "Creating…" : "Create Deployment"}
             </Button>
           </DialogFooter>
         </DialogContent>

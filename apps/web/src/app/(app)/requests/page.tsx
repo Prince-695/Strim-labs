@@ -36,6 +36,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useGsap } from "@/hooks/use-gsap";
+import gsap from "gsap";
 
 type RequestRow = {
   id: string;
@@ -66,6 +68,16 @@ type TraceDetail = {
 export default function RequestsPage() {
   const { token, orgId, environmentId } = useSession();
   const qc = useQueryClient();
+
+  const containerRef = useGsap<HTMLDivElement>((el) => {
+    gsap.from(el.querySelectorAll(".req-box"), {
+      y: 15,
+      autoAlpha: 0,
+      stagger: 0.08,
+      duration: 0.4,
+      ease: "power2.out",
+    });
+  });
 
   const [activeTraceId, setActiveTraceId] = useState<string | null>(null);
   const [replayRequest, setReplayRequest] = useState<RequestRow | null>(null);
@@ -208,15 +220,15 @@ export default function RequestsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div ref={containerRef} className="space-y-6">
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-heading font-extrabold tracking-tight text-foreground">
-            Request Explorer & Safe Replay Studio
+            Request Log
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Real-time HTTP ingress transactions, distributed span waterfalls, and sandboxed deterministic traffic replay.
+            Inspect live requests, view breakdown traces, and replay requests to test fixes safely.
           </p>
         </div>
 
@@ -226,13 +238,13 @@ export default function RequestsPage() {
             className="text-xs font-semibold py-1 px-3 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
           >
             <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse mr-1.5" />
-            Live Ingress Active
+            Live Stream Active
           </Badge>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="p-3.5 rounded-2xl border border-border/70 bg-card shadow-2xs flex flex-wrap items-center justify-between gap-3">
+      <div className="req-box p-3.5 rounded-2xl border border-border/70 bg-card shadow-2xs flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 flex-1 min-w-[240px]">
           <div className="relative flex-1">
             <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -240,7 +252,7 @@ export default function RequestsPage() {
               type="text"
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
-              placeholder="Filter by path, trace ID, or origin service..."
+              placeholder="Filter by route path or service..."
               className="w-full pl-9 pr-3 py-1.5 h-9 rounded-xl border border-border bg-secondary/40 text-xs text-foreground placeholder:text-muted-foreground outline-none focus:border-brand-pink/50 focus:ring-1 focus:ring-brand-pink/30"
             />
           </div>
@@ -270,9 +282,9 @@ export default function RequestsPage() {
           {/* Status Pills */}
           <div className="flex items-center p-0.5 rounded-xl bg-secondary/60 border border-border">
             {[
-              { id: "ALL", label: "All Status" },
-              { id: "ERRORS", label: "Errors (4xx/5xx)" },
-              { id: "SLOW", label: "> 300ms Slow" },
+              { id: "ALL", label: "All Requests" },
+              { id: "ERRORS", label: "Errors Only" },
+              { id: "SLOW", label: "Slow (> 300ms)" },
             ].map((s) => (
               <button
                 key={s.id}
@@ -293,7 +305,7 @@ export default function RequestsPage() {
       </div>
 
       {/* Main Table Card */}
-      <Card className="rounded-2xl border-border/70 shadow-xs overflow-hidden">
+      <Card className="req-box rounded-2xl border-border/70 shadow-xs overflow-hidden">
         <CardHeader className="py-3 px-4 border-b border-border/70 bg-muted/20 flex flex-row items-center justify-between">
           <div className="flex items-center gap-2">
             <ListTree className="size-4 text-brand-pink" />

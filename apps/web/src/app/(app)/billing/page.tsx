@@ -20,6 +20,8 @@ import {
   Building,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useGsap } from "@/hooks/use-gsap";
+import gsap from "gsap";
 
 type Invoice = {
   id: string;
@@ -33,6 +35,16 @@ export default function BillingPage() {
   const { token, orgId } = useSession();
   const [ssoEnforced, setSsoEnforced] = useState(true);
 
+  const containerRef = useGsap<HTMLDivElement>((el) => {
+    gsap.from(el.querySelectorAll(".bill-box"), {
+      y: 15,
+      autoAlpha: 0,
+      stagger: 0.08,
+      duration: 0.4,
+      ease: "power2.out",
+    });
+  });
+
   const mockInvoices: Invoice[] = [
     { id: "INV-2026-09", period: "Sep 1 - Sep 30, 2026", amount: "$1,250.00", status: "PAID", date: "Oct 1, 2026" },
     { id: "INV-2026-08", period: "Aug 1 - Aug 31, 2026", amount: "$1,250.00", status: "PAID", date: "Sep 1, 2026" },
@@ -40,15 +52,15 @@ export default function BillingPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div ref={containerRef} className="space-y-6">
       {/* Header section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-heading font-extrabold tracking-tight text-foreground">
-            Billing, Invoices & Enterprise SSO
+            Billing & Plan
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Manage your organization tier, quota consumption, invoices, and SAML 2.0 Single Sign-On federation.
+            Manage your subscription, usage quotas, payment methods, and invoices.
           </p>
         </div>
 
@@ -58,7 +70,7 @@ export default function BillingPage() {
             className="text-xs font-semibold py-1 px-3 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
           >
             <ShieldCheck className="size-3.5 mr-1 text-emerald-500" />
-            Enterprise Tier Active
+            Enterprise Active
           </Badge>
         </div>
       </div>
@@ -66,7 +78,7 @@ export default function BillingPage() {
       {/* Subscription Tier Overview Cards */}
       <div className="grid gap-6 md:grid-cols-3">
         {/* Current Plan */}
-        <Card className="rounded-2xl border-border/70 shadow-xs md:col-span-2">
+        <Card className="bill-box rounded-2xl border-border/70 shadow-xs md:col-span-2">
           <CardHeader className="pb-3 border-b border-border/70 bg-muted/20">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -75,10 +87,10 @@ export default function BillingPage() {
                 </div>
                 <div>
                   <CardTitle className="text-sm font-heading font-bold text-foreground">
-                    Enterprise Platform Fleet Plan
+                    Enterprise Plan
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    Dedicated multi-tenant isolation with 99.99% uptime SLA guarantee
+                    Full platform access with 99.99% uptime guarantee
                   </CardDescription>
                 </div>
               </div>
