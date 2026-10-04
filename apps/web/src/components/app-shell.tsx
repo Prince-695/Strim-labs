@@ -18,7 +18,7 @@ import {
   KeyRound,
   LogOut,
   Search,
-  ExternalLink,
+
   Cpu,
   CreditCard,
   Layers,
@@ -55,36 +55,36 @@ type NavGroup = {
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    title: "Observability",
+    title: "Monitor",
     items: [
-      { href: "/runtime", label: "Runtime Overview", icon: Activity, pulse: true },
-      { href: "/topology", label: "Service Topology", icon: GitBranch },
-      { href: "/requests", label: "Request Explorer", icon: ListTree },
+      { href: "/runtime", label: "Dashboard", icon: Activity, pulse: true },
+      { href: "/topology", label: "Service Map", icon: GitBranch },
+      { href: "/requests", label: "Request Log", icon: ListTree },
     ],
   },
   {
-    title: "Change Safety",
+    title: "Deploy",
     items: [
-      { href: "/change-plans", label: "Change Plans", icon: ScrollText },
-      { href: "/simulations", label: "Simulations Studio", icon: FlaskConical },
-      { href: "/load-tests", label: "Load & Stress Tests", icon: Cpu },
-      { href: "/cache", label: "Cache Intelligence", icon: Database },
+      { href: "/change-plans", label: "Deployments", icon: ScrollText },
+      { href: "/simulations", label: "Simulations", icon: FlaskConical },
+      { href: "/load-tests", label: "Load Tests", icon: Cpu },
+      { href: "/cache", label: "Cache Manager", icon: Database },
     ],
   },
   {
-    title: "Governance",
+    title: "Protect",
     items: [
-      { href: "/incidents", label: "Incidents & Rollbacks", icon: Siren, badge: "Live" },
-      { href: "/policies", label: "Policies & Drift", icon: Shield },
-      { href: "/audit", label: "Compliance Audit", icon: History },
+      { href: "/incidents", label: "Incidents", icon: Siren, badge: "Live" },
+      { href: "/policies", label: "Rules", icon: Shield },
+      { href: "/audit", label: "Activity Log", icon: History },
     ],
   },
   {
-    title: "Developer & Admin",
+    title: "Settings",
     items: [
-      { href: "/applications", label: "Apps & Environments", icon: AppWindow },
-      { href: "/keys", label: "API Keys & Scopes", icon: KeyRound },
-      { href: "/billing", label: "Billing & SSO", icon: CreditCard },
+      { href: "/applications", label: "Apps", icon: AppWindow },
+      { href: "/keys", label: "API Keys", icon: KeyRound },
+      { href: "/billing", label: "Billing", icon: CreditCard },
       { href: "/ai", label: "AI Copilot", icon: Sparkles, badge: "Beta" },
     ],
   },
@@ -127,7 +127,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="size-10 rounded-2xl bg-brand-pink/15 text-brand-pink flex items-center justify-center animate-pulse">
             <Layers className="size-5" />
           </div>
-          <p className="text-sm font-medium text-muted-foreground animate-pulse">Initializing Strim workspace…</p>
+          <p className="text-sm font-medium text-muted-foreground animate-pulse">Loading your workspace…</p>
         </div>
       </div>
     );
@@ -148,7 +148,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 v1.2
               </span>
             </div>
-            <p className="text-[10px] text-muted-foreground">Safe Change Engine</p>
+            <p className="text-[10px] text-muted-foreground">Deploy with confidence</p>
           </div>
         </Link>
 
@@ -411,23 +411,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </kbd>
             </button>
 
-            {/* Health Score Pill */}
+            {/* Status Pill */}
             <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
               <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Score: 98</span>
-              <span className="text-[10px] font-normal text-emerald-600/80 dark:text-emerald-400/80">Nominal</span>
+              <span>All Good</span>
             </div>
 
-            {/* API Docs Button */}
-            <a
-              href="http://localhost:8080/docs"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 h-8 rounded-full text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
-            >
-              <span>API Docs</span>
-              <ExternalLink className="size-3" />
-            </a>
+
 
             {/* Dark / Light Theme Toggle */}
             <ThemeToggle />
