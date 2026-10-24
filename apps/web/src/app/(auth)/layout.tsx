@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Activity, ShieldCheck, Zap, ArrowLeft } from "lucide-react";
+import { Zap, Gauge, ArrowLeft, ArrowLeftRight } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export default function AuthLayout({
@@ -10,22 +10,22 @@ export default function AuthLayout({
   return (
     <div className="min-h-screen w-full grid lg:grid-cols-2 bg-background">
       {/* Left Branding Showcase (Hidden on Mobile) */}
-      <div className="hidden lg:flex flex-col justify-between p-12 bg-[#0E0D1E] text-white border-r border-[#232242] relative overflow-hidden">
-        {/* Subtle background glow */}
-        <div className="absolute -top-24 -left-24 size-96 rounded-full bg-brand-pink/15 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -right-24 size-96 rounded-full bg-brand-lime/10 blur-3xl pointer-events-none" />
+      <div className="hidden lg:flex flex-col justify-between p-12 bg-[#0B1015] text-[#E6ECE8] border-r border-[#202D3A] relative overflow-hidden">
+        {/* Glow Effects */}
+        <div className="absolute -top-24 -left-24 size-96 rounded-full bg-brand/10 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -right-24 size-96 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
 
         {/* Top Header */}
         <div className="relative z-10 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="size-9 rounded-full bg-brand-pink flex items-center justify-center font-bold text-white shadow-xs group-hover:scale-105 transition-transform">
-              S
+          <Link href="/" className="flex items-center gap-2.5 group">
+            <div className="size-8 rounded-lg bg-brand text-white flex items-center justify-center font-bold shadow-xs group-hover:scale-105 transition-transform">
+              <Zap className="size-4" />
             </div>
-            <span className="font-heading text-xl font-bold tracking-tight">STRIM</span>
+            <span className="font-heading text-lg font-bold tracking-tight text-white">STRIM</span>
           </Link>
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-xs text-[#8E8D9F] hover:text-white transition-colors rounded-full px-3 py-1.5 bg-[#1E1D38]/60 border border-[#232242]"
+            className="inline-flex items-center gap-1.5 text-xs text-[#88978E] hover:text-white transition-colors rounded-lg px-3 py-1.5 bg-[#121820] border border-[#202D3A]"
           >
             <ArrowLeft className="size-3" /> Back to Home
           </Link>
@@ -33,47 +33,50 @@ export default function AuthLayout({
 
         {/* Hero Narrative */}
         <div className="relative z-10 my-auto py-8 max-w-lg space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-brand-pink/15 border border-brand-pink/30 text-brand-pink text-xs font-semibold">
-            <Activity className="size-3.5" />
-            <span>Deploy With Confidence</span>
+          <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 bg-brand-subtle border border-brand/30 text-brand text-xs font-semibold">
+            <Zap className="size-3.5" />
+            <span>API Load & Capacity Engine</span>
           </div>
 
-          <h1 className="font-heading text-4xl xl:text-5xl font-bold leading-tight tracking-tight">
-            Ship changes without the fear.
+          <h1 className="font-heading text-4xl xl:text-5xl font-bold leading-tight tracking-tight text-white">
+            Know your API breaking point before production does.
           </h1>
 
-          <p className="text-[#8E8D9F] text-base leading-relaxed">
-            Test your changes before they go live, roll out gradually, and roll back in one click if anything goes wrong. No more 2 AM fire drills.
+          <p className="text-[#88978E] text-sm leading-relaxed">
+            Multi-VU HTTP load generation, empirical saturation knee detection, and live regression gates for engineering teams.
           </p>
 
-          {/* Interactive Feature Highlights */}
           <div className="space-y-3 pt-2">
-            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-[#16152C]/80 border border-[#232242]">
-              <div className="size-8 rounded-full bg-brand-lime/20 text-brand-lime flex items-center justify-center shrink-0">
-                <Zap className="size-4" />
+            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-[#121820] border border-[#202D3A]">
+              <div className="size-8 rounded-lg bg-brand/15 text-brand flex items-center justify-center shrink-0">
+                <Gauge className="size-4" />
               </div>
               <div>
-                <div className="text-sm font-semibold">What-If Testing</div>
-                <div className="text-xs text-[#8E8D9F]">See how your app handles 2x traffic or slow APIs before merging.</div>
+                <div className="text-xs font-semibold text-white">3-Zone Capacity Spectrum</div>
+                <div className="text-[11px] text-[#88978E]">
+                  Accurately separates Safe Band from Saturation Knee and Critical Cliff.
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-[#16152C]/80 border border-[#232242]">
-              <div className="size-8 rounded-full bg-brand-pink/20 text-brand-pink flex items-center justify-center shrink-0">
-                <ShieldCheck className="size-4" />
+            <div className="flex items-center gap-3 p-3.5 rounded-xl bg-[#121820] border border-[#202D3A]">
+              <div className="size-8 rounded-lg bg-brand/15 text-brand flex items-center justify-center shrink-0">
+                <ArrowLeftRight className="size-4" />
               </div>
               <div>
-                <div className="text-sm font-semibold">Safe Gradual Rollouts</div>
-                <div className="text-xs text-[#8E8D9F]">Release to 10% → 25% → 50% → 100% with automatic rollbacks if errors spike.</div>
+                <div className="text-xs font-semibold text-white">Comparison Studio & Gates</div>
+                <div className="text-[11px] text-[#88978E]">
+                  Block pull request merges with live latency and error rate gate thresholds.
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Bottom Social Proof */}
-        <div className="relative z-10 text-xs text-[#8E8D9F] flex items-center justify-between border-t border-[#232242] pt-6">
-          <span>99.9% Uptime Guarantee</span>
-          <span>5-Minute Setup • 500+ Teams</span>
+        {/* Footer */}
+        <div className="relative z-10 text-xs text-[#88978E] flex items-center justify-between border-t border-[#202D3A] pt-6">
+          <span>Real High-Throughput Multi-Worker Engine</span>
+          <span>Zero External Agent Binaries</span>
         </div>
       </div>
 

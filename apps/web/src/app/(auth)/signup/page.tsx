@@ -11,16 +11,10 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowRight, CheckCircle2 } from "lucide-react";
-import { useGsap } from "@/hooks/use-gsap";
-import gsap from "gsap";
 
 export default function SignupPage() {
   const router = useRouter();
   const { setSession, token, loading } = useSession();
-
-  const containerRef = useGsap<HTMLDivElement>((el) => {
-    gsap.from(el, { y: 20, autoAlpha: 0, duration: 0.5, ease: "power2.out" });
-  });
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -30,7 +24,7 @@ export default function SignupPage() {
   const [pending, setPending] = useState(false);
 
   useEffect(() => {
-    if (!loading && token) router.replace("/runtime");
+    if (!loading && token) router.replace("/");
   }, [loading, token, router]);
 
   async function onSubmit(e: FormEvent) {
@@ -47,7 +41,7 @@ export default function SignupPage() {
       const res = await api<{
         token: string;
         user: { id: string; email: string; name: string };
-        organization: { id: string; name: string; slug: string };
+        orgs: Org[];
       }>("/v1/auth/signup", {
         method: "POST",
         body: JSON.stringify({
@@ -58,15 +52,8 @@ export default function SignupPage() {
         }),
       });
 
-      const org: Org = {
-        id: res.organization.id,
-        name: res.organization.name,
-        slug: res.organization.slug,
-        role: "OWNER",
-      };
-
-      setSession(res.token, [org]);
-      router.push("/runtime");
+      setSession(res.token, res.orgs);
+      router.push("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -74,160 +61,90 @@ export default function SignupPage() {
     }
   }
 
-  async function handleGoogleLogin() {
-    try {
-      const res = await api<{ url?: string }>("/v1/auth/google/url");
-      if (res.url) {
-        window.location.href = res.url;
-      } else {
-        setError("Google OAuth is not configured in this environment.");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to initiate Google login");
-    }
-  }
-
   return (
-    <div ref={containerRef}>
-      <Card className="border border-border/80 shadow-md rounded-2xl bg-card">
+    <div>
+      <Card className="border border-border/60 shadow-md rounded-xl bg-card">
         <CardHeader className="space-y-1.5 pb-4">
-          <CardTitle className="text-2xl font-bold tracking-tight">Start your free trial</CardTitle>
-          <CardDescription className="text-xs">
-            No credit card needed • 5-minute setup • Free for 14 days
+          <CardTitle className="text-xl font-heading font-bold tracking-tight">
+            Create STRIM Workspace
+          </CardTitle>
+          <CardDescription className="text-xs text-muted-foreground">
+            Start stress testing your APIs with real-time breaking point detection.
           </CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-4">
-          {/* Google OAuth Button */}
-        <Button
-          type="button"
-          variant="outline"
-          onClick={handleGoogleLogin}
-          className="w-full h-10 rounded-full font-semibold border-border hover:bg-secondary/70 flex items-center justify-center gap-2 text-xs"
-        >
-          <svg className="size-4" viewBox="0 0 24 24">
-            <path
-              fill="#4285F4"
-              d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-            />
-            <path
-              fill="#34A853"
-              d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-            />
-            <path
-              fill="#FBBC05"
-              d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-            />
-            <path
-              fill="#EA4335"
-              d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-            />
-          </svg>
-          Sign up with Google
-        </Button>
-
-        <div className="relative flex items-center justify-center">
-          <div className="border-t border-border w-full" />
-          <span className="bg-card px-3 text-[11px] uppercase tracking-wider text-muted-foreground absolute">
-            or with email
-          </span>
-        </div>
-
-        {/* Signup Form */}
-        <form onSubmit={onSubmit} className="space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="name" className="text-xs font-semibold">
-                Your Full Name
-              </Label>
+          <form onSubmit={onSubmit} className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Your full name</Label>
               <Input
-                id="name"
+                required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Priya Patel"
-                required
-                className="h-10 rounded-full px-4 text-xs bg-secondary/40 border-border/80 focus:bg-card"
+                placeholder="Priya Sharma"
+                className="h-9 text-xs rounded-lg bg-secondary/40 border-border/80"
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="orgName" className="text-xs font-semibold">
-                Organization Name
-              </Label>
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Work email address</Label>
               <Input
-                id="orgName"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.com"
+                className="h-9 text-xs rounded-lg bg-secondary/40 border-border/80"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Organization / Team name</Label>
+              <Input
+                required
                 value={organizationName}
                 onChange={(e) => setOrganizationName(e.target.value)}
-                placeholder="Acme Corp"
-                required
-                className="h-10 rounded-full px-4 text-xs bg-secondary/40 border-border/80 focus:bg-card"
+                placeholder="Acme Platform Team"
+                className="h-9 text-xs rounded-lg bg-secondary/40 border-border/80"
               />
             </div>
-          </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-xs font-semibold">
-              Work Email
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="priya@acme.com"
-              required
-              autoComplete="email"
-              className="h-10 rounded-full px-4 text-xs bg-secondary/40 border-border/80 focus:bg-card"
-            />
-          </div>
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Create password (min. 8 characters)</Label>
+              <Input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="h-9 text-xs rounded-lg bg-secondary/40 border-border/80"
+              />
+            </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="password" className="text-xs font-semibold">
-              Password
-            </Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Minimum 8 characters"
-              required
-              autoComplete="new-password"
-              className="h-10 rounded-full px-4 text-xs bg-secondary/40 border-border/80 focus:bg-card"
-            />
-          </div>
+            {error && (
+              <Alert variant="destructive" className="py-2 px-3 rounded-lg text-xs">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
 
-          {error && (
-            <Alert variant="destructive" className="py-2 px-3 rounded-xl text-xs">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+            <Button
+              type="submit"
+              disabled={pending}
+              className="w-full rounded-lg bg-brand hover:bg-brand-strong text-white font-medium text-xs h-9 shadow-sm mt-1"
+            >
+              {pending ? "Creating account…" : "Create Workspace"}
+              <ArrowRight className="size-3.5 ml-1.5" />
+            </Button>
+          </form>
 
-          <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-            <CheckCircle2 className="size-3 text-brand-lime shrink-0" />
-            <span>Includes 14-day free trial with unlimited simulations</span>
-          </div>
-
-          <Button
-            type="submit"
-            disabled={pending}
-            className="w-full h-10 rounded-full font-bold bg-[#0D0C22] text-white hover:opacity-90 dark:bg-white dark:text-[#0D0C22] text-xs shadow-xs cursor-pointer"
-          >
-            {pending ? "Creating account…" : "Create Free Account"}
-            <ArrowRight className="size-3.5 ml-1.5" />
-          </Button>
-        </form>
-
-        <div className="text-center pt-2">
-          <p className="text-xs text-muted-foreground">
+          <div className="text-center text-xs text-muted-foreground pt-1">
             Already have an account?{" "}
-            <Link href="/login" className="text-brand-pink font-semibold hover:underline">
-              Sign in
+            <Link href="/login" className="text-brand font-semibold hover:underline">
+              Sign In
             </Link>
-          </p>
-        </div>
-      </CardContent>
-    </Card>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
