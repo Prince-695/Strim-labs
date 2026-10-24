@@ -4,30 +4,20 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  Zap,
   Activity,
-  AppWindow,
-  GitBranch,
-  ListTree,
-  FlaskConical,
-  ScrollText,
-  Database,
-  Siren,
-  Shield,
-  History,
-  Sparkles,
-  KeyRound,
+  BarChart3,
+  ArrowLeftRight,
+  Settings,
+  Plus,
   LogOut,
-  Search,
-
-  Cpu,
-  CreditCard,
-  Layers,
-  ChevronRight,
   Menu,
   X,
-  Zap,
-  User,
-  Users,
+  Target,
+  BookOpen,
+  Monitor,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useSession } from "@/lib/session";
 import { Button } from "@/components/ui/button";
@@ -39,73 +29,62 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { CommandPalette } from "@/components/command-palette";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { useTheme } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 
-type NavGroup = {
-  title: string;
-  items: {
-    href: string;
-    label: string;
-    icon: React.ComponentType<{ className?: string }>;
-    pulse?: boolean;
-    badge?: string;
-  }[];
-};
+import { AddTargetModal } from "@/components/add-target-modal";
 
-const NAV_GROUPS: NavGroup[] = [
-  {
-    title: "Monitor",
-    items: [
-      { href: "/runtime", label: "Dashboard", icon: Activity, pulse: true },
-      { href: "/topology", label: "Service Map", icon: GitBranch },
-      { href: "/requests", label: "Request Log", icon: ListTree },
-    ],
-  },
-  {
-    title: "Deploy",
-    items: [
-      { href: "/change-plans", label: "Deployments", icon: ScrollText },
-      { href: "/simulations", label: "Simulations", icon: FlaskConical },
-      { href: "/load-tests", label: "Load Tests", icon: Cpu },
-      { href: "/cache", label: "Cache Manager", icon: Database },
-    ],
-  },
-  {
-    title: "Protect",
-    items: [
-      { href: "/incidents", label: "Incidents", icon: Siren, badge: "Live" },
-      { href: "/policies", label: "Rules", icon: Shield },
-      { href: "/audit", label: "Activity Log", icon: History },
-    ],
-  },
-  {
-    title: "Settings",
-    items: [
-      { href: "/settings", label: "Profile & Settings", icon: User },
-      { href: "/organization", label: "Organization & Team", icon: Users },
-      { href: "/applications", label: "Apps", icon: AppWindow },
-      { href: "/keys", label: "API Keys", icon: KeyRound },
-      { href: "/billing", label: "Billing", icon: CreditCard },
-      { href: "/ai", label: "AI Copilot", icon: Sparkles, badge: "Beta" },
-    ],
-  },
+const NAV_ITEMS = [
+  { href: "/", label: "Dashboard", icon: BarChart3 },
+  { href: "/runner", label: "Load Runner", icon: Zap, accent: true },
+  { href: "/compare", label: "Comparison", icon: ArrowLeftRight },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-function onSelect(setter: (id: string) => void) {
-  return (value: string | null) => {
-    if (value) setter(value);
-  };
+function ThemeSwitch() {
+  const { theme, setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return <div className="h-8 w-20 rounded-lg bg-secondary animate-pulse" />;
+
+  const modes = [
+    { value: "system" as const, icon: Monitor, label: "System" },
+    { value: "light" as const, icon: Sun, label: "Light" },
+    { value: "dark" as const, icon: Moon, label: "Dark" },
+  ];
+
+  return (
+    <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-secondary/80 border border-border/60">
+      {modes.map((m) => {
+        const Icon = m.icon;
+        const active = theme === m.value;
+        return (
+          <button
+            key={m.value}
+            type="button"
+            onClick={() => setTheme(m.value)}
+            title={m.label}
+            className={cn(
+              "flex items-center justify-center size-7 rounded-md transition-all text-xs",
+              active
+                ? "bg-card text-foreground shadow-sm border border-border/50"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <Icon className="size-3.5" />
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const router = useRouter();
   const s = useSession();
-  const [commandOpen, setCommandOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [addTargetOpen, setAddTargetOpen] = useState(false);
 
   useEffect(() => {
     if (!s.loading && !s.token) {
@@ -113,25 +92,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [s.loading, s.token, router]);
 
-  const workspaces = s.workspaces;
-  const currentWorkspace = workspaces.find((w) => w.id === s.workspaceId) ?? workspaces[0];
-  const projects = currentWorkspace?.projects ?? [];
-  const currentProject = projects.find((p) => p.id === s.projectId) ?? projects[0];
-  const apps = currentProject?.applications ?? [];
-  const currentApp = apps.find((a) => a.id === s.applicationId) ?? apps[0];
-  const envs = currentApp?.environments ?? [];
-  const currentEnv = envs.find((e) => e.id === s.environmentId) ?? envs[0];
-
   const currentOrg = s.orgs.find((o) => o.id === s.orgId) ?? s.orgs[0];
+  const currentProject = s.projects.find((p) => p.id === s.projectId) ?? s.projects[0];
 
   if (s.loading || !s.token) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
         <div className="flex flex-col items-center gap-3">
-          <div className="size-10 rounded-2xl bg-brand-pink/15 text-brand-pink flex items-center justify-center animate-pulse">
-            <Layers className="size-5" />
+          <div className="size-10 rounded-xl bg-brand/15 text-brand flex items-center justify-center animate-pulse">
+            <Zap className="size-5" />
           </div>
-          <p className="text-sm font-medium text-muted-foreground animate-pulse">Loading your workspace…</p>
+          <p className="text-sm font-medium text-muted-foreground animate-pulse">Loading STRIM Engine…</p>
         </div>
       </div>
     );
@@ -140,23 +111,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const sidebarContent = (
     <div className="flex h-full flex-col">
       {/* Brand Header */}
-      <div className="p-4 border-b border-border/70 flex items-center justify-between">
-        <Link href="/runtime" className="flex items-center gap-2.5 group">
-          <div className="size-8 rounded-xl bg-gradient-to-tr from-brand-pink to-brand-gold flex items-center justify-center text-white shadow-md shadow-brand-pink/20 transition-transform group-hover:scale-105">
-            <Zap className="size-4 fill-white" />
+      <div className="p-4 border-b border-border/60 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-2.5 group">
+          <div className="size-8 rounded-lg bg-brand text-white flex items-center justify-center shadow-sm transition-transform group-hover:scale-105">
+            <Zap className="size-4" />
           </div>
           <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-heading font-black text-sm tracking-tight text-foreground">STRIM</span>
-              <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                v1.2
-              </span>
-            </div>
-            <p className="text-[10px] text-muted-foreground">Deploy with confidence</p>
+            <span className="font-heading font-bold text-sm tracking-tight text-foreground block leading-none">
+              STRIM
+            </span>
+            <span className="text-[10px] text-muted-foreground leading-none">
+              Load & Capacity Engine
+            </span>
           </div>
         </Link>
 
-        {/* Mobile close button */}
         <button
           type="button"
           onClick={() => setMobileMenuOpen(false)}
@@ -166,97 +135,112 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </button>
       </div>
 
-      {/* Navigation Groups */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-5">
-        {NAV_GROUPS.map((group) => (
-          <div key={group.title} className="space-y-1">
-            <h4 className="px-2.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/70">
-              {group.title}
-            </h4>
-            <div className="space-y-0.5">
-              {group.items.map((item) => {
-                const Icon = item.icon;
-                const active = path === item.href || (item.href !== "/runtime" && path.startsWith(item.href));
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={cn(
-                      "flex items-center justify-between rounded-xl px-2.5 py-2 text-xs font-medium transition-all group",
-                      active
-                        ? "bg-secondary text-foreground font-bold border border-border/80 shadow-2xs"
-                        : "text-muted-foreground hover:bg-secondary/70 hover:text-foreground"
-                    )}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <Icon
-                        className={cn(
-                          "size-4 shrink-0 transition-transform group-hover:scale-110",
-                          active ? "text-brand-pink" : "text-muted-foreground group-hover:text-foreground"
-                        )}
-                      />
-                      <span>{item.label}</span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      {item.pulse && (
-                        <span className="relative flex size-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 bg-emerald-400" />
-                          <span className="relative inline-flex rounded-full size-2 bg-emerald-500" />
-                        </span>
-                      )}
-                      {item.badge && (
-                        <span
-                          className={cn(
-                            "text-[9px] font-bold uppercase px-1.5 py-0.2 rounded-full",
-                            active
-                              ? "bg-brand-pink/10 text-brand-pink border border-brand-pink/30"
-                              : "bg-secondary text-muted-foreground border border-border"
-                          )}
-                        >
-                          {item.badge}
-                        </span>
-                      )}
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+      {/* Active API Target */}
+      <div className="p-3 border-b border-border/40">
+        <div className="flex items-center justify-between mb-1.5 px-1">
+          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            Active Target
+          </span>
+          <button
+            type="button"
+            onClick={() => setAddTargetOpen(true)}
+            className="flex items-center gap-0.5 text-[10px] font-semibold text-brand hover:text-brand-strong transition-colors cursor-pointer"
+            title="Add Target API"
+          >
+            <Plus className="size-3" />
+            Add
+          </button>
+        </div>
+        <Select
+          value={currentProject?.id ?? ""}
+          onValueChange={(val) => {
+            if (val) s.setProjectId(val);
+          }}
+        >
+          <SelectTrigger className="w-full text-xs h-9 bg-secondary/60 border-border/60 rounded-lg">
+            <SelectValue placeholder="Select target…" />
+          </SelectTrigger>
+          <SelectContent className="rounded-lg">
+            {s.projects.map((p) => (
+              <SelectItem key={p.id} value={p.id} className="text-xs">
+                <div className="flex items-center gap-2">
+                  <Target className="size-3 text-muted-foreground shrink-0" />
+                  {p.name}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {currentProject?.targetUrl && (
+          <p className="text-[10px] font-mono text-muted-foreground truncate mt-1 px-1">
+            {currentProject.targetUrl}
+          </p>
+        )}
       </div>
 
-      <Separator />
-
-      {/* User Session Footer */}
-      <div className="p-3 bg-secondary/30">
-        <div className="flex items-center justify-between p-2 rounded-xl bg-card border border-border/70 shadow-2xs">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="size-8 rounded-full bg-gradient-to-tr from-brand-pink to-brand-gold text-white font-bold text-xs flex items-center justify-center shrink-0">
-              {currentOrg?.name?.slice(0, 1).toUpperCase() || "S"}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold text-foreground truncate">{currentOrg?.name || "Strim Member"}</p>
-              <div className="flex items-center gap-1">
-                <span className="text-[10px] text-muted-foreground capitalize truncate">
-                  {currentOrg?.role || "Member"}
-                </span>
-                <span className="text-[10px] text-muted-foreground">•</span>
-                <span className="text-[10px] text-emerald-600 font-semibold">Active</span>
+      {/* Navigation */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-0.5">
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          const active = path === item.href || (item.href !== "/" && path.startsWith(item.href));
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={() => setMobileMenuOpen(false)}
+              className={cn(
+                "flex items-center justify-between rounded-lg px-3 py-2 text-[13px] font-medium transition-all group",
+                active
+                  ? "bg-brand-subtle text-foreground font-semibold"
+                  : "text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
+              )}
+            >
+              <div className="flex items-center gap-2.5">
+                <Icon
+                  className={cn(
+                    "size-4 shrink-0 transition-colors",
+                    active ? "text-brand" : "text-muted-foreground group-hover:text-foreground"
+                  )}
+                />
+                <span>{item.label}</span>
               </div>
-            </div>
-          </div>
+              {item.accent && (
+                <span className="relative flex size-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-60" />
+                  <span className="relative inline-flex rounded-full size-1.5 bg-brand" />
+                </span>
+              )}
+            </Link>
+          );
+        })}
 
+        <div className="pt-2 mt-2 border-t border-border/40">
+          <a
+            href="/docs"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-secondary/80 hover:text-foreground transition-all"
+          >
+            <BookOpen className="size-4 shrink-0" />
+            Documentation
+          </a>
+        </div>
+      </div>
+
+      {/* Footer: Org + Theme + Logout */}
+      <div className="p-3 border-t border-border/60 space-y-2.5">
+        <ThemeSwitch />
+        <div className="flex items-center justify-between px-1 text-xs">
+          <div className="truncate">
+            <p className="font-semibold text-foreground truncate">{currentOrg?.name ?? "Workspace"}</p>
+            <p className="text-[10px] text-muted-foreground capitalize">{currentOrg?.role?.toLowerCase() ?? "owner"}</p>
+          </div>
           <Button
             variant="ghost"
-            size="icon-sm"
-            onClick={() => {
-              s.clear();
-              router.replace("/login");
-            }}
+            size="icon"
+            className="size-7 rounded-lg text-muted-foreground hover:text-destructive"
+            onClick={() => s.clear()}
             title="Sign out"
-            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0"
           >
             <LogOut className="size-3.5" />
           </Button>
@@ -268,174 +252,47 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen bg-background">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 flex-col border-r border-border bg-card text-card-foreground shrink-0 shadow-2xs">
+      <aside className="hidden md:flex w-60 flex-col border-r border-border/60 bg-card shrink-0 sticky top-0 h-screen">
         {sidebarContent}
       </aside>
 
-      {/* Mobile Sidebar Overlay */}
+      {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden">
-          <div
-            className="fixed inset-0 bg-background/80 backdrop-blur-sm"
-            onClick={() => setMobileMenuOpen(false)}
-          />
-          <aside className="relative flex w-72 flex-col border-r border-border bg-card text-card-foreground shadow-2xl z-10">
+        <div className="fixed inset-0 z-50 flex md:hidden bg-background/80 backdrop-blur-sm">
+          <div className="w-72 bg-card border-r border-border h-full shadow-2xl animate-in slide-in-from-left duration-200">
             {sidebarContent}
-          </aside>
+          </div>
+          <div className="flex-1" onClick={() => setMobileMenuOpen(false)} />
         </div>
       )}
 
-      {/* Main Workspace Frame */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        {/* Top Header Bar */}
-        <header className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-border bg-card/95 backdrop-blur-md px-4 py-2.5">
-          <div className="flex items-center gap-2 min-w-0 flex-wrap">
-            {/* Mobile Hamburger */}
-            <button
-              type="button"
-              onClick={() => setMobileMenuOpen(true)}
-              className="md:hidden size-8 rounded-lg border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary"
-            >
-              <Menu className="size-4" />
-            </button>
-
-            {/* Hierarchical Context Selectors */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {/* Org Select */}
-              <Select value={s.orgId ?? ""} onValueChange={onSelect(s.setOrgId)}>
-                <SelectTrigger size="sm" className="h-8 max-w-[150px] text-xs font-semibold rounded-lg bg-secondary/50 border-border/80 hover:bg-secondary">
-                  <span className="truncate">{currentOrg?.name || "Organization"}</span>
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border border-border bg-card shadow-lg text-xs">
-                  {s.orgs.map((o) => (
-                    <SelectItem key={o.id} value={o.id} className="text-xs">
-                      {o.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-
-              {/* Workspace Select */}
-              <Select value={s.workspaceId ?? ""} onValueChange={onSelect(s.setWorkspaceId)}>
-                <SelectTrigger size="sm" className="h-8 max-w-[140px] text-xs font-medium rounded-lg bg-secondary/50 border-border/80 hover:bg-secondary">
-                  <span className="truncate">{currentWorkspace?.name || "Workspace"}</span>
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border border-border bg-card shadow-lg text-xs">
-                  {workspaces.map((w) => (
-                    <SelectItem key={w.id} value={w.id} className="text-xs">
-                      {w.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <ChevronRight className="size-3 text-muted-foreground/60 shrink-0" />
-
-              {/* Project Select */}
-              <Select value={s.projectId ?? ""} onValueChange={onSelect(s.setProjectId)}>
-                <SelectTrigger size="sm" className="h-8 max-w-[140px] text-xs font-medium rounded-lg bg-secondary/50 border-border/80 hover:bg-secondary">
-                  <span className="truncate">{currentProject?.name || "Project"}</span>
-                </SelectTrigger>
-                <SelectContent className="rounded-xl border border-border bg-card shadow-lg text-xs">
-                  {projects.map((p) => (
-                    <SelectItem key={p.id} value={p.id} className="text-xs">
-                      {p.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <ChevronRight className="size-3 text-muted-foreground/60 shrink-0 hidden sm:block" />
-
-              {/* App Select */}
-              <div className="hidden sm:block">
-                <Select value={s.applicationId ?? ""} onValueChange={onSelect(s.setApplicationId)}>
-                  <SelectTrigger size="sm" className="h-8 max-w-[150px] text-xs font-medium rounded-lg bg-secondary/50 border-border/80 hover:bg-secondary">
-                    <span className="truncate">{currentApp?.name || "Application"}</span>
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border border-border bg-card shadow-lg text-xs">
-                    {apps.map((a) => (
-                      <SelectItem key={a.id} value={a.id} className="text-xs">
-                        {a.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <ChevronRight className="size-3 text-muted-foreground/60 shrink-0 hidden lg:block" />
-
-              {/* Env Select */}
-              <div className="hidden lg:block">
-                <Select value={s.environmentId ?? ""} onValueChange={onSelect(s.setEnvironmentId)}>
-                  <SelectTrigger size="sm" className="h-8 max-w-[130px] text-xs font-medium rounded-lg bg-secondary/50 border-border/80 hover:bg-secondary">
-                    <span className="truncate">{currentEnv?.name || "Environment"}</span>
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl border border-border bg-card shadow-lg text-xs">
-                    {envs.map((e) => (
-                      <SelectItem key={e.id} value={e.id} className="text-xs">
-                        {e.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Environment Type Badge */}
-              {currentEnv && (
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "text-[10px] font-bold uppercase tracking-wider py-0.5 px-2 rounded-full hidden md:inline-flex",
-                    currentEnv.type === "PRODUCTION"
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                      : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                  )}
-                >
-                  {currentEnv.type}
-                </Badge>
-              )}
-            </div>
-          </div>
-
-          {/* Right Header Actions */}
+      {/* Main Content Area */}
+      <div className="flex flex-1 flex-col min-w-0">
+        {/* Mobile Header */}
+        <header className="md:hidden flex items-center justify-between p-3 border-b border-border/60 bg-card">
+          <button
+            type="button"
+            onClick={() => setMobileMenuOpen(true)}
+            className="size-9 rounded-lg border border-border flex items-center justify-center text-muted-foreground"
+          >
+            <Menu className="size-5" />
+          </button>
           <div className="flex items-center gap-2">
-            {/* Quick Search Button */}
-            <button
-              type="button"
-              onClick={() => setCommandOpen(true)}
-              className="flex items-center gap-2 px-3 py-1.5 h-8 rounded-full border border-border/80 bg-secondary/50 hover:bg-secondary text-xs text-muted-foreground transition-colors cursor-pointer"
-            >
-              <Search className="size-3.5" />
-              <span className="hidden sm:inline">Search...</span>
-              <kbd className="hidden sm:inline-flex h-4 items-center rounded border border-border px-1 text-[9px] font-mono font-semibold">
-                ⌘K
-              </kbd>
-            </button>
-
-            {/* Status Pill */}
-            <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
-              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>All Good</span>
+            <div className="size-6 rounded-md bg-brand flex items-center justify-center text-white">
+              <Zap className="size-3.5" />
             </div>
-
-
-
-            {/* Dark / Light Theme Toggle */}
-            <ThemeToggle />
+            <span className="font-heading font-bold text-xs tracking-tight text-foreground">STRIM</span>
           </div>
+          <ThemeSwitch />
         </header>
 
-        {/* Page Content Body */}
-        <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 bg-background">
-          <div className="mx-auto max-w-7xl">{children}</div>
+        {/* Page Content */}
+        <main className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto">
+          {children}
         </main>
       </div>
 
-      {/* Global Command Palette */}
-      <CommandPalette open={commandOpen} onOpenChange={setCommandOpen} />
+      <AddTargetModal open={addTargetOpen} onOpenChange={setAddTargetOpen} />
     </div>
   );
 }

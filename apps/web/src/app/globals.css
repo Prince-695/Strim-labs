@@ -11,7 +11,7 @@
 @theme inline {
   --font-sans: "Mona Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-heading: "Mona Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: var(--font-geist-mono), monospace;
+  --font-mono: var(--font-geist-mono), "JetBrains Mono", "Fira Code", monospace;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -32,15 +32,18 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Dribbble Modern Brand Tokens */
-  --color-brand-pink: var(--brand-pink);
-  --color-brand-lime: var(--brand-lime);
-  --color-brand-blush: var(--brand-blush);
-  --color-brand-border: var(--brand-border);
+  /* STRIM Labs Brand Tokens */
+  --color-brand: var(--brand);
+  --color-brand-strong: var(--brand-strong);
+  --color-brand-subtle: var(--brand-subtle);
   --color-brand-ink: var(--brand-ink);
-  --color-brand-slate: var(--brand-slate);
-  --color-brand-tertiary: var(--brand-tertiary);
-  --color-brand-gold: var(--brand-gold);
+  --color-brand-muted: var(--text-muted);
+
+  /* Semantic Status */
+  --color-status-success: var(--status-success);
+  --color-status-warning: var(--status-warning);
+  --color-status-danger: var(--status-danger);
+  --color-status-info: var(--status-info);
 
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
@@ -58,90 +61,102 @@
   --radius-full: 9999px;
 }
 
+/* ═══════════════════════════════════════════════════
+   STRIM Labs — Light Theme
+   Quiet canvas with emerald brand accent
+   ═══════════════════════════════════════════════════ */
 :root {
-  /* Light theme: Pure bright gallery canvas with dark ink */
-  --background: #FFFFFF;
-  --foreground: #0D0C22;
+  --background: #F7F9F8;
+  --foreground: #101713;
   --card: #FFFFFF;
-  --card-foreground: #0D0C22;
+  --card-foreground: #101713;
   --popover: #FFFFFF;
-  --popover-foreground: #0D0C22;
-  --primary: #0D0C22;
+  --popover-foreground: #101713;
+  --primary: #101713;
   --primary-foreground: #FFFFFF;
-  --secondary: #F4F4F6;
-  --secondary-foreground: #0D0C22;
-  --muted: #F4F4F6;
-  --muted-foreground: #6E6D7A;
-  --accent: #F4F4F6;
-  --accent-foreground: #0D0C22;
-  --destructive: #E5484D;
+  --secondary: #F0F4F1;
+  --secondary-foreground: #101713;
+  --muted: #F0F4F1;
+  --muted-foreground: #647169;
+  --accent: #F0F4F1;
+  --accent-foreground: #101713;
+  --destructive: #C9363E;
   --destructive-foreground: #FFFFFF;
-  --border: #E7E7E9;
-  --input: #E7E7E9;
-  --ring: #0D0C22;
+  --border: #DDE5DF;
+  --input: #DDE5DF;
+  --ring: #00C968;
 
-  /* Dribbble Brand Palette */
-  --brand-pink: #EA4C89;
-  --brand-lime: #CDE36B;
-  --brand-blush: #FFF1F7;
-  --brand-border: #E5E7EB;
-  --brand-ink: #0D0C22;
-  --brand-slate: #6E6D7A;
-  --brand-tertiary: #F4F4F6;
-  --brand-gold: #FFAD48;
+  /* Brand Palette */
+  --brand: #00C968;
+  --brand-strong: #008F4A;
+  --brand-subtle: #E3F8EC;
+  --brand-ink: #0D141E;
+  --text-muted: #647169;
 
-  --sidebar: #FAFAFC;
-  --sidebar-foreground: #0D0C22;
-  --sidebar-primary: #0D0C22;
+  /* Semantic Status */
+  --status-success: #16834A;
+  --status-warning: #A96500;
+  --status-danger: #C9363E;
+  --status-info: #2563A6;
+
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: #101713;
+  --sidebar-primary: #00C968;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F4F4F6;
-  --sidebar-accent-foreground: #0D0C22;
-  --sidebar-border: #E7E7E9;
-  --sidebar-ring: #0D0C22;
+  --sidebar-accent: #F0F4F1;
+  --sidebar-accent-foreground: #101713;
+  --sidebar-border: #DDE5DF;
+  --sidebar-ring: #00C968;
 
   --radius: 0.5rem;
 }
 
+/* ═══════════════════════════════════════════════════
+   STRIM Labs — Curated Dark Theme
+   Deep midnight slate with glowing emerald accent
+   ═══════════════════════════════════════════════════ */
 .dark {
-  /* Dark theme: Deep midnight indigo with crisp ink contrast & glowing accents */
-  --background: #0A0915;
-  --foreground: #F4F4F6;
-  --card: #121124;
-  --card-foreground: #F4F4F6;
-  --popover: #16152C;
-  --popover-foreground: #F4F4F6;
-  --primary: #FFFFFF;
-  --primary-foreground: #0D0C22;
-  --secondary: #1E1D38;
-  --secondary-foreground: #F4F4F6;
-  --muted: #1A1932;
-  --muted-foreground: #8E8D9F;
-  --accent: #1E1D38;
-  --accent-foreground: #F4F4F6;
-  --destructive: #E5484D;
+  --background: #0B1015;
+  --foreground: #E6ECE8;
+  --card: #121820;
+  --card-foreground: #E6ECE8;
+  --popover: #18222D;
+  --popover-foreground: #E6ECE8;
+  --primary: #E6ECE8;
+  --primary-foreground: #0B1015;
+  --secondary: #18222D;
+  --secondary-foreground: #E6ECE8;
+  --muted: #151F2B;
+  --muted-foreground: #88978E;
+  --accent: #18222D;
+  --accent-foreground: #E6ECE8;
+  --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
-  --border: #232242;
-  --input: #232242;
-  --ring: #EA4C89;
+  --border: #202D3A;
+  --input: #202D3A;
+  --ring: #00E575;
 
   /* Dark mode brand tokens */
-  --brand-pink: #EA4C89;
-  --brand-lime: #CDE36B;
-  --brand-blush: #261324;
-  --brand-border: #232242;
-  --brand-ink: #FFFFFF;
-  --brand-slate: #8E8D9F;
-  --brand-tertiary: #1A1932;
-  --brand-gold: #FFAD48;
+  --brand: #00E575;
+  --brand-strong: #00C968;
+  --brand-subtle: #0A2818;
+  --brand-ink: #060A0E;
+  --text-muted: #88978E;
 
-  --sidebar: #0E0D1E;
-  --sidebar-foreground: #F4F4F6;
-  --sidebar-primary: #EA4C89;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #1A1932;
-  --sidebar-accent-foreground: #FFFFFF;
-  --sidebar-border: #232242;
-  --sidebar-ring: #EA4C89;
+  /* Dark mode status */
+  --status-success: #22C55E;
+  --status-warning: #F59E0B;
+  --status-danger: #EF4444;
+  --status-info: #38BDF8;
+
+  --sidebar: #0E1419;
+  --sidebar-foreground: #E6ECE8;
+  --sidebar-primary: #00E575;
+  --sidebar-primary-foreground: #0B1015;
+  --sidebar-accent: #18222D;
+  --sidebar-accent-foreground: #E6ECE8;
+  --sidebar-border: #202D3A;
+  --sidebar-ring: #00E575;
 }
 
 @layer base {
@@ -149,7 +164,7 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground antialiased selection:bg-brand-pink/20 selection:text-brand-pink;
+    @apply bg-background text-foreground antialiased selection:bg-brand/20 selection:text-brand-strong;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
   html {
@@ -158,6 +173,12 @@
 }
 
 @layer utilities {
+  /* Tabular numerals for metric displays — prevents jitter in live dashboards */
+  .font-tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
   .text-headline-display {
     font-family: var(--font-heading);
     font-size: 52px;

@@ -9,21 +9,10 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  Activity,
-  AppWindow,
-  GitBranch,
-  ListTree,
-  FlaskConical,
-  ScrollText,
-  Database,
-  Siren,
-  Shield,
-  History,
-  KeyRound,
-  Sparkles,
-  CreditCard,
-  Cpu,
-  FileCode2,
+  Zap,
+  Layers,
+  ArrowLeftRight,
+  Settings,
   Search,
 } from "lucide-react";
 
@@ -35,20 +24,10 @@ type NavItem = {
 };
 
 const ITEMS: NavItem[] = [
-  { href: "/runtime", label: "Runtime Overview", category: "Observability", icon: Activity },
-  { href: "/topology", label: "Service Topology Graph", category: "Observability", icon: GitBranch },
-  { href: "/requests", label: "Request Explorer & Traces", category: "Observability", icon: ListTree },
-  { href: "/change-plans", label: "Change Plans & Canary Stepper", category: "Change Safety", icon: ScrollText },
-  { href: "/simulations", label: "What-If Simulations Studio", category: "Change Safety", icon: FlaskConical },
-  { href: "/load-tests", label: "Load Stress & Breaking Points", category: "Change Safety", icon: Cpu },
-  { href: "/cache", label: "Edge Cache Intelligence", category: "Change Safety", icon: Database },
-  { href: "/incidents", label: "Incidents & Rollback Center", category: "Governance", icon: Siren },
-  { href: "/policies", label: "Policies & Runtime Drift", category: "Governance", icon: Shield },
-  { href: "/audit", label: "Compliance Audit Logs", category: "Governance", icon: History },
-  { href: "/applications", label: "Applications & Environments", category: "Admin", icon: AppWindow },
-  { href: "/keys", label: "API Keys & Programmatic Scopes", category: "Admin", icon: KeyRound },
-  { href: "/billing", label: "Billing, Invoices & SSO", category: "Admin", icon: CreditCard },
-  { href: "/ai", label: "Grounded AI Copilot", category: "Intelligence", icon: Sparkles },
+  { href: "/", label: "Capacity Dashboard", category: "Navigation", icon: Layers },
+  { href: "/runner", label: "Launch Load Test", category: "Load Testing", icon: Zap },
+  { href: "/compare", label: "Run-to-Run Regression Studio", category: "Analysis", icon: ArrowLeftRight },
+  { href: "/settings", label: "Organization & API Keys", category: "Settings", icon: Settings },
 ];
 
 export function CommandPalette({
@@ -93,27 +72,22 @@ export function CommandPalette({
           <DialogTitle>Quick Search</DialogTitle>
         </DialogHeader>
 
-        {/* Search input header */}
         <div className="flex items-center px-4 border-b border-border/70 h-13">
           <Search className="size-4 text-muted-foreground mr-3 shrink-0" />
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Type a command or jump to feature..."
-            className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+            placeholder="Type a command or jump to page... (ESC to close)"
+            className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground/60 outline-none h-full"
             autoFocus
           />
-          <kbd className="hidden sm:inline-flex h-5 items-center rounded-md border border-border px-1.5 text-[10px] font-mono text-muted-foreground">
-            ESC
-          </kbd>
         </div>
 
-        {/* Results List */}
-        <div className="max-h-80 overflow-y-auto p-2 space-y-1">
+        <div className="max-h-72 overflow-y-auto p-2 divide-y divide-border/40">
           {filtered.length === 0 ? (
-            <div className="p-8 text-center text-xs text-muted-foreground">
-              No matching pages or tools found.
+            <div className="py-6 text-center text-xs text-muted-foreground">
+              No matching pages found for "{query}".
             </div>
           ) : (
             filtered.map((item) => {
@@ -123,37 +97,21 @@ export function CommandPalette({
                   key={item.href}
                   type="button"
                   onClick={() => select(item)}
-                  className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-secondary/70 transition-colors text-left text-xs group cursor-pointer"
+                  className="w-full flex items-center justify-between p-2 rounded-lg text-left hover:bg-secondary/70 transition-colors group cursor-pointer"
                 >
-                  <div className="flex items-center gap-2.5">
-                    <div className="size-7 rounded-lg bg-secondary text-foreground group-hover:bg-brand-pink/15 group-hover:text-brand-pink flex items-center justify-center transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="size-7 rounded-md bg-secondary flex items-center justify-center text-muted-foreground group-hover:text-brand transition-colors">
                       <Icon className="size-3.5" />
                     </div>
-                    <span className="font-semibold text-foreground">{item.label}</span>
+                    <div>
+                      <span className="text-xs font-semibold text-foreground block">{item.label}</span>
+                      <span className="text-[10px] text-muted-foreground">{item.category}</span>
+                    </div>
                   </div>
-                  <span className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground/80">
-                    {item.category}
-                  </span>
                 </button>
               );
             })
           )}
-        </div>
-
-        {/* Footer info */}
-        <div className="p-3 bg-secondary/40 border-t border-border/70 flex items-center justify-between text-[11px] text-muted-foreground">
-          <span>Strim Navigation Engine</span>
-          <div className="flex items-center gap-2">
-            <span>Open API Docs:</span>
-            <a
-              href="http://localhost:8080/docs"
-              target="_blank"
-              rel="noreferrer"
-              className="text-brand-pink hover:underline font-semibold"
-            >
-              /docs
-            </a>
-          </div>
         </div>
       </DialogContent>
     </Dialog>

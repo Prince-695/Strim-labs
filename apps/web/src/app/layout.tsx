@@ -3,8 +3,9 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
-  title: "Strim — Runtime Intelligence & Controlled Change Platform",
-  description: "Know what a change will do before production finds out. Simulation, verification, and automated rollback for production infrastructure.",
+  title: "STRIM Labs — API Load Testing & Capacity Engine",
+  description:
+    "Find your API's breaking point before production does. Multi-VU HTTP load testing, saturation knee detection, and live CI/CD regression gates.",
   icons: {
     icon: "/favicon.ico",
   },
@@ -24,7 +25,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-background text-foreground font-sans selection:bg-brand-pink/20 selection:text-brand-pink">
+      <body className="min-h-full flex flex-col bg-background text-foreground font-sans selection:bg-brand selection:text-white">
         <Providers>{children}</Providers>
       </body>
     </html>
