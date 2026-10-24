@@ -9,23 +9,9 @@ export const optionalAuth = createMiddleware<AppEnv>(async (c, next) => {
   const cookieToken = cookie.match(/(?:^|;\s*)strim_session=([^;]+)/)?.[1] ?? null;
   const token = bearer ?? cookieToken;
 
-  if (token && !token.startsWith("sk_")) {
+  if (token && !token.startsWith("strim_")) {
     const session = verifySession(token);
     if (session) {
-      // If session record exists in token, verify it's still active in DB
-      if (session.sessionId) {
-        try {
-          const dbSession = await c.get("db").session.findUnique({
-            where: { id: session.sessionId },
-          });
-          if (!dbSession || dbSession.expiresAt < new Date()) {
-            await next();
-            return;
-          }
-        } catch {
-          // In case DB session lookup fails, fall through
-        }
-      }
       c.set("userId", session.userId);
       c.set("email", session.email);
     }
