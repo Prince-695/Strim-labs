@@ -27,158 +27,95 @@ async function main() {
   const passwordHash = await hash("password123");
 
   const priya = await prisma.user.create({
-    data: { email: "priya@acme.test", name: "Priya", passwordHash },
-  });
-  const marcus = await prisma.user.create({
-    data: { email: "marcus@globex.test", name: "Marcus", passwordHash },
+    data: { email: "priya@acme.test", name: "Priya Sharma", passwordHash },
   });
 
   const acme = await prisma.organization.create({
-    data: { name: "Acme", slug: "acme" },
-  });
-  const globex = await prisma.organization.create({
-    data: { name: "Globex", slug: "globex" },
+    data: { name: "Acme Corp", slug: "acme" },
   });
 
-  const acmePlatform = await prisma.team.create({
-    data: { organizationId: acme.id, name: "Platform" },
-  });
-  const acmeSre = await prisma.team.create({
-    data: { organizationId: acme.id, name: "SRE" },
-  });
-  const globexPlatform = await prisma.team.create({
-    data: { organizationId: globex.id, name: "Platform" },
-  });
-
-  await prisma.teamMember.createMany({
-    data: [
-      { teamId: acmePlatform.id, userId: priya.id },
-      { teamId: acmeSre.id, userId: priya.id },
-      { teamId: globexPlatform.id, userId: marcus.id },
-    ],
-  });
-
-  await prisma.membership.createMany({
-    data: [
-      { organizationId: acme.id, userId: priya.id, role: "OWNER", scope: "ORGANIZATION" },
-      { organizationId: globex.id, userId: marcus.id, role: "OWNER", scope: "ORGANIZATION" },
-    ],
-  });
-
-  const acmeWs = await prisma.workspace.create({
-    data: { organizationId: acme.id, name: "Payments", slug: "payments" },
-  });
-  const globexWs = await prisma.workspace.create({
-    data: { organizationId: globex.id, name: "Core", slug: "core" },
-  });
-
-  const acmeProj = await prisma.project.create({
+  await prisma.membership.create({
     data: {
       organizationId: acme.id,
-      workspaceId: acmeWs.id,
-      name: "Checkout",
-      slug: "checkout",
-    },
-  });
-  const globexProj = await prisma.project.create({
-    data: {
-      organizationId: globex.id,
-      workspaceId: globexWs.id,
-      name: "Billing",
-      slug: "billing",
+      userId: priya.id,
+      role: "OWNER",
     },
   });
 
-  const checkout = await prisma.application.create({
+  const checkoutApi = await prisma.project.create({
     data: {
       organizationId: acme.id,
-      projectId: acmeProj.id,
-      name: "Checkout API",
-      repository: "github.com/acme/checkout",
-      language: "TypeScript",
-      framework: "Hono",
-      region: "us-east-1",
-      version: "1.0.0",
-      ownerTeamId: acmePlatform.id,
-      technicalOwnerId: priya.id,
-      oncallTeamId: acmeSre.id,
-    },
-  });
-  const billing = await prisma.application.create({
-    data: {
-      organizationId: globex.id,
-      projectId: globexProj.id,
-      name: "Billing API",
-      repository: "github.com/globex/billing",
-      language: "TypeScript",
-      framework: "Hono",
-      region: "us-west-2",
-      version: "1.0.0",
-      ownerTeamId: globexPlatform.id,
-      technicalOwnerId: marcus.id,
-      oncallTeamId: globexPlatform.id,
-    },
-  });
-
-  for (const app of [checkout, billing]) {
-    for (const [name, type] of [
-      ["Development", "DEVELOPMENT"],
-      ["Staging", "STAGING"],
-      ["Production", "PRODUCTION"],
-    ] as const) {
-      await prisma.environment.create({
-        data: {
-          organizationId: app.organizationId,
-          applicationId: app.id,
-          name,
-          type,
-          region: app.region,
-          declaredState: {
-            "cache.enabled": false,
-            "cache.ttl": 0,
-            "checkout.timeout": 5000,
-            retry_count: 2,
-          },
-        },
-      });
-    }
-  }
-
-  const acmeProd = await prisma.environment.findFirstOrThrow({
-    where: { applicationId: checkout.id, type: "PRODUCTION" },
-  });
-
-  await prisma.runtimeVersion.create({
-    data: {
-      organizationId: acme.id,
-      environmentId: acmeProd.id,
-      seq: 1,
-      approved: true,
-      values: {
-        "cache.enabled": false,
-        "cache.ttl": 0,
-        "checkout.timeout": 5000,
-        retry_count: 2,
+      name: "Checkout API Gateway",
+      targetUrl: "https://httpbin.org/get",
+      defaultMethod: "GET",
+      defaultHeaders: {
+        "User-Agent": "Strim-LoadEngine/1.0",
+        Accept: "application/json",
       },
     },
   });
 
-  await prisma.billingAccount.create({
-    data: { organizationId: acme.id, plan: "team" },
-  });
-  await prisma.billingAccount.create({
-    data: { organizationId: globex.id, plan: "team" },
+  // Seed baseline completed test run
+  const baselineRun = await prisma.testRun.create({
+    data: {
+      organizationId: acme.id,
+      projectId: checkoutApi.id,
+      userId: priya.id,
+      name: "Baseline v1.0.0 Ramp-Up",
+      profile: "RAMP_UP",
+      status: "COMPLETED",
+      targetUrl: "https://httpbin.org/get",
+      method: "GET",
+      concurrency: 100,
+      durationSec: 30,
+      totalRequests: 24500,
+      avgRps: 816.6,
+      peakRps: 1120.0,
+      p50Ms: 42.5,
+      p95Ms: 145.0,
+      p99Ms: 290.0,
+      errorRate: 0.012,
+      statusCodes: {
+        "200": 24206,
+        "429": 250,
+        "500": 44,
+      },
+      breakingPoint: {
+        kneeRps: 850,
+        failureRps: 1080,
+        bottleneck: "RATE_LIMIT_429",
+        verdict: "Safe up to 850 RPS. Degradation onset at 920 RPS. System bottleneck reached at 1,080 RPS with 429 Rate Limiting backpressure.",
+      },
+      startedAt: new Date(Date.now() - 3600000),
+      completedAt: new Date(Date.now() - 3600000 + 30000),
+    },
   });
 
-  await prisma.retentionPolicy.createMany({
-    data: [
-      { organizationId: acme.id, dataClass: "request_payloads", days: 30 },
-      { organizationId: acme.id, dataClass: "audit", days: 365 },
-      { organizationId: acme.id, dataClass: "metrics", days: 90 },
-    ],
-  });
+  // Seed samples for baseline run
+  const samplesData = [];
+  for (let i = 0; i < 20; i++) {
+    const vus = Math.round(5 + i * 5);
+    const rps = Math.round(50 + i * 55);
+    const p95 = Math.round(35 + (i > 12 ? Math.pow(i - 12, 1.8) * 20 : i * 3));
+    samplesData.push({
+      testRunId: baselineRun.id,
+      timestamp: new Date(Date.now() - 3600000 + i * 1500),
+      rps,
+      activeVUs: vus,
+      p50Ms: Math.round(p95 * 0.4),
+      p95Ms: p95,
+      p99Ms: Math.round(p95 * 1.6),
+      errorCount: i > 15 ? (i - 15) * 8 : 0,
+      statusCodes: {
+        "200": rps - (i > 15 ? (i - 15) * 8 : 0),
+        ...(i > 15 ? { "429": (i - 15) * 6, "500": (i - 15) * 2 } : {}),
+      },
+    });
+  }
 
-  console.log("Seeded Acme (priya@acme.test) and Globex (marcus@globex.test). Password: password123");
+  await prisma.testSample.createMany({ data: samplesData });
+
+  console.log("Seeded Strim Load Engine with user priya@acme.test (password: password123)");
 }
 
 main()
