@@ -1,76 +1,35 @@
-import * as React from "react"
-import { cva, type VariantProps } from "class-variance-authority"
+import { AlertTriangle, CheckCircle2, Info, OctagonAlert } from "lucide-react";
+import type { HTMLAttributes, ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
-import { cn } from "@/lib/utils"
+const tones = {
+  info: { icon: Info, cls: "border-info/25 bg-info-subtle text-info" },
+  success: { icon: CheckCircle2, cls: "border-brand/30 bg-brand-subtle text-success-text" },
+  warning: { icon: AlertTriangle, cls: "border-warning/35 bg-warning-subtle text-warning-text" },
+  danger: { icon: OctagonAlert, cls: "border-destructive/35 bg-danger-subtle text-danger-text" },
+} as const;
 
-const alertVariants = cva(
-  "group/alert relative grid w-full gap-0.5 rounded-lg border px-4 py-3 text-left text-sm has-data-[slot=alert-action]:relative has-data-[slot=alert-action]:pr-18 has-[>svg]:grid-cols-[auto_1fr] has-[>svg]:gap-x-2.5 *:[svg]:row-span-2 *:[svg]:translate-y-0.5 *:[svg]:text-current *:[svg:not([class*='size-'])]:size-4",
-  {
-    variants: {
-      variant: {
-        default: "bg-card text-card-foreground",
-        destructive:
-          "bg-card text-destructive *:data-[slot=alert-description]:text-destructive/90 *:[svg]:text-current",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-    },
-  }
-)
-
-function Alert({
-  className,
-  variant,
-  ...props
-}: React.ComponentProps<"div"> & VariantProps<typeof alertVariants>) {
-  return (
-    <div
-      data-slot="alert"
-      role="alert"
-      className={cn(alertVariants({ variant }), className)}
-      {...props}
-    />
-  )
-}
-
-function AlertTitle({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="alert-title"
-      className={cn(
-        "font-medium group-has-[>svg]/alert:col-start-2 [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-function AlertDescription({
+export function Alert({
+  tone = "info",
+  title,
+  children,
+  action,
   className,
   ...props
-}: React.ComponentProps<"div">) {
+}: HTMLAttributes<HTMLDivElement> & { tone?: keyof typeof tones; title?: string; action?: ReactNode }) {
+  const { icon: Icon, cls } = tones[tone];
   return (
     <div
-      data-slot="alert-description"
-      className={cn(
-        "text-sm text-balance text-muted-foreground md:text-pretty [&_a]:underline [&_a]:underline-offset-3 [&_a]:hover:text-foreground [&_p:not(:last-child)]:mb-4",
-        className
-      )}
+      role={tone === "danger" || tone === "warning" ? "alert" : "status"}
+      className={cn("flex items-start gap-3 rounded-xl border px-4 py-3 text-sm", cls, className)}
       {...props}
-    />
-  )
+    >
+      <Icon className="mt-0.5 size-4 shrink-0" aria-hidden />
+      <div className="min-w-0 flex-1 space-y-0.5">
+        {title && <p className="font-semibold">{title}</p>}
+        <div className="text-[13px] leading-relaxed opacity-90">{children}</div>
+      </div>
+      {action}
+    </div>
+  );
 }
-
-function AlertAction({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="alert-action"
-      className={cn("absolute top-2.5 right-3", className)}
-      {...props}
-    />
-  )
-}
-
-export { Alert, AlertTitle, AlertDescription, AlertAction }

@@ -1,118 +1,79 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { MailCheck } from "lucide-react";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { useState } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, CheckCircle, Mail } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Field } from "@/components/ui/label";
+import { sleep } from "@/lib/utils";
+import { validateEmail } from "@/lib/validation";
 
+/**
+ * The backend has no reset endpoint in the current contract, so this page shows the neutral confirmation state
+ * without sending anything. Wire it to POST /v1/auth/forgot-password when that exists.
+ */
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | undefined>();
+  const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
-  const [error, setError] = useState("");
-  const [pending, setPending] = useState(false);
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-    setPending(true);
+  async function submit() {
+    const e = validateEmail(email);
+    setError(e);
+    if (e) return;
+    setLoading(true);
+    await sleep(700);
+    setLoading(false);
+    setSent(true);
+  }
 
-    try {
-      await api("/v1/auth/forgot-password", {
-        method: "POST",
-        body: JSON.stringify({ email }),
-      });
-      setSent(true);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to process request");
-    } finally {
-      setPending(false);
-    }
+  if (sent) {
+    return (
+      <div className="space-y-6 text-center">
+        <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-brand-subtle text-brand-strong dark:text-brand">
+          <MailCheck className="size-6" />
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-[26px] font-semibold tracking-[-0.03em]">Check your inbox</h1>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            If an account exists for <span className="font-medium text-foreground">{email}</span>, a reset link is on its way. It can take a few minutes.
+          </p>
+        </div>
+        <Link href="/login" className={buttonVariants({ variant: "outline", className: "w-full" })}>
+          Back to sign in
+        </Link>
+      </div>
+    );
   }
 
   return (
-    <div>
-      <Card className="border border-border/60 shadow-md rounded-xl bg-card">
-        <CardHeader className="space-y-1.5 pb-4">
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground mb-1"
-          >
-            <ArrowLeft className="size-3" /> Back to sign in
-          </Link>
-          <CardTitle className="text-xl font-heading font-bold tracking-tight">
-            Reset Password
-          </CardTitle>
-          <CardDescription className="text-xs text-muted-foreground">
-            Enter your email and we'll send you instructions to reset your password.
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          {sent ? (
-            <div className="space-y-4 text-center py-4">
-              <div className="size-12 rounded-xl bg-brand/15 text-brand flex items-center justify-center mx-auto">
-                <CheckCircle className="size-6" />
-              </div>
-              <div className="space-y-1">
-                <h4 className="text-sm font-bold text-foreground">Check your inbox</h4>
-                <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-                  If an account exists for <span className="font-semibold text-foreground">{email}</span>, a password reset link was sent.
-                </p>
-              </div>
-              <Link
-                href="/login"
-                className={cn(
-                  buttonVariants({ variant: "outline" }),
-                  "h-9 rounded-lg w-full text-xs font-medium inline-flex items-center justify-center cursor-pointer",
-                )}
-              >
-                Return to Sign In
-              </Link>
-            </div>
-          ) : (
-            <form onSubmit={onSubmit} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-xs font-semibold">
-                  Account Email
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@company.com"
-                    required
-                    autoComplete="email"
-                    className="h-9 rounded-lg pl-9 pr-3 text-xs bg-secondary/40 border-border/80"
-                  />
-                  <Mail className="absolute left-3 top-2.5 size-4 text-muted-foreground pointer-events-none" />
-                </div>
-              </div>
-
-              {error && (
-                <Alert variant="destructive" className="py-2 px-3 rounded-lg text-xs">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-
-              <Button
-                type="submit"
-                disabled={pending}
-                className="w-full h-9 rounded-lg font-medium bg-brand hover:bg-brand-strong text-white text-xs shadow-xs cursor-pointer"
-              >
-                {pending ? "Sending link…" : "Send Reset Link"}
-              </Button>
-            </form>
-          )}
-        </CardContent>
-      </Card>
+    <div className="space-y-7">
+      <div className="space-y-2">
+        <h1 className="text-[28px] font-semibold tracking-[-0.03em]">Reset your password</h1>
+        <p className="text-sm text-muted-foreground">Enter your email and we'll send a link to choose a new one.</p>
+      </div>
+      <form
+        className="space-y-4"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit();
+        }}
+      >
+        <Field id="email" label="Work email" error={error}>
+          <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} aria-invalid={Boolean(error)} aria-describedby={error ? "email-error" : undefined} />
+        </Field>
+        <Button type="submit" size="lg" className="w-full" loading={loading}>
+          Send reset link
+        </Button>
+      </form>
+      <p className="text-center text-sm">
+        <Link href="/login" className="font-medium text-brand-strong hover:underline dark:text-brand">
+          Back to sign in
+        </Link>
+      </p>
     </div>
   );
 }

@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# STRIM Labs web console (`apps/web`)
 
-## Getting Started
+Next.js 16 (App Router) + React 19 + TypeScript (strict) + Tailwind CSS v4.
 
-First, run the development server:
+## Run it
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# from the monorepo root, with the API running on :8080
+cd apps/web
+cp .env.example .env.local     # NEXT_PUBLIC_API_URL=http://localhost:8080
+bun install
+bun run dev                    # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Other scripts: `bun run typecheck`, `bun run build`, `bun run start`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+> This package was generated without network access to a package registry, so it has **not** been installed, type-checked or built yet. Run `bun run typecheck && bun run build` first and fix anything that surfaces.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Routes
 
-## Learn More
+| Route | What it is |
+|---|---|
+| `/` | Marketing page for guests, capacity dashboard when signed in |
+| `/how-it-works`, `/docs` | Public architecture guide and documentation |
+| `/login`, `/signup`, `/forgot-password` | Auth (two-column layout with the 3D surface) |
+| `/runner` | Load runner cockpit: presets, live SSE telemetry, abort |
+| `/tests`, `/tests/[id]` | Run history; run detail with capacity gauge and diagnosis |
+| `/compare` | Regression studio with live gate sliders |
+| `/settings` | Workspace, CI/CD API keys, members |
 
-To learn more about Next.js, take a look at the following resources:
+## Architecture
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/
+  app/            routes (route groups: (auth), (app))
+  components/
+    ui/           primitives: button, dialog, tabs, slider, table…
+    fx/           motion + 3D: terrain-canvas, tilt-card, animated-number, magnetic, reveal
+    marketing/    header, footer, hero, simulator, sections, docs, diagram
+    runner/       preset cards, live cockpit
+  lib/
+    api.ts        fetch client + ApiError (401/403/404/409/422/429/5xx normalised)
+    session.tsx   localStorage session via useSyncExternalStore
+    sse.ts        fetch-based SSE client with bounded backoff and de-duplication
+    gate.ts       regression-gate logic and run compatibility checks
+    analysis.ts   evidence diagnosis (observed / likely explanation / next checks)
+    format.ts     the one place for number, unit and "—" formatting
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Motion lives in `fx/` and is limited to: the hero latency surface, tilt on key cards, spring-tweened live numbers, and the verdict stamp. Everything respects `prefers-reduced-motion`.
 
-## Deploy on Vercel
+## Assumptions about the backend (verify these)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Error rate** is a 0–1 fraction. If the API returns percent, flip `ERROR_RATE_IS_FRACTION` in `src/lib/format.ts`.
+- **Aborted status**: the spec says `ABORTED`, the README says `CANCELLED`. Both are handled.
+- **SSE** is read with `fetch` (not `EventSource`) so the `Authorization` header can be sent. Events: `sample`, `done`, `abort`.
+- **Targets** are `projects` (1:1), per the spec.
+- **Forgot password** has no endpoint in the contract, so that page only shows the neutral confirmation state. Wire it to a real endpoint when one exists.
+- Member invites/removal and a `/targets` management page are not in the API contract and are intentionally absent.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Not done yet
+
+Unit tests for `gate.ts`, `analysis.ts` and `format.ts`, and E2E tests, are recommended before shipping.

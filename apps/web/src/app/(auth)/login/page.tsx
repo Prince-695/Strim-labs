@@ -1,138 +1,130 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Sparkles } from "lucide-react";
 import Link from "next/link";
-import { api } from "@/lib/api";
-import { useSession, type Org } from "@/lib/session";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { PasswordInput } from "@/components/auth/password-input";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowRight, Sparkles, Zap } from "lucide-react";
+import { Field } from "@/components/ui/label";
+import { ApiError, api } from "@/lib/api";
+import { DEMO_PERSONA } from "@/lib/presets";
+import { useSession } from "@/lib/session";
+import type { Org } from "@/lib/types";
+import { hasErrors, validateEmail, validatePassword, type FieldErrors } from "@/lib/validation";
+
+/** Only same-origin relative paths are allowed as a post-login destination (prevents open redirects). */
+function safeNext(raw: string | null): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.includes("\\") || raw === "/") return "/dashboard";
+  return raw;
+}
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
-  const { setSession, token, loading } = useSession();
-  const [email, setEmail] = useState("priya@acme.test");
-  const [password, setPassword] = useState("password123");
-  const [error, setError] = useState("");
-  const [pending, setPending] = useState(false);
+  const params = useSearchParams();
+  const { setSession, token, ready } = useSession();
+  const next = safeNext(params.get("next"));
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<FieldErrors<"email" | "password">>({});
+  const [formError, setFormError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!loading && token) router.replace("/");
-  }, [loading, token, router]);
+    if (ready && token) router.replace(next);
+  }, [ready, token, router, next]);
 
-  async function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError("");
-    setPending(true);
+  async function submit() {
+    const e = { email: validateEmail(email), password: validatePassword(password) };
+    setErrors(e);
+    setFormError(null);
+    if (hasErrors(e)) return;
+    setLoading(true);
     try {
-      const res = await api<{ token: string; orgs: Org[] }>("/v1/auth/login", {
+      const res = await api<{ token: string; orgs: Org[]; user: { id: string; email: string; name: string } }>("/v1/auth/login", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email: email.trim(), password }),
       });
-      setSession(res.token, res.orgs);
-      router.push("/");
+      setSession(res.token, res.orgs, res.user);
+      router.replace(next);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid email or password");
-    } finally {
-      setPending(false);
+      // Neutral message: never reveal whether the email is registered.
+      setFormError(err instanceof ApiError && (err.status === 0 || err.status >= 500) ? err.message : "That email and password don't match. Check them and try again.");
+      setLoading(false);
     }
   }
 
-  function setDemoPersona(demoEmail: string, demoPass: string) {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setError("");
-  }
-
   return (
-    <div>
-      <Card className="border border-border/60 shadow-md rounded-xl bg-card">
-        <CardHeader className="space-y-1.5 pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xl font-heading font-bold tracking-tight">
-              Sign In to STRIM
-            </CardTitle>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-secondary text-muted-foreground uppercase font-semibold">
-              Console
-            </span>
-          </div>
-          <CardDescription className="text-xs text-muted-foreground">
-            Access your API benchmarks, capacity telemetry, and CI/CD gates.
-          </CardDescription>
-        </CardHeader>
+    <div className="space-y-7">
+      <div className="space-y-2">
+        <h1 className="text-[28px] font-semibold tracking-[-0.03em]">Sign in</h1>
+        <p className="text-sm text-muted-foreground">Welcome back. Pick up where your last test left off.</p>
+      </div>
 
-        <CardContent className="space-y-4">
-          {/* Quick Demo Switcher */}
-          <div className="p-3 rounded-lg bg-secondary/50 border border-border/60 space-y-2">
-            <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-              <Sparkles className="size-3 text-brand" />
-              <span>Quick Demo Account:</span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => setDemoPersona("priya@acme.test", "password123")}
-                className="text-xs px-2.5 py-1 rounded-md bg-card hover:bg-card/80 border border-border/70 text-foreground transition-colors font-medium shadow-xs cursor-pointer"
-              >
-                Priya (Acme Corp Owner)
-              </button>
-            </div>
-          </div>
+      <button
+        type="button"
+        onClick={() => {
+          setEmail(DEMO_PERSONA.email);
+          setPassword(DEMO_PERSONA.password);
+          setErrors({});
+        }}
+        className="group flex w-full items-center gap-3 rounded-xl border border-dashed border-brand/40 bg-brand-subtle/60 px-4 py-3 text-left transition-colors hover:bg-brand-subtle"
+      >
+        <span className="grid size-8 place-items-center rounded-lg bg-ink text-brand">
+          <Sparkles className="size-4" />
+        </span>
+        <span className="text-[13px]">
+          <span className="font-medium">Try the demo persona</span>
+          <span className="block text-muted-foreground">{DEMO_PERSONA.label}. Fills the form; you press Sign in.</span>
+        </span>
+      </button>
 
-          <form onSubmit={onSubmit} className="space-y-3.5">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">Email address</Label>
-              <Input
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@company.com"
-                className="h-9 text-xs rounded-lg bg-secondary/40 border-border/80"
-              />
-            </div>
+      <form
+        className="space-y-4"
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit();
+        }}
+      >
+        {formError && (
+          <Alert tone="danger" title="Couldn't sign you in">
+            {formError}
+          </Alert>
+        )}
+        <Field id="email" label="Work email" error={errors.email}>
+          <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" aria-invalid={Boolean(errors.email)} aria-describedby={errors.email ? "email-error" : undefined} />
+        </Field>
+        <Field id="password" label="Password" error={errors.password}>
+          <PasswordInput id="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} aria-invalid={Boolean(errors.password)} aria-describedby={errors.password ? "password-error" : undefined} />
+        </Field>
+        <div className="flex justify-end">
+          <Link href="/forgot-password" className="text-[13px] font-medium text-brand-strong hover:underline dark:text-brand">
+            Forgot password?
+          </Link>
+        </div>
+        <Button type="submit" size="lg" className="w-full" loading={loading}>
+          Sign in
+        </Button>
+      </form>
 
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label className="text-xs font-semibold">Password</Label>
-              </div>
-              <Input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-9 text-xs rounded-lg bg-secondary/40 border-border/80"
-              />
-            </div>
-
-            {error && (
-              <Alert variant="destructive" className="py-2 px-3 rounded-lg text-xs">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-
-            <Button
-              type="submit"
-              disabled={pending}
-              className="w-full rounded-lg bg-brand hover:bg-brand-strong text-white font-medium text-xs h-9 shadow-sm"
-            >
-              {pending ? "Signing in…" : "Sign In to STRIM"}
-              <ArrowRight className="size-3.5 ml-1.5" />
-            </Button>
-          </form>
-
-          <div className="text-center text-xs text-muted-foreground pt-1">
-            Don't have an account?{" "}
-            <Link href="/signup" className="text-brand font-semibold hover:underline">
-              Create workspace
-            </Link>
-          </div>
-        </CardContent>
-      </Card>
+      <p className="text-center text-sm text-muted-foreground">
+        New to STRIM?{" "}
+        <Link href="/signup" className="font-medium text-brand-strong hover:underline dark:text-brand">
+          Create a workspace
+        </Link>
+      </p>
     </div>
   );
 }

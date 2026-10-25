@@ -1,294 +1,397 @@
 "use client";
 
-import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Target, CheckCircle2, AlertCircle, Loader2, Globe } from "lucide-react";
-import { api } from "@/lib/api";
+import { motion } from "framer-motion";
+import {
+  ArrowRight,
+  Check,
+  CheckCircle2,
+  Copy,
+  Eye,
+  EyeOff,
+  Globe,
+  Key,
+  Layers,
+  Radio,
+  Server,
+  Sparkles,
+  Zap,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { ApiError } from "@/lib/api";
+import { useCreateProject } from "@/lib/queries";
 import { useSession } from "@/lib/session";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { normalizeUrl, validateRequired, validateTargetUrl, type FieldErrors } from "@/lib/validation";
+import { Alert } from "./ui/alert";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Dialog } from "./ui/dialog";
+import { Input } from "./ui/input";
+import { Field } from "./ui/label";
 
-interface AddTargetModalProps {
+type Framework = "hono" | "express" | "nextjs" | "fastify";
+
+export function AddTargetModal({
+  open,
+  onOpenChange,
+}: {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
-}
+  onOpenChange: (o: boolean) => void;
+}) {
+  const router = useRouter();
+  const create = useCreateProject();
+  const { projects, call } = useSession();
 
-export function AddTargetModal({ open, onOpenChange }: AddTargetModalProps) {
-  const session = useSession();
-  const queryClient = useQueryClient();
-
+  // Wizard steps: 1 = Form, 2 = SDK Onboarding & Live Listener
+  const [step, setStep] = useState<1 | 2>(1);
   const [name, setName] = useState("");
-  const [targetUrl, setTargetUrl] = useState("");
-  const [defaultMethod, setDefaultMethod] = useState<"GET" | "POST" | "PUT" | "DELETE">("GET");
-  const [bearerToken, setBearerToken] = useState("");
-  const [testingReachability, setTestingReachability] = useState(false);
-  const [pingResult, setPingResult] = useState<{
-    status: "success" | "error" | "warning";
-    message: string;
-  } | null>(null);
+  const [baseUrl, setBaseUrl] = useState("");
+  const [errors, setErrors] = useState<FieldErrors<"name" | "baseUrl">>({});
+  const [serverError, setServerError] = useState<string | null>(null);
 
-  const createTargetMutation = useMutation({
-    mutationFn: async () => {
-      if (!session.token || !session.orgId) {
-        throw new Error("No active organization session");
-      }
+  // Step 2 State
+  const [createdProject, setCreatedProject] = useState<{ id: string; name: string } | null>(null);
+  const [apiKey, setApiKey] = useState("");
+  const [showKey, setShowKey] = useState(false);
+  const [copiedKey, setCopiedKey] = useState(false);
+  const [activeTab, setActiveTab] = useState<Framework>("hono");
+  const [connected, setConnected] = useState(false);
+  const [simulating, setSimulating] = useState(false);
 
-      const headers: Record<string, string> = {};
-      if (bearerToken.trim()) {
-        headers["Authorization"] = bearerToken.startsWith("Bearer ")
-          ? bearerToken.trim()
-          : `Bearer ${bearerToken.trim()}`;
-      }
-
-      return api<{ project: { id: string; name: string; targetUrl: string; defaultMethod: string } }>(
-        "/v1/projects",
-        {
-          method: "POST",
-          token: session.token,
-          orgId: session.orgId,
-          body: JSON.stringify({
-            name: name.trim(),
-            targetUrl: targetUrl.trim(),
-            defaultMethod,
-            defaultHeaders: Object.keys(headers).length > 0 ? headers : undefined,
-          }),
-        }
-      );
-    },
-    onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ["projects", session.orgId] });
-      session.setProjectId(res.project.id);
-      onOpenChange(false);
-      resetForm();
-    },
-  });
-
-  const resetForm = () => {
+  function reset() {
+    setStep(1);
     setName("");
-    setTargetUrl("");
-    setDefaultMethod("GET");
-    setBearerToken("");
-    setPingResult(null);
-  };
+    setBaseUrl("");
+    setErrors({});
+    setServerError(null);
+    setCreatedProject(null);
+    setApiKey("");
+    setConnected(false);
+    setSimulating(false);
+  }
 
-  const handleTestReachability = async () => {
-    if (!targetUrl.trim()) return;
-    setTestingReachability(true);
-    setPingResult(null);
+  function close(next: boolean) {
+    onOpenChange(next);
+    if (!next) setTimeout(reset, 250);
+  }
 
-    const startTime = performance.now();
+  // Poll project status in Step 2 until status is ACTIVE
+  useEffect(() => {
+    if (step !== 2 || !createdProject || connected) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await call<{ project: { id: string; status: string } }>(
+          `/v1/projects/${createdProject.id}`
+        );
+        if (res.project.status === "ACTIVE") {
+          setConnected(true);
+          toast.success("Telemetry received! Production observability active.");
+        }
+      } catch {
+        // ignore polling errors
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
+  }, [step, createdProject, connected, call]);
+
+  async function handleCreateProject() {
+    const next: FieldErrors<"name" | "baseUrl"> = {
+      name: validateRequired(name, "a name for this project"),
+      baseUrl: validateTargetUrl(baseUrl || "http://localhost:3000"),
+    };
+
+    setErrors(next);
+    if (next.name || next.baseUrl) return;
+    setServerError(null);
+
     try {
-      // Direct client check (or CORS fallback)
-      const res = await fetch(targetUrl.trim(), {
-        method: defaultMethod === "GET" ? "HEAD" : defaultMethod,
-        mode: "no-cors",
-        signal: AbortSignal.timeout(5000),
+      const res = await create.mutateAsync({
+        name: name.trim(),
+        baseUrl: normalizeUrl(baseUrl || "http://localhost:3000"),
+        targetUrl: normalizeUrl(baseUrl || "http://localhost:3000"),
       });
-      const durationMs = Math.round(performance.now() - startTime);
-      setPingResult({
-        status: "success",
-        message: `Host reached in ${durationMs}ms (opaque/reachable)`,
+
+      setCreatedProject({ id: res.project.id, name: res.project.name });
+      setApiKey(res.apiKey);
+      setStep(2);
+      toast.success(`Project "${res.project.name}" registered!`);
+    } catch (e) {
+      setServerError(
+        e instanceof ApiError
+          ? e.message
+          : "Couldn't create the project. You may have hit the 5-project limit."
+      );
+    }
+  }
+
+  async function handleSimulatePing() {
+    if (!apiKey || !createdProject) return;
+    setSimulating(true);
+    try {
+      await fetch("http://localhost:8080/v1/ingest", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-strim-key": apiKey,
+        },
+        body: JSON.stringify({
+          events: [
+            {
+              method: "GET",
+              path: "/api/health",
+              statusCode: 200,
+              durationMs: 38,
+            },
+            {
+              method: "POST",
+              path: "/api/checkout",
+              statusCode: 200,
+              durationMs: 142,
+            },
+          ],
+        }),
       });
-    } catch (err: any) {
-      setPingResult({
-        status: "warning",
-        message: `Direct ping timed out or blocked by CORS (${err?.message || "Verify target URL is online"}). The backend load engine will test directly.`,
-      });
+
+      setConnected(true);
+      toast.success("Test telemetry event sent & verified!");
+    } catch {
+      toast.error("Failed to reach STRIM Ingestion service.");
     } finally {
-      setTestingReachability(false);
+      setSimulating(false);
+    }
+  }
+
+  function copyApiKey() {
+    if (!apiKey) return;
+    navigator.clipboard.writeText(apiKey);
+    setCopiedKey(true);
+    toast.success("API key copied to clipboard");
+    setTimeout(() => setCopiedKey(false), 2000);
+  }
+
+  const getSnippet = () => {
+    switch (activeTab) {
+      case "hono":
+        return `// 1. Install package\nbun add @strim/sdk\n\n// 2. Attach middleware in your server\nimport { Hono } from "hono";\nimport { strimHono } from "@strim/sdk";\n\nconst app = new Hono();\napp.use("*", strimHono({ apiKey: "${apiKey}" }));\n\nexport default app;`;
+      case "express":
+        return `// 1. Install package\nnpm install @strim/sdk\n\n// 2. Attach middleware in server.js\nimport express from "express";\nimport { strimExpress } from "@strim/sdk";\n\nconst app = express();\napp.use(strimExpress({ apiKey: "${apiKey}" }));\n\napp.listen(3000);`;
+      case "nextjs":
+        return `// 1. Install package\nnpm install @strim/sdk\n\n// 2. Wrap your route handler in app/api/.../route.ts\nimport { strimNext } from "@strim/sdk";\n\nexport const GET = strimNext(async (req) => {\n  return Response.json({ ok: true });\n}, { apiKey: "${apiKey}" });`;
+      case "fastify":
+        return `// 1. Install package\nnpm install @strim/sdk\n\n// 2. Register hook in fastify\nimport Fastify from "fastify";\nimport { strimFastify } from "@strim/sdk";\n\nconst fastify = Fastify();\nfastify.addHook("onResponse", strimFastify({ apiKey: "${apiKey}" }));\n\nfastify.listen({ port: 3000 });`;
     }
   };
 
-  const fillLocalDemoTarget = () => {
-    setName("Local Strim Health API");
-    setTargetUrl("http://localhost:3001/health");
-    setDefaultMethod("GET");
-    setBearerToken("");
-    setPingResult(null);
-  };
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="size-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center">
-                <Target className="size-4" />
-              </div>
-              <DialogTitle className="text-base font-semibold">Register Target API</DialogTitle>
-            </div>
-            <button
-              type="button"
-              onClick={fillLocalDemoTarget}
-              className="text-[11px] font-medium text-brand hover:underline flex items-center gap-1"
+    <Dialog
+      open={open}
+      onOpenChange={close}
+      title={step === 1 ? "Add New Project or Server" : `Connect ${createdProject?.name || "Project"}`}
+      description={
+        step === 1
+          ? "Connect a service for continuous production observability, 7-day breakpoint diagnosis, and auto route discovery."
+          : "Add the @strim/sdk middleware to your server. We'll automatically capture routes and diagnose breakpoints."
+      }
+      footer={
+        step === 1 ? (
+          <>
+            <Button variant="ghost" onClick={() => close(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateProject} loading={create.isPending}>
+              Generate API Key & Continue <ArrowRight className="size-4" />
+            </Button>
+          </>
+        ) : (
+          <div className="flex w-full items-center justify-between">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSimulatePing}
+              loading={simulating}
+              className="text-xs"
             >
-              <Globe className="size-3" />
-              Use Local Demo API
-            </button>
-          </div>
-          <DialogDescription className="text-xs text-muted-foreground mt-1">
-            Specify an HTTP API endpoint to benchmark, monitor breaking points, and gate in CI/CD.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            createTargetMutation.mutate();
-          }}
-          className="space-y-4 py-2"
-        >
-          <div className="space-y-1.5">
-            <Label htmlFor="target-name" className="text-xs font-medium">
-              Target Name
-            </Label>
-            <Input
-              id="target-name"
-              placeholder="e.g. Checkout Service, Search API"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              minLength={2}
-              className="h-9 text-xs"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="target-url" className="text-xs font-medium">
-                Endpoint URL
-              </Label>
-              <button
-                type="button"
-                onClick={handleTestReachability}
-                disabled={!targetUrl.trim() || testingReachability}
-                className="text-[11px] font-medium text-brand hover:text-brand-strong disabled:opacity-50 transition-colors flex items-center gap-1"
-              >
-                {testingReachability && <Loader2 className="size-3 animate-spin" />}
-                Test Reachability
-              </button>
-            </div>
+              <Zap className="size-3.5 text-warning" /> Simulate Connection Ping
+            </Button>
             <div className="flex items-center gap-2">
-              <Select
-                value={defaultMethod}
-                onValueChange={(v) => {
-                  if (v) setDefaultMethod(v as "GET" | "POST" | "PUT" | "DELETE");
+              <Button variant="ghost" onClick={() => close(false)}>
+                Done
+              </Button>
+              <Button
+                onClick={() => {
+                  close(false);
+                  if (createdProject) {
+                    router.push(`/projects/${createdProject.id}`);
+                  }
                 }}
               >
-                <SelectTrigger className="w-24 h-9 text-xs font-mono font-semibold">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="GET" className="text-xs font-mono">GET</SelectItem>
-                  <SelectItem value="POST" className="text-xs font-mono">POST</SelectItem>
-                  <SelectItem value="PUT" className="text-xs font-mono">PUT</SelectItem>
-                  <SelectItem value="DELETE" className="text-xs font-mono">DELETE</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input
-                id="target-url"
-                type="url"
-                placeholder="https://api.example.com/health"
-                value={targetUrl}
-                onChange={(e) => setTargetUrl(e.target.value)}
-                required
-                className="h-9 text-xs font-mono flex-1"
-              />
+                Go to Project Console <ArrowRight className="size-4" />
+              </Button>
             </div>
-            {pingResult && (
-              <div
-                className={`text-[11px] p-2 rounded-md flex items-start gap-1.5 mt-1.5 ${
-                  pingResult.status === "success"
-                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                }`}
-              >
-                {pingResult.status === "success" ? (
-                  <CheckCircle2 className="size-3.5 shrink-0 mt-0.5" />
-                ) : (
-                  <AlertCircle className="size-3.5 shrink-0 mt-0.5" />
-                )}
-                <span>{pingResult.message}</span>
-              </div>
-            )}
+          </div>
+        )
+      }
+    >
+      {step === 1 ? (
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleCreateProject();
+          }}
+          noValidate
+        >
+          {/* Organization project limits pill */}
+          <div className="flex items-center justify-between rounded-xl border border-border bg-surface-muted/60 px-4 py-2.5 text-xs">
+            <span className="flex items-center gap-1.5 font-medium text-foreground">
+              <Layers className="size-3.5 text-brand" /> Active Projects
+            </span>
+            <span className="font-mono text-muted-foreground">
+              {projects.length} / 5 limit
+            </span>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="bearer-token" className="text-xs font-medium text-muted-foreground">
-              Bearer Token / Auth Header (Optional)
-            </Label>
+          <Field id="project-name" label="Project Name" error={errors.name}>
             <Input
-              id="bearer-token"
-              type="password"
-              placeholder="e.g. sk_live_... or token string"
-              value={bearerToken}
-              onChange={(e) => setBearerToken(e.target.value)}
-              className="h-9 text-xs font-mono"
+              id="project-name"
+              data-autofocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Checkout Gateway, Auth API, Microservice A"
+              aria-invalid={Boolean(errors.name)}
             />
-            <p className="text-[10px] text-muted-foreground">
-              Encrypted at rest with AES-256-GCM. Injected automatically during load generation.
+          </Field>
+
+          <Field
+            id="project-base-url"
+            label="Base URL / Target"
+            error={errors.baseUrl}
+            hint="The public or staging URL where your server is hosted."
+          >
+            <div className="relative">
+              <Globe className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="project-base-url"
+                value={baseUrl}
+                onChange={(e) => setBaseUrl(e.target.value)}
+                placeholder="https://api.mycorp.com or http://localhost:3000"
+                className="pl-9 font-mono text-[13px]"
+                aria-invalid={Boolean(errors.baseUrl)}
+              />
+            </div>
+          </Field>
+
+          {serverError && (
+            <Alert tone="danger" title="Unable to create project">
+              {serverError}
+            </Alert>
+          )}
+        </form>
+      ) : (
+        <div className="space-y-5">
+          {/* API Key Box */}
+          <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                <Key className="size-3.5 text-brand" /> Project API Key
+              </span>
+              <span className="rounded bg-brand-subtle px-2 py-0.5 text-[10px] font-semibold text-brand-strong">
+                Production Token
+              </span>
+            </div>
+
+            <div className="mt-2 flex items-center gap-2 rounded-lg border border-border bg-surface-muted px-3 py-2">
+              <code className="flex-1 font-mono text-xs">
+                {showKey ? apiKey : `${apiKey.slice(0, 15)}••••••••••••••••••••••••••••`}
+              </code>
+              <button
+                type="button"
+                onClick={() => setShowKey((v) => !v)}
+                className="text-muted-foreground hover:text-foreground"
+                title={showKey ? "Hide key" : "Show key"}
+              >
+                {showKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              </button>
+              <button
+                type="button"
+                onClick={copyApiKey}
+                className="flex items-center gap-1 text-xs font-medium text-brand hover:text-brand-strong"
+              >
+                {copiedKey ? <Check className="size-4" /> : <Copy className="size-4" />}
+                {copiedKey ? "Copied" : "Copy"}
+              </button>
+            </div>
+            <p className="mt-1.5 text-[11px] text-muted-foreground">
+              Add this to your server environment as <code className="font-mono">STRIM_API_KEY</code>.
             </p>
           </div>
 
-          {createTargetMutation.isError && (
-            <div className="text-[11px] p-2.5 rounded-md bg-destructive/10 text-destructive border border-destructive/20 flex items-center gap-2">
-              <AlertCircle className="size-4 shrink-0" />
-              <span>
-                {createTargetMutation.error instanceof Error
-                  ? createTargetMutation.error.message
-                  : "Failed to create target"}
-              </span>
-            </div>
-          )}
-
-          <DialogFooter className="pt-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              className="text-xs h-8"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              size="sm"
-              disabled={createTargetMutation.isPending || !name.trim() || !targetUrl.trim()}
-              className="text-xs h-8 bg-brand hover:bg-brand-strong text-white"
-            >
-              {createTargetMutation.isPending ? (
-                <>
-                  <Loader2 className="size-3.5 animate-spin mr-1.5" />
-                  Saving…
-                </>
+          {/* Connection Listener Banner */}
+          <div
+            className={`flex items-center justify-between rounded-xl border p-3.5 transition-colors ${
+              connected
+                ? "border-success/40 bg-success/10 text-success-text"
+                : "border-border bg-surface-muted/50"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              {connected ? (
+                <div className="grid size-8 place-items-center rounded-full bg-success/20 text-success">
+                  <CheckCircle2 className="size-5" />
+                </div>
               ) : (
-                <>
-                  <Plus className="size-3.5 mr-1" />
-                  Create Target
-                </>
+                <div className="relative grid size-8 place-items-center rounded-full bg-brand/10">
+                  <span className="absolute inset-0 animate-ping rounded-full bg-brand/30" />
+                  <Radio className="size-4 text-brand" />
+                </div>
               )}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
+              <div>
+                <p className="text-xs font-semibold">
+                  {connected ? "Server Connected!" : "Listening for first request..."}
+                </p>
+                <p className="text-[11px] text-muted-foreground">
+                  {connected
+                    ? "Initial API routes successfully ingested and registered."
+                    : "Install the SDK and make any HTTP request to your server."}
+                </p>
+              </div>
+            </div>
+            {connected && <Badge tone="success">Active</Badge>}
+          </div>
+
+          {/* Code Snippets */}
+          <div>
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <span className="text-xs font-medium text-muted-foreground">Select framework</span>
+              <div className="flex gap-1">
+                {(["hono", "express", "nextjs", "fastify"] as Framework[]).map((fw) => (
+                  <button
+                    key={fw}
+                    type="button"
+                    onClick={() => setActiveTab(fw)}
+                    className={`rounded-md px-2.5 py-1 text-xs font-medium uppercase transition-colors ${
+                      activeTab === fw
+                        ? "bg-brand text-white"
+                        : "text-muted-foreground hover:bg-surface-muted"
+                    }`}
+                  >
+                    {fw}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-2 relative">
+              <pre className="max-h-56 overflow-x-auto rounded-xl border border-border bg-neutral-950 p-3.5 font-mono text-[12px] leading-relaxed text-neutral-200">
+                {getSnippet()}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
     </Dialog>
   );
 }

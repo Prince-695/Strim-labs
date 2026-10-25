@@ -1,20 +1,47 @@
 "use client";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useState } from "react";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { SessionProvider } from "@/lib/session";
-import { ThemeProvider } from "@/components/theme-provider";
+import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState, type ReactNode } from "react";
+import { Toaster } from "sonner";
+import { ApiError } from "@/lib/api";
+import { onUnauthorized, SessionProvider } from "@/lib/session";
+import { ThemeProvider, useTheme } from "./theme-provider";
 
-export function Providers({ children }: { children: React.ReactNode }) {
-  const [client] = useState(() => new QueryClient());
+function ThemedToaster() {
+  const { resolved } = useTheme();
+  return <Toaster theme={resolved} position="bottom-right" richColors closeButton toastOptions={{ className: "font-sans" }} />;
+}
+
+export function Providers({ children }: { children: ReactNode }) {
+  const [client] = useState(
+    () =>
+      new QueryClient({
+        queryCache: new QueryCache({
+          onError: (error) => {
+            if (error instanceof ApiError && error.status === 401) onUnauthorized();
+          },
+        }),
+        defaultOptions: {
+          queries: {
+            staleTime: 15_000,
+            refetchOnWindowFocus: false,
+            retry: (count, error) => {
+              if (error instanceof ApiError && error.status >= 400 && error.status < 500) return false;
+              return count < 2;
+            },
+          },
+        },
+      }),
+  );
+
   return (
-    <QueryClientProvider client={client}>
-      <ThemeProvider defaultTheme="system">
-        <TooltipProvider>
-          <SessionProvider>{children}</SessionProvider>
-        </TooltipProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={client}>
+        <SessionProvider>
+          {children}
+          <ThemedToaster />
+        </SessionProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }

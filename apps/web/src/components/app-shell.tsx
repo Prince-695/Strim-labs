@@ -1,298 +1,366 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  BarChart3,
+  BookOpen,
+  Building2,
+  Check,
+  ChevronsUpDown,
+  Layers,
+  Plus,
+  Search,
+  Settings,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  Zap,
-  Activity,
-  BarChart3,
-  ArrowLeftRight,
-  Settings,
-  Plus,
-  LogOut,
-  Menu,
-  X,
-  Target,
-  BookOpen,
-  Monitor,
-  Sun,
-  Moon,
-} from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
+import { SPRING_SNAPPY } from "@/lib/motion";
 import { useSession } from "@/lib/session";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useTheme } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
+import { AddTargetModal } from "./add-target-modal";
+import { AppHeader } from "./app-header";
+import { CommandPalette } from "./command-palette";
+import { CreateOrgModal } from "./create-org-modal";
+import { Logo, LogoMark } from "./logo";
+import { Skeleton } from "./ui/skeleton";
 
-import { AddTargetModal } from "@/components/add-target-modal";
-
-const NAV_ITEMS = [
-  { href: "/", label: "Dashboard", icon: BarChart3 },
-  { href: "/runner", label: "Load Runner", icon: Zap, accent: true },
-  { href: "/compare", label: "Comparison", icon: ArrowLeftRight },
+const NAV = [
+  { href: "/dashboard", label: "Dashboard", icon: BarChart3 },
+  { href: "/projects", label: "Projects", icon: Layers },
   { href: "/settings", label: "Settings", icon: Settings },
-];
+  { href: "/docs", label: "Documentation", icon: BookOpen },
+] as const;
 
-function ThemeSwitch() {
-  const { theme, setTheme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  if (!mounted) return <div className="h-8 w-20 rounded-lg bg-secondary animate-pulse" />;
-
-  const modes = [
-    { value: "system" as const, icon: Monitor, label: "System" },
-    { value: "light" as const, icon: Sun, label: "Light" },
-    { value: "dark" as const, icon: Moon, label: "Dark" },
-  ];
-
-  return (
-    <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-secondary/80 border border-border/60">
-      {modes.map((m) => {
-        const Icon = m.icon;
-        const active = theme === m.value;
-        return (
-          <button
-            key={m.value}
-            type="button"
-            onClick={() => setTheme(m.value)}
-            title={m.label}
-            className={cn(
-              "flex items-center justify-center size-7 rounded-md transition-all text-xs",
-              active
-                ? "bg-card text-foreground shadow-sm border border-border/50"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <Icon className="size-3.5" />
-          </button>
-        );
-      })}
-    </div>
-  );
+function isActive(pathname: string, href: string) {
+  if (href === "/dashboard") return pathname === "/dashboard";
+  if (href === "/projects") return pathname === "/projects" || pathname.startsWith("/projects/");
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function AppShell({ children }: { children: React.ReactNode }) {
-  const path = usePathname();
+export function AppShell({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
   const router = useRouter();
-  const s = useSession();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [addTargetOpen, setAddTargetOpen] = useState(false);
+  const { ready, token, org, orgs, setOrgId } = useSession();
 
+  const [collapsed, setCollapsed] = useState(false);
+  const [drawer, setDrawer] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  const [createOrgOpen, setCreateOrgOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [orgMenu, setOrgMenu] = useState(false);
+
+  // Restore sidebar collapse state from localStorage
   useEffect(() => {
-    if (!s.loading && !s.token) {
-      router.replace("/login");
+    try {
+      const saved = localStorage.getItem("strim_sidebar_collapsed");
+      if (saved !== null) {
+        setCollapsed(saved === "true");
+      }
+    } catch {
+      // ignore
     }
-  }, [s.loading, s.token, router]);
+  }, []);
 
-  const currentOrg = s.orgs.find((o) => o.id === s.orgId) ?? s.orgs[0];
-  const currentProject = s.projects.find((p) => p.id === s.projectId) ?? s.projects[0];
+  const toggleCollapse = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem("strim_sidebar_collapsed", String(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  };
 
-  if (s.loading || !s.token) {
+  // Guard: require session
+  useEffect(() => {
+    if (ready && !token) router.replace(`/login?next=${encodeURIComponent(pathname)}`);
+  }, [ready, token, router, pathname]);
+
+  useEffect(() => setDrawer(false), [pathname]);
+
+  if (!ready || !token) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-foreground">
-        <div className="flex flex-col items-center gap-3">
-          <div className="size-10 rounded-xl bg-brand/15 text-brand flex items-center justify-center animate-pulse">
-            <Zap className="size-5" />
-          </div>
-          <p className="text-sm font-medium text-muted-foreground animate-pulse">Loading STRIM Engine…</p>
+      <div className="grid min-h-dvh place-items-center">
+        <div className="flex flex-col items-center gap-3" role="status" aria-label="Loading console">
+          <Skeleton className="size-10 rounded-xl" />
+          <Skeleton className="h-3 w-28" />
         </div>
       </div>
     );
   }
 
-  const sidebarContent = (
+  const orgInitial = (org?.name || "O").slice(0, 1).toUpperCase();
+
+  const renderSidebar = (isCollapsed: boolean, isDrawer = false) => (
     <div className="flex h-full flex-col">
       {/* Brand Header */}
-      <div className="p-4 border-b border-border/60 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2.5 group">
-          <div className="size-8 rounded-lg bg-brand text-white flex items-center justify-center shadow-sm transition-transform group-hover:scale-105">
-            <Zap className="size-4" />
-          </div>
-          <div>
-            <span className="font-heading font-bold text-sm tracking-tight text-foreground block leading-none">
-              STRIM
-            </span>
-            <span className="text-[10px] text-muted-foreground leading-none">
-              Load & Capacity Engine
-            </span>
-          </div>
+      <div className={cn("flex h-16 items-center px-4", isCollapsed ? "justify-center" : "justify-between px-5")}>
+        <Link href="/dashboard" aria-label="STRIM Labs dashboard">
+          {isCollapsed ? <LogoMark className="size-9 p-0.5" /> : <Logo />}
         </Link>
-
-        <button
-          type="button"
-          onClick={() => setMobileMenuOpen(false)}
-          className="md:hidden size-8 rounded-lg text-muted-foreground hover:bg-secondary flex items-center justify-center"
-        >
-          <X className="size-4" />
-        </button>
-      </div>
-
-      {/* Active API Target */}
-      <div className="p-3 border-b border-border/40">
-        <div className="flex items-center justify-between mb-1.5 px-1">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            Active Target
-          </span>
+        {isDrawer && (
           <button
             type="button"
-            onClick={() => setAddTargetOpen(true)}
-            className="flex items-center gap-0.5 text-[10px] font-semibold text-brand hover:text-brand-strong transition-colors cursor-pointer"
-            title="Add Target API"
+            onClick={() => setDrawer(false)}
+            aria-label="Close navigation"
+            className="rounded-md p-1.5 text-muted-foreground hover:bg-surface-muted md:hidden"
           >
-            <Plus className="size-3" />
-            Add
+            <X className="size-4" />
           </button>
-        </div>
-        <Select
-          value={currentProject?.id ?? ""}
-          onValueChange={(val) => {
-            if (val) s.setProjectId(val);
-          }}
-        >
-          <SelectTrigger className="w-full text-xs h-9 bg-secondary/60 border-border/60 rounded-lg">
-            <SelectValue placeholder="Select target…" />
-          </SelectTrigger>
-          <SelectContent className="rounded-lg">
-            {s.projects.map((p) => (
-              <SelectItem key={p.id} value={p.id} className="text-xs">
-                <div className="flex items-center gap-2">
-                  <Target className="size-3 text-muted-foreground shrink-0" />
-                  {p.name}
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {currentProject?.targetUrl && (
-          <p className="text-[10px] font-mono text-muted-foreground truncate mt-1 px-1">
-            {currentProject.targetUrl}
-          </p>
         )}
       </div>
 
-      {/* Navigation */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-0.5">
-        {NAV_ITEMS.map((item) => {
-          const Icon = item.icon;
-          const active = path === item.href || (item.href !== "/" && path.startsWith(item.href));
+      {/* Organization Switcher Dropdown */}
+      <div className={cn("relative", isCollapsed ? "px-2" : "px-3")}>
+        {isCollapsed ? (
+          <button
+            type="button"
+            onClick={() => setOrgMenu((o) => !o)}
+            title={`Organization: ${org?.name || "Select Org"}`}
+            aria-label="Switch organization"
+            className="mx-auto flex size-10 items-center justify-center rounded-xl border border-border bg-surface-muted/60 font-semibold text-xs text-foreground transition-colors hover:bg-surface-muted"
+          >
+            {orgInitial}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOrgMenu((o) => !o)}
+            aria-haspopup="listbox"
+            aria-expanded={orgMenu}
+            className="flex w-full items-center gap-2.5 rounded-xl border border-border bg-surface-muted/60 px-3 py-2 text-left transition-colors hover:bg-surface-muted"
+          >
+            <div className="grid size-6 place-items-center rounded-lg bg-brand text-xs font-bold text-brand-foreground shadow-xs shrink-0">
+              {orgInitial}
+            </div>
+            <div className="min-w-0 flex-1">
+              <span className="truncate text-[13px] font-semibold text-foreground block">
+                {org?.name || "Select Org"}
+              </span>
+              <p className="truncate text-[10px] text-muted-foreground uppercase tracking-wider font-mono">
+                {org?.role || "OWNER"} WORKSPACE
+              </p>
+            </div>
+            <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+          </button>
+        )}
+
+        <AnimatePresence>
+          {orgMenu && (
+            <>
+              <button
+                type="button"
+                aria-label="Close organization menu"
+                className="fixed inset-0 z-30 cursor-default"
+                onClick={() => setOrgMenu(false)}
+              />
+              <motion.div
+                role="listbox"
+                aria-label="Organizations"
+                initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4 }}
+                transition={{ duration: 0.14 }}
+                className={cn(
+                  "z-40 max-h-72 overflow-y-auto rounded-xl border border-border bg-card p-1.5 shadow-xl",
+                  isCollapsed
+                    ? "absolute left-full top-0 ml-2 w-64"
+                    : "absolute inset-x-3 top-full mt-1.5"
+                )}
+              >
+                <div className="flex items-center justify-between px-2.5 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  <span>Organizations</span>
+                  <span className="font-mono">{orgs.length} / 3</span>
+                </div>
+
+                <div className="space-y-0.5 mt-1">
+                  {orgs.map((o) => (
+                    <button
+                      key={o.id}
+                      type="button"
+                      role="option"
+                      aria-selected={o.id === org?.id}
+                      onClick={() => {
+                        setOrgId(o.id);
+                        setOrgMenu(false);
+                      }}
+                      className={cn(
+                        "flex w-full items-center justify-between rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-surface-muted text-xs",
+                        o.id === org?.id && "bg-brand-subtle text-brand-foreground font-semibold"
+                      )}
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Building2 className="size-3.5 shrink-0 text-muted-foreground" />
+                        <span className="truncate">{o.name}</span>
+                      </div>
+                      {o.id === org?.id && <Check className="size-3.5 text-brand shrink-0" />}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="border-t border-border mt-1.5 pt-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setOrgMenu(false);
+                      setCreateOrgOpen(true);
+                    }}
+                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-surface-muted hover:text-foreground"
+                  >
+                    <Plus className="size-3.5" />
+                    <span>Create organization</span>
+                  </button>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Quick Search */}
+      {isCollapsed ? (
+        <button
+          type="button"
+          onClick={() => setPaletteOpen(true)}
+          title="Search or command palette (⌘K)"
+          aria-label="Search"
+          className="mx-auto mt-3 flex size-10 items-center justify-center rounded-xl border border-border text-muted-foreground transition-colors hover:bg-surface-muted hover:text-foreground"
+        >
+          <Search className="size-4" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setPaletteOpen(true)}
+          className="mx-3 mt-3 flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-[13px] text-muted-foreground transition-colors hover:bg-surface-muted hover:text-foreground"
+        >
+          <Search className="size-3.5" /> Search
+          <kbd className="ml-auto rounded border border-border px-1.5 py-px font-mono text-[10px]">⌘K</kbd>
+        </button>
+      )}
+
+      {/* Primary Navigation */}
+      <nav aria-label="Primary" className={cn("mt-4 flex-1 space-y-1 overflow-y-auto", isCollapsed ? "px-2" : "px-3")}>
+        {NAV.map(({ href, label, icon: Icon }) => {
+          const active = isActive(pathname, href);
+
+          if (isCollapsed) {
+            return (
+              <Link
+                key={href}
+                href={href}
+                title={label}
+                aria-label={label}
+                aria-current={active ? "page" : undefined}
+                className={cn(
+                  "relative mx-auto flex size-10 items-center justify-center rounded-xl transition-colors",
+                  active
+                    ? "bg-brand-subtle text-brand-strong dark:text-brand shadow-xs"
+                    : "text-muted-foreground hover:bg-surface-muted hover:text-foreground"
+                )}
+              >
+                <Icon className="size-5" aria-hidden />
+              </Link>
+            );
+          }
+
           return (
             <Link
-              key={item.href}
-              href={item.href}
-              onClick={() => setMobileMenuOpen(false)}
+              key={href}
+              href={href}
+              aria-current={active ? "page" : undefined}
               className={cn(
-                "flex items-center justify-between rounded-lg px-3 py-2 text-[13px] font-medium transition-all group",
-                active
-                  ? "bg-brand-subtle text-foreground font-semibold"
-                  : "text-muted-foreground hover:bg-secondary/80 hover:text-foreground"
+                "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                active ? "text-foreground" : "text-muted-foreground hover:bg-surface-muted/70 hover:text-foreground"
               )}
             >
-              <div className="flex items-center gap-2.5">
-                <Icon
-                  className={cn(
-                    "size-4 shrink-0 transition-colors",
-                    active ? "text-brand" : "text-muted-foreground group-hover:text-foreground"
-                  )}
+              {active && (
+                <motion.span
+                  layoutId="nav-active"
+                  transition={SPRING_SNAPPY}
+                  className="absolute inset-0 rounded-lg bg-brand-subtle"
                 />
-                <span>{item.label}</span>
-              </div>
-              {item.accent && (
-                <span className="relative flex size-1.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-60" />
-                  <span className="relative inline-flex rounded-full size-1.5 bg-brand" />
-                </span>
               )}
+              {active && (
+                <motion.span
+                  layoutId="nav-bar"
+                  transition={SPRING_SNAPPY}
+                  className="absolute -left-3 top-2 bottom-2 w-[3px] rounded-r-full bg-brand"
+                />
+              )}
+              <Icon className={cn("relative size-4", active && "text-brand-strong dark:text-brand")} aria-hidden />
+              <span className="relative flex-1">{label}</span>
             </Link>
           );
         })}
-
-        <div className="pt-2 mt-2 border-t border-border/40">
-          <a
-            href="/docs"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-[13px] font-medium text-muted-foreground hover:bg-secondary/80 hover:text-foreground transition-all"
-          >
-            <BookOpen className="size-4 shrink-0" />
-            Documentation
-          </a>
-        </div>
-      </div>
-
-      {/* Footer: Org + Theme + Logout */}
-      <div className="p-3 border-t border-border/60 space-y-2.5">
-        <ThemeSwitch />
-        <div className="flex items-center justify-between px-1 text-xs">
-          <div className="truncate">
-            <p className="font-semibold text-foreground truncate">{currentOrg?.name ?? "Workspace"}</p>
-            <p className="text-[10px] text-muted-foreground capitalize">{currentOrg?.role?.toLowerCase() ?? "owner"}</p>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7 rounded-lg text-muted-foreground hover:text-destructive"
-            onClick={() => s.clear()}
-            title="Sign out"
-          >
-            <LogOut className="size-3.5" />
-          </Button>
-        </div>
-      </div>
+      </nav>
     </div>
   );
 
   return (
-    <div className="flex min-h-screen bg-background">
-      {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-60 flex-col border-r border-border/60 bg-card shrink-0 sticky top-0 h-screen">
-        {sidebarContent}
+    <div
+      className={cn(
+        "min-h-dvh transition-[padding-left] duration-200 ease-in-out",
+        collapsed ? "md:pl-[72px]" : "md:pl-[260px]"
+      )}
+    >
+      {/* Desktop sidebar */}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-20 hidden border-r border-border bg-card transition-[width] duration-200 ease-in-out md:block",
+          collapsed ? "w-[72px]" : "w-[260px]"
+        )}
+      >
+        {renderSidebar(collapsed, false)}
       </aside>
 
-      {/* Mobile Drawer */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 flex md:hidden bg-background/80 backdrop-blur-sm">
-          <div className="w-72 bg-card border-r border-border h-full shadow-2xl animate-in slide-in-from-left duration-200">
-            {sidebarContent}
+      {/* Top Application Navbar */}
+      <AppHeader
+        collapsed={collapsed}
+        onToggleCollapse={toggleCollapse}
+        onOpenDrawer={() => setDrawer(true)}
+        onOpenPalette={() => setPaletteOpen(true)}
+      />
+
+      {/* Mobile drawer */}
+      <AnimatePresence>
+        {drawer && (
+          <div className="fixed inset-0 z-50 md:hidden">
+            <motion.div
+              className="absolute inset-0 bg-ink/50 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDrawer(false)}
+              aria-hidden
+            />
+            <motion.aside
+              role="dialog"
+              aria-modal="true"
+              aria-label="Navigation"
+              className="absolute inset-y-0 left-0 w-[280px] max-w-[85vw] bg-card shadow-2xl"
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "spring", stiffness: 380, damping: 38 }}
+            >
+              {renderSidebar(false, true)}
+            </motion.aside>
           </div>
-          <div className="flex-1" onClick={() => setMobileMenuOpen(false)} />
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
-      {/* Main Content Area */}
-      <div className="flex flex-1 flex-col min-w-0">
-        {/* Mobile Header */}
-        <header className="md:hidden flex items-center justify-between p-3 border-b border-border/60 bg-card">
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(true)}
-            className="size-9 rounded-lg border border-border flex items-center justify-center text-muted-foreground"
-          >
-            <Menu className="size-5" />
-          </button>
-          <div className="flex items-center gap-2">
-            <div className="size-6 rounded-md bg-brand flex items-center justify-center text-white">
-              <Zap className="size-3.5" />
-            </div>
-            <span className="font-heading font-bold text-xs tracking-tight text-foreground">STRIM</span>
-          </div>
-          <ThemeSwitch />
-        </header>
+      <main id="main" className="mx-auto w-full max-w-[1280px] px-4 py-6 sm:px-8 sm:py-8">
+        {children}
+      </main>
 
-        {/* Page Content */}
-        <main className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto">
-          {children}
-        </main>
-      </div>
-
-      <AddTargetModal open={addTargetOpen} onOpenChange={setAddTargetOpen} />
+      <AddTargetModal open={addOpen} onOpenChange={setAddOpen} />
+      <CreateOrgModal open={createOrgOpen} onOpenChange={setCreateOrgOpen} />
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} onAddTarget={() => setAddOpen(true)} />
     </div>
   );
 }

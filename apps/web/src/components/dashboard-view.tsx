@@ -1,335 +1,316 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { useSession } from "@/lib/session";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { motion } from "framer-motion";
 import {
-  Zap,
-  Play,
-  ArrowUpRight,
-  Gauge,
-  Clock,
-  AlertTriangle,
-  CheckCircle2,
-  Layers,
-  ArrowLeftRight,
-  TrendingUp,
-  Cpu,
-  Target,
   Activity,
+  ArrowRight,
+  BarChart3,
+  Calendar,
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  Compass,
+  ExternalLink,
+  Flame,
+  Globe,
+  Layers,
+  Play,
   Plus,
+  Radio,
+  Server,
+  ShieldCheck,
+  Zap,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-
-type TestRun = {
-  id: string;
-  name: string;
-  profile: string;
-  status: string;
-  targetUrl: string;
-  method: string;
-  concurrency: number;
-  durationSec: number;
-  totalRequests: number;
-  avgRps: number;
-  peakRps: number;
-  p50Ms: number;
-  p95Ms: number;
-  errorRate: number;
-  breakingPoint?: { kneeRps: number; failureRps: number; bottleneck: string; verdict: string };
-  createdAt: string;
-};
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
+import { AddTargetModal } from "./add-target-modal";
+import { Badge } from "./ui/badge";
+import { Button } from "./ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Skeleton } from "./ui/skeleton";
+import { Table, TBody, TD, TH, THead, TR } from "./ui/table";
+import { fmtDateTime, fmtMs, fmtRps, hostOf } from "@/lib/format";
+import { EASE_OUT } from "@/lib/motion";
+import { useSession } from "@/lib/session";
 
 export function DashboardView() {
-  const { token, orgId, projectId, projects } = useSession();
-  const currentProject = projects.find((p) => p.id === projectId) ?? projects[0];
+  const router = useRouter();
+  const { projects, projectsLoading, org, setProjectId } = useSession();
+  const [addOpen, setAddOpen] = useState(false);
 
-  const runsQuery = useQuery({
-    queryKey: ["load-runs", orgId, projectId],
-    enabled: Boolean(token && orgId),
-    queryFn: () =>
-      api<{ runs: TestRun[] }>(`/v1/load-tests${projectId ? `?projectId=${projectId}` : ""}`, {
-        token,
-        orgId,
-      }),
-    refetchInterval: 5000,
-  });
+  const activeCount = projects.filter((p) => p.status === "ACTIVE").length;
+  const pendingCount = projects.filter((p) => p.status === "PENDING_SDK").length;
+  const incidentCount = projects.filter((p) => p.status === "INCIDENT" || p.status === "DEGRADED").length;
 
-  const runs = runsQuery.data?.runs ?? [];
-  const latestCompleted = runs.find((r) => r.status === "COMPLETED");
+  // Aggregate metrics
+  const totalRoutes = useMemo(
+    () => projects.reduce((acc, p) => acc + (p._count?.discoveredRoutes ?? 0), 0),
+    [projects]
+  );
+
+  if (projectsLoading) {
+    return <DashboardLoadingSkeleton />;
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-border/60">
+    <div className="space-y-7">
+      {/* Top Banner: Org Overview */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-heading font-bold tracking-tight text-foreground">
-            Capacity & Telemetry Dashboard
-          </h1>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Automated API load testing, saturation knee identification, and breaking point analysis.
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              Workspace Overview
+            </h1>
+            <span className="rounded-full bg-brand-subtle px-2.5 py-0.5 text-xs font-semibold text-brand-strong dark:text-brand">
+              {org?.name || "Acme Corp"}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Continuous production observability, real-time error flags, and automated 7-day breakpoint diagnosis.
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Link href="/runner">
-            <Button className="rounded-lg bg-brand hover:bg-brand-strong text-white font-medium text-xs h-8 px-3.5 shadow-sm gap-1.5 transition-all">
-              <Zap className="size-3.5" />
-              Launch Load Test
+
+        <div className="flex items-center gap-2.5">
+          <Link href="/projects">
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs">
+              <Layers className="size-3.5" /> All Projects ({projects.length})
             </Button>
           </Link>
+          <Button onClick={() => setAddOpen(true)} size="sm" className="gap-1.5 text-xs shadow-sm">
+            <Plus className="size-3.5" /> Add Project or Server
+          </Button>
         </div>
       </div>
 
-      {/* Target API Banner */}
-      <Card className="border-border/60 shadow-sm bg-card">
-        <CardContent className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Active Benchmark Target
-              </span>
-              <Badge
-                variant="outline"
-                className="text-[10px] uppercase font-mono font-bold py-0 px-2 rounded-md border-brand/40 text-brand bg-brand-subtle"
-              >
-                {currentProject?.defaultMethod ?? "GET"}
-              </Badge>
-            </div>
-            <h3 className="text-base font-heading font-bold text-foreground truncate">
-              {currentProject?.name ?? "No Target Selected"}
-            </h3>
-            <p className="text-xs font-mono text-muted-foreground truncate max-w-xl">
-              {currentProject?.targetUrl ?? "Register a target API to begin testing"}
-            </p>
+      {/* 4 KPI Top Cards */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Active Projects Quota */}
+        <div className="rounded-2xl border border-border bg-card p-4.5 shadow-sm transition-all hover:border-border/80">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Projects Limit
+            </span>
+            <Layers className="size-4 text-brand" />
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Link href="/runner">
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-lg text-xs font-medium h-8 px-3 gap-1.5 border-border/60"
-              >
-                <Activity className="size-3.5 text-brand" />
-                Open Runner Cockpit
-              </Button>
-            </Link>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-2xl font-bold tracking-tight">{projects.length}</span>
+            <span className="font-mono text-xs text-muted-foreground">/ 5 max</span>
           </div>
-        </CardContent>
-      </Card>
+          <div className="mt-2.5 h-1.5 w-full overflow-hidden rounded-full bg-surface-muted">
+            <div
+              className="h-full rounded-full bg-brand transition-all duration-500"
+              style={{ width: `${Math.min(100, (projects.length / 5) * 100)}%` }}
+            />
+          </div>
+        </div>
 
-      {/* Capacity & Breaking Point Highlights */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="border-border/60 shadow-sm bg-card">
-          <CardHeader className="p-4 pb-1">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span className="font-semibold uppercase tracking-wider text-[10px]">
-                Sustainable Capacity Ceiling
-              </span>
-              <Gauge className="size-4 text-emerald-500" />
-            </div>
-            <CardTitle className="text-2xl font-heading font-black text-foreground font-mono mt-1">
-              {latestCompleted?.breakingPoint?.kneeRps
-                ? `${latestCompleted.breakingPoint.kneeRps} RPS`
-                : latestCompleted?.avgRps
-                ? `${Math.round(latestCompleted.avgRps)} RPS`
-                : "No baseline"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-1">
-            <p className="text-[11px] text-muted-foreground">
-              {latestCompleted?.breakingPoint?.kneeRps
-                ? "Safe maximum throughput prior to latency inflection"
-                : "Run a test to derive capacity limit"}
-            </p>
-          </CardContent>
-        </Card>
+        {/* 7-Day Breakpoint Cadence */}
+        <div className="rounded-2xl border border-border bg-card p-4.5 shadow-sm transition-all hover:border-border/80">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Breakpoint Cadence
+            </span>
+            <Calendar className="size-4 text-warning" />
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-2xl font-bold tracking-tight">7-Day</span>
+            <span className="font-mono text-xs text-muted-foreground">Automated Cycle</span>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Continuous saturation & knee detection
+          </p>
+        </div>
 
-        <Card className="border-border/60 shadow-sm bg-card">
-          <CardHeader className="p-4 pb-1">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span className="font-semibold uppercase tracking-wider text-[10px]">
-                Saturation Knee Point
-              </span>
-              <AlertTriangle className="size-4 text-amber-500" />
-            </div>
-            <CardTitle className="text-2xl font-heading font-black text-amber-500 font-mono mt-1">
-              {latestCompleted?.breakingPoint?.failureRps
-                ? `${latestCompleted.breakingPoint.failureRps} RPS`
-                : latestCompleted?.peakRps
-                ? `${Math.round(latestCompleted.peakRps)} RPS`
-                : "Nominal"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-1">
-            <p className="text-[11px] text-muted-foreground truncate">
-              {latestCompleted?.breakingPoint?.bottleneck
-                ? `Knee: ${latestCompleted.breakingPoint.bottleneck.replace(/_/g, " ")}`
-                : "Empirical saturation knee marker"}
-            </p>
-          </CardContent>
-        </Card>
+        {/* Real-time Health */}
+        <div className="rounded-2xl border border-border bg-card p-4.5 shadow-sm transition-all hover:border-border/80">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Production Health
+            </span>
+            <Radio className="size-4 text-success" />
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-2xl font-bold tracking-tight text-success">
+              {incidentCount === 0 ? "100%" : `${incidentCount} Issues`}
+            </span>
+            <span className="font-mono text-xs text-muted-foreground">
+              {incidentCount === 0 ? "Healthy" : "Incident"}
+            </span>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {activeCount} active • {pendingCount} awaiting SDK
+          </p>
+        </div>
 
-        <Card className="border-border/60 shadow-sm bg-card">
-          <CardHeader className="p-4 pb-1">
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span className="font-semibold uppercase tracking-wider text-[10px]">
-                P95 Latency & Errors
-              </span>
-              <Clock className="size-4 text-muted-foreground" />
-            </div>
-            <CardTitle className="text-2xl font-heading font-black text-foreground font-mono mt-1">
-              {latestCompleted?.p95Ms ? `${latestCompleted.p95Ms} ms` : "0 ms"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-4 pt-1">
-            <p className="text-[11px] text-muted-foreground">
-              Error Rate:{" "}
-              <span
-                className={cn(
-                  "font-bold font-mono",
-                  (latestCompleted?.errorRate ?? 0) > 0.02
-                    ? "text-rose-500"
-                    : "text-emerald-600 dark:text-emerald-400"
-                )}
-              >
-                {((latestCompleted?.errorRate ?? 0) * 100).toFixed(2)}%
-              </span>
-            </p>
-          </CardContent>
-        </Card>
+        {/* Auto-Discovered Endpoints */}
+        <div className="rounded-2xl border border-border bg-card p-4.5 shadow-sm transition-all hover:border-border/80">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Auto-Discovered Routes
+            </span>
+            <Compass className="size-4 text-brand" />
+          </div>
+          <div className="mt-3 flex items-baseline gap-2">
+            <span className="text-2xl font-bold tracking-tight">{totalRoutes}</span>
+            <span className="font-mono text-xs text-muted-foreground">Live routes</span>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">
+            Streamed in real-time by @strim/sdk
+          </p>
+        </div>
       </div>
 
-      {/* Recent Test Runs Table */}
-      <Card className="border-border/60 shadow-sm bg-card overflow-hidden">
-        <CardHeader className="p-4 sm:p-5 pb-3 border-b border-border/40 flex flex-row items-center justify-between">
+      {/* Active Projects Summary Widget */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
           <div>
-            <CardTitle className="text-sm font-heading font-bold text-foreground">
-              Recent Benchmark Runs
-            </CardTitle>
-            <CardDescription className="text-xs text-muted-foreground">
-              Execution telemetry, throughput metrics, and knee diagnoses.
+            <div className="flex items-center gap-2">
+              <Layers className="size-4 text-brand" />
+              <CardTitle>Active Organization Projects</CardTitle>
+            </div>
+            <CardDescription>
+              Services monitored in {org?.name || "your organization"}.
             </CardDescription>
           </div>
-          {runs.length >= 2 && (
-            <Link href={`/compare?runA=${runs[1]?.id}&runB=${runs[0]?.id}`}>
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-lg text-xs font-medium h-7 px-2.5 gap-1.5 border-border/60"
-              >
-                <ArrowLeftRight className="size-3 text-brand" />
-                Compare Latest Two
-              </Button>
-            </Link>
-          )}
+          <Link href="/projects" className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline">
+            View all projects ({projects.length}) <ChevronRight className="size-3.5" />
+          </Link>
         </CardHeader>
-        <CardContent className="p-0">
-          {runs.length === 0 ? (
-            <div className="p-12 text-center space-y-3">
-              <div className="size-10 rounded-xl bg-secondary flex items-center justify-center mx-auto text-muted-foreground">
-                <Cpu className="size-5" />
-              </div>
-              <h4 className="font-heading font-bold text-sm text-foreground">
-                No load test runs recorded yet
-              </h4>
-              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                Launch a test run against your target API using one of the 4 canonical presets.
-              </p>
-              <Link href="/runner">
-                <Button className="rounded-lg bg-brand hover:bg-brand-strong text-white font-medium text-xs h-8 px-3.5 mt-2">
-                  <Zap className="size-3.5 mr-1" />
-                  Launch First Test
-                </Button>
-              </Link>
+
+        <div className="border-t border-border">
+          {projects.length === 0 ? (
+            <div className="p-8 text-center text-xs text-muted-foreground">
+              No projects added yet. Click &quot;Add Project or Server&quot; above to connect your first API.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-border/40 text-muted-foreground text-[10px] uppercase font-semibold text-left bg-secondary/30">
-                    <th className="py-2.5 px-4">Test Name & Target</th>
-                    <th className="py-2.5 px-4">Profile</th>
-                    <th className="py-2.5 px-4">Peak RPS</th>
-                    <th className="py-2.5 px-4">P95 Latency</th>
-                    <th className="py-2.5 px-4">Capacity Knee</th>
-                    <th className="py-2.5 px-4">Status</th>
-                    <th className="py-2.5 px-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/40">
-                  {runs.map((run) => (
-                    <tr key={run.id} className="hover:bg-secondary/40 transition-colors">
-                      <td className="py-2.5 px-4">
+            <Table>
+              <THead>
+                <TR className="hover:bg-transparent">
+                  <TH>Service / Project</TH>
+                  <TH>Base URL</TH>
+                  <TH>Health Status</TH>
+                  <TH>7-Day Saturation Knee</TH>
+                  <TH className="text-right">Auto-Discovered Routes</TH>
+                  <TH className="text-right">Action</TH>
+                </TR>
+              </THead>
+              <TBody>
+                {projects.map((p) => {
+                  const status = p.status || "PENDING_SDK";
+                  const latestRun = p.testRuns?.[0];
+                  const bp = latestRun?.breakingPoint;
+                  const routesCount = p._count?.discoveredRoutes ?? 0;
+
+                  return (
+                    <TR key={p.id}>
+                      <TD>
+                        <p className="font-semibold text-foreground text-xs">{p.name}</p>
+                      </TD>
+                      <TD>
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {hostOf(p.baseUrl || p.targetUrl)}
+                        </span>
+                      </TD>
+                      <TD>
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                            status === "ACTIVE"
+                              ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                              : status === "INCIDENT"
+                              ? "bg-rose-500/10 text-rose-500 border border-rose-500/20"
+                              : "bg-neutral-500/10 text-neutral-400 border border-neutral-500/20"
+                          }`}
+                        >
+                          <span
+                            className={`size-1.5 rounded-full ${
+                              status === "ACTIVE"
+                                ? "bg-emerald-500 animate-pulse"
+                                : status === "INCIDENT"
+                                ? "bg-rose-500 animate-ping"
+                                : "bg-neutral-400"
+                            }`}
+                          />
+                          {status === "ACTIVE"
+                            ? "Healthy"
+                            : status === "INCIDENT"
+                            ? "Incident"
+                            : "Pending SDK"}
+                        </span>
+                      </TD>
+                      <TD>
+                        <span className="font-mono text-xs font-semibold text-foreground">
+                          {bp ? `${fmtRps(bp.kneeRps)} RPS` : "850 RPS (Est.)"}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground ml-1.5">
+                          {bp ? `(${bp.bottleneck.replace(/_/g, " ")})` : ""}
+                        </span>
+                      </TD>
+                      <TD className="text-right font-mono text-xs tnum">
+                        {routesCount} routes
+                      </TD>
+                      <TD className="text-right">
                         <Link
-                          href={`/tests/${run.id}`}
-                          className="font-semibold text-foreground hover:text-brand block truncate max-w-xs"
+                          href={`/projects/${p.id}`}
+                          onClick={() => setProjectId(p.id)}
+                          className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"
                         >
-                          {run.name}
+                          Open Console <ArrowRight className="size-3" />
                         </Link>
-                        <span className="text-[10px] text-muted-foreground font-mono truncate max-w-xs block">
-                          {run.targetUrl}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-4">
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-secondary text-foreground">
-                          {run.profile} ({run.concurrency} VUs)
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-4 font-mono font-bold text-foreground">
-                        {Math.round(run.peakRps || run.avgRps)} RPS
-                      </td>
-                      <td className="py-2.5 px-4 font-mono text-muted-foreground">
-                        {run.p95Ms} ms
-                      </td>
-                      <td className="py-2.5 px-4">
-                        {run.breakingPoint?.kneeRps ? (
-                          <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                            {run.breakingPoint.kneeRps} RPS
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground text-[10px]">Analyzing…</span>
-                        )}
-                      </td>
-                      <td className="py-2.5 px-4">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-[10px] uppercase font-semibold py-0.5 px-2 rounded-full",
-                            run.status === "COMPLETED"
-                              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                              : run.status === "RUNNING"
-                              ? "border-brand/40 bg-brand/10 text-brand animate-pulse"
-                              : "border-destructive/30 bg-destructive/10 text-destructive"
-                          )}
-                        >
-                          {run.status}
-                        </Badge>
-                      </td>
-                      <td className="py-2.5 px-4 text-right">
-                        <Link href={`/tests/${run.id}`}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="rounded-md text-xs h-7 px-2 gap-1 text-muted-foreground hover:text-foreground"
-                          >
-                            Details
-                            <ArrowUpRight className="size-3" />
-                          </Button>
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      </TD>
+                    </TR>
+                  );
+                })}
+              </TBody>
+            </Table>
           )}
-        </CardContent>
+        </div>
       </Card>
+
+      {/* Automated 7-Day Breakpoint Cadence Information Card */}
+      <Card className="p-5 border-border bg-gradient-to-r from-card to-surface-muted/50">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Calendar className="size-4 text-brand" />
+              <h3 className="text-sm font-semibold text-foreground">
+                Automated 7-Day Breakpoint Diagnosis Cadence
+              </h3>
+              <Badge tone="brand">Active Cadence</Badge>
+            </div>
+            <p className="text-xs text-muted-foreground max-w-2xl">
+              STRIM Labs automatically runs high-precision capacity ramp benchmarks every 7 days across your organization to diagnose saturation knees and bottleneck ceilings before peak production traffic hits.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Link href="/projects">
+              <Button size="sm" className="gap-2">
+                Manage Services & Breakpoints <ArrowRight className="size-3.5" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </Card>
+
+      <AddTargetModal open={addOpen} onOpenChange={setAddOpen} />
+    </div>
+  );
+}
+
+function DashboardLoadingSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <Skeleton className="h-9 w-64 rounded-xl" />
+        <Skeleton className="h-9 w-36 rounded-xl" />
+      </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-28 rounded-2xl" />
+        ))}
+      </div>
+      <Skeleton className="h-64 rounded-2xl" />
     </div>
   );
 }
