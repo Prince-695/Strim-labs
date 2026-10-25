@@ -46,7 +46,6 @@ model Organization {
 
   memberships Membership[]
   projects    Project[]
-  apiKeys     ApiKey[]
   testRuns    TestRun[]
 }
 
@@ -63,26 +62,59 @@ model Membership {
 }
 
 model Project {
-  id             String       @id @default(cuid())
+  id             String            @id @default(cuid())
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   name           String
+  baseUrl        String?
   targetUrl      String
-  defaultMethod  String       @default("GET")
+  defaultMethod  String            @default("GET")
   defaultHeaders Json?
-  createdAt      DateTime     @default(now())
+  apiKey         String            @unique @default(cuid())
+  apiKeyPrefix   String            @default("strim_live_")
+  status         String            @default("PENDING_SDK") // PENDING_SDK, ACTIVE, DEGRADED, INCIDENT
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 
-  testRuns       TestRun[]
+  testRuns         TestRun[]
+  discoveredRoutes DiscoveredRoute[]
+  telemetryMetrics TelemetryMetric[]
+
+  @@index([organizationId, createdAt])
 }
 
-model ApiKey {
-  id             String       @id @default(cuid())
-  organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  name           String
-  keyHash        String       @unique
-  prefix         String
-  createdAt      DateTime     @default(now())
+model DiscoveredRoute {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  path          String
+  method        String
+  isSafe        Boolean  @default(true)
+  totalCalls    Int      @default(0)
+  errorCalls    Int      @default(0)
+  avgDurationMs Float    @default(0)
+  p95DurationMs Float    @default(0)
+  lastSeenAt    DateTime @default(now())
+  firstSeenAt   DateTime @default(now())
+
+  @@unique([projectId, method, path])
+  @@index([projectId, lastSeenAt])
+}
+
+model TelemetryMetric {
+  id            String   @id @default(cuid())
+  projectId     String
+  project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  timestamp     DateTime @default(now())
+  totalRequests Int      @default(0)
+  successCount  Int      @default(0) // 2xx
+  warningCount  Int      @default(0) // 4xx
+  errorCount    Int      @default(0) // 5xx
+  p50Ms         Float    @default(0)
+  p95Ms         Float    @default(0)
+  p99Ms         Float    @default(0)
+
+  @@index([projectId, timestamp])
 }
 
 model TestRun {
