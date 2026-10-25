@@ -14,7 +14,12 @@ export type RunConfig = {
   profile: "SUSTAINED" | "RAMP_UP" | "SPIKE";
 };
 
-type LiveSubscriber = (metric: SampleMetric) => void;
+export type EngineEvent =
+  | { type: "sample"; metric: SampleMetric }
+  | { type: "done"; runId: string }
+  | { type: "abort"; runId: string };
+
+type LiveSubscriber = (event: EngineEvent) => void;
 
 class LoadEngine {
   private activeRuns = new Map<string, { abortController: AbortController; subscribers: Set<LiveSubscriber> }>();
@@ -37,6 +42,13 @@ class LoadEngine {
   abort(testRunId: string): boolean {
     const run = this.activeRuns.get(testRunId);
     if (run) {
+      for (const sub of run.subscribers) {
+        try {
+          sub({ type: "abort", runId: testRunId });
+        } catch {
+          // ignore
+        }
+      }
       run.abortController.abort();
       this.activeRuns.delete(testRunId);
       return true;
@@ -115,7 +127,7 @@ class LoadEngine {
       // Broadcast to live SSE stream listeners
       for (const sub of subscribers) {
         try {
-          sub(metric);
+          sub({ type: "sample", metric });
         } catch {
           // ignore dead subscriber
         }
@@ -141,13 +153,18 @@ class LoadEngine {
       intervalStatusCodes = {};
     }, 500);
 
-    const headers = new Headers(config.headers);
+    const headers = new Headers();
+    if (config.headers && typeof config.headers === "object") {
+      for (const [k, v] of Object.entries(config.headers)) {
+        if (v !== undefined && v !== null) headers.set(k, String(v));
+      }
+    }
     if (!headers.has("content-type") && config.body) {
       headers.set("content-type", "application/json");
     }
     headers.set("x-strim-loadtest-id", config.testRunId);
 
-    const bodyPayload = config.body ? JSON.stringify(config.body) : undefined;
+    const bodyPayload = config.body ? (typeof config.body === "string" ? config.body : JSON.stringify(config.body)) : undefined;
 
     // Concurrency Worker Loop
     const workers = Array.from({ length: config.concurrency }, async (_, vuIndex) => {
@@ -204,6 +221,15 @@ class LoadEngine {
       // worker completed or aborted
     } finally {
       clearInterval(sampleTimer);
+
+      for (const sub of subscribers) {
+        try {
+          sub({ type: signal.aborted ? "abort" : "done", runId: config.testRunId });
+        } catch {
+          // ignore
+        }
+      }
+
       this.activeRuns.delete(config.testRunId);
 
       // Compute final percentiles

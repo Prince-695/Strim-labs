@@ -32,7 +32,7 @@ export const requireOrg = createMiddleware<AppEnv>(async (c, next) => {
       where: { organizationId: orgId, userId },
     });
 
-    if (!membership && !c.get("apiKeyId")) {
+    if (!membership && !c.get("projectId") && !c.get("apiKeyId")) {
       return c.json({ error: "TENANT_MISMATCH", message: "No access to this organization" }, 403);
     }
 
@@ -41,7 +41,7 @@ export const requireOrg = createMiddleware<AppEnv>(async (c, next) => {
       membershipCache.set(cacheKey, { role, expiresAt: Date.now() + 60000 });
       c.set("role", role);
     }
-  } else if (!c.get("apiKeyId")) {
+  } else if (!c.get("projectId") && !c.get("apiKeyId")) {
     return c.json({ error: "UNAUTHORIZED", message: "Authentication required" }, 401);
   }
 

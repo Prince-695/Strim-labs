@@ -10,5 +10,7 @@ export type AppEnv = {
     role?: Role;
     apiKeyId?: string;
     apiKeyScopes?: string[];
+    projectId?: string;
+    projectApiKey?: string;
   };
 };

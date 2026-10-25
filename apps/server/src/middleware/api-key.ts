@@ -1,10 +1,10 @@
 import { createMiddleware } from "hono/factory";
-import { sha256 } from "../lib/crypto";
 import type { AppEnv } from "../types";
 
 export const apiKeyAuth = createMiddleware<AppEnv>(async (c, next) => {
-  const header = c.req.header("authorization");
-  const rawKey = header?.startsWith("Bearer ") ? header.slice(7) : null;
+  const authHeader = c.req.header("authorization");
+  const strimHeader = c.req.header("x-strim-key");
+  const rawKey = strimHeader || (authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null);
   
   if (!rawKey || !rawKey.startsWith("strim_")) {
     await next();
@@ -12,13 +12,15 @@ export const apiKeyAuth = createMiddleware<AppEnv>(async (c, next) => {
   }
 
   const db = c.get("db");
-  const key = await db.apiKey.findUnique({ where: { keyHash: sha256(rawKey) } });
+  const project = await db.project.findUnique({ where: { apiKey: rawKey } });
   
-  if (!key) {
-    return c.json({ error: "UNAUTHORIZED", message: "Invalid API key" }, 401);
+  if (!project) {
+    return c.json({ error: "UNAUTHORIZED", message: "Invalid STRIM Project API key" }, 401);
   }
 
-  c.set("apiKeyId", key.id);
-  c.set("organizationId", key.organizationId);
+  c.set("projectId", project.id);
+  c.set("organizationId", project.organizationId);
+  c.set("projectApiKey", project.apiKey);
   await next();
 });
+

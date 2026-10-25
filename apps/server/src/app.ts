@@ -9,6 +9,8 @@ import { projectRoutes } from "./modules/projects";
 import { loadTestRoutes } from "./modules/load-tests";
 import { compareRoutes } from "./modules/compare";
 import { orgRoutes } from "./modules/org";
+import { discoveryRoutes } from "./modules/discovery";
+import { ingestRoutes } from "./modules/ingest";
 
 export function createApp(db: PrismaClient) {
   const app = new Hono<AppEnv>();
@@ -34,6 +36,8 @@ export function createApp(db: PrismaClient) {
   app.route("/v1/load-tests", loadTestRoutes);
   app.route("/v1/compare", compareRoutes);
   app.route("/v1/org", orgRoutes);
+  app.route("/v1/discovery", discoveryRoutes);
+  app.route("/v1/ingest", ingestRoutes);
 
   app.onError((err, c) => {
     const status = (err as { status?: number }).status ?? 500;
