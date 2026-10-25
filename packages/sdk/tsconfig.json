@@ -1,0 +1,9 @@
+{
+  "extends": "@strim/tsconfig/base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "module": "ESNext",
+    "moduleResolution": "bundler"
+  },
+  "include": ["src"]
+}
