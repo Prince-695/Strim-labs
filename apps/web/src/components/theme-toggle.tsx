@@ -1,45 +1,59 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Moon, Sun } from "lucide-react";
-import { useTheme } from "@/components/theme-provider";
-import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
+import { Monitor, Moon, Sun } from "lucide-react";
+import { useId } from "react";
+import { SPRING_SNAPPY } from "@/lib/motion";
 import { cn } from "@/lib/utils";
+import { useTheme, type Theme } from "./theme-provider";
 
-export function ThemeToggle({ className }: { className?: string }) {
-  const { resolvedTheme, toggleTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+const OPTIONS: Array<{ value: Theme; label: string; icon: typeof Sun }> = [
+  { value: "system", label: "System", icon: Monitor },
+  { value: "light", label: "Light", icon: Sun },
+  { value: "dark", label: "Dark", icon: Moon },
+];
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) {
-    return (
-      <div className={cn("size-8 rounded-full border border-border/60 bg-secondary/30", className)} />
-    );
-  }
-
-  const isDark = resolvedTheme === "dark";
-
+/** 3-way System / Light / Dark switch with a sliding indicator. */
+export function ThemeToggle({ className, dark }: { className?: string; dark?: boolean }) {
+  const { theme, setTheme } = useTheme();
+  const id = useId();
   return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      onClick={toggleTheme}
-      title={isDark ? "Switch to light theme" : "Switch to dark theme"}
-      aria-label="Toggle theme"
+    <div
+      role="radiogroup"
+      aria-label="Theme"
       className={cn(
-        "size-8 rounded-full border border-border/80 bg-secondary/50 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all cursor-pointer",
-        className
+        "inline-flex rounded-lg border p-0.5",
+        dark ? "border-ink-border bg-ink-raised" : "border-border bg-surface-muted",
+        className,
       )}
     >
-      {isDark ? (
-        <Sun className="size-4 text-amber-400 rotate-0 scale-100 transition-transform duration-200" />
-      ) : (
-        <Moon className="size-4 text-slate-700 rotate-0 scale-100 transition-transform duration-200" />
-      )}
-      <span className="sr-only">Toggle theme</span>
-    </Button>
+      {OPTIONS.map(({ value, label, icon: Icon }) => {
+        const active = theme === value;
+        return (
+          <button
+            key={value}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            aria-label={label}
+            title={label}
+            onClick={() => setTheme(value)}
+            className={cn(
+              "relative grid size-7 place-items-center rounded-md transition-colors",
+              active ? (dark ? "text-ink-foreground" : "text-foreground") : dark ? "text-ink-muted hover:text-ink-foreground" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {active && (
+              <motion.span
+                layoutId={`theme-pill-${id}`}
+                transition={SPRING_SNAPPY}
+                className={cn("absolute inset-0 rounded-md shadow-sm", dark ? "bg-white/10" : "bg-card ring-1 ring-border")}
+              />
+            )}
+            <Icon className="relative size-3.5" />
+          </button>
+        );
+      })}
+    </div>
   );
 }
