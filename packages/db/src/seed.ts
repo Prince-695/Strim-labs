@@ -46,14 +46,18 @@ async function main() {
     data: {
       organizationId: acme.id,
       name: "Checkout API Gateway",
-      baseUrl: "https://httpbin.org",
-      targetUrl: "https://httpbin.org/get",
-      defaultMethod: "GET",
-      apiKey: "strim_live_demo_38f9a01b92c4485f",
+      description: "Primary checkout routing and telemetry",
+      ingestKey: "strim_live_demo_38f9a01b92c4485f",
       status: "ACTIVE",
-      defaultHeaders: {
-        "User-Agent": "Strim-LoadEngine/1.0",
-        Accept: "application/json",
+      services: {
+        create: [
+          {
+            name: "Checkout Service",
+            baseUrl: "https://httpbin.org",
+            environment: "production",
+            status: "HEALTHY",
+          },
+        ],
       },
       discoveredRoutes: {
         create: [

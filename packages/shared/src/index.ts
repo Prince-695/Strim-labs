@@ -1,8 +1,15 @@
-export type Role = "OWNER" | "MEMBER";
+export type Role = "OWNER" | "ADMIN" | "ENGINEER" | "DEVELOPER" | "VIEWER";
+
+const ROLE_HIERARCHY: Record<Role, number> = {
+  VIEWER: 1,
+  DEVELOPER: 2,
+  ENGINEER: 3,
+  ADMIN: 4,
+  OWNER: 5,
+};
 
 export function roleAtLeast(role: Role, min: Role): boolean {
-  if (role === "OWNER") return true;
-  return min === "MEMBER";
+  return (ROLE_HIERARCHY[role] ?? 0) >= (ROLE_HIERARCHY[min] ?? 0);
 }
 
 export type RunProfile = "SUSTAINED" | "RAMP_UP" | "SPIKE";

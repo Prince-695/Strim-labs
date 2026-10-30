@@ -7,15 +7,57 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
 enum Role {
   OWNER
-  MEMBER
+  ADMIN
+  ENGINEER
+  DEVELOPER
+  VIEWER
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  CANCELLED
+}
+
+enum ProjectStatus {
+  PENDING_SDK
+  ACTIVE
+  DEGRADED
+  INCIDENT
+  ARCHIVED
+}
+
+enum ServiceStatus {
+  PENDING
+  HEALTHY
+  DEGRADED
+  DOWN
+  UNKNOWN
+}
+
+enum DiscoveryRunStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+enum DiscoveryRunSource {
+  OPENAPI_PROBE
+  CRAWLER
+  MANUAL_IMPORT
+  SDK_TELEMETRY
 }
 
 enum RunProfile {
   SUSTAINED
   RAMP_UP
   SPIKE
+  BREAKING_HUNT
 }
 
 enum RunStatus {
@@ -26,27 +68,163 @@ enum RunStatus {
   ABORTED
 }
 
-model User {
-  id           String       @id @default(cuid())
-  email        String       @unique
-  name         String
-  passwordHash String
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-
-  memberships  Membership[]
-  runsStarted  TestRun[]
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
 }
+
+enum AlertConditionType {
+  THRESHOLD
+  ANOMALY
+  ERROR_RATE
+  LATENCY
+  AVAILABILITY
+}
+
+enum IncidentStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+enum NotificationChannelType {
+  EMAIL
+  SLACK
+  PAGERDUTY
+  WEBHOOK
+  TEAMS
+}
+
+enum WebhookEventType {
+  INCIDENT_CREATED
+  INCIDENT_RESOLVED
+  ALERT_FIRED
+  LOAD_TEST_COMPLETED
+  SERVICE_DOWN
+  SERVICE_RECOVERED
+  PROJECT_CREATED
+  MEMBER_ADDED
+  MEMBER_REMOVED
+}
+
+enum ApiKeyType {
+  PERSONAL
+  PROJECT_INGEST
+  ORG_SERVICE
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  INVITE
+  ACCEPT_INVITE
+  REVOKE
+  TRANSFER
+  SIGN_IN
+  SIGN_OUT
+  ROTATE_KEY
+  START_TEST
+  ABORT_TEST
+}
+
+enum IntegrationType {
+  GITHUB
+  GITLAB
+  SLACK
+  PAGERDUTY
+  DATADOG
+  GRAFANA
+  JIRA
+}
+
+enum PanelType {
+  TIMESERIES
+  STAT
+  TABLE
+  BAR_CHART
+  GAUGE
+  TEXT
+  HEATMAP
+}
+
+// ─── Auth & Identity ──────────────────────────────────────────────────────────
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  emailVerified   Boolean   @default(false)
+  name            String
+  avatarUrl       String?
+  passwordHash    String?
+  googleId        String?   @unique
+  timezone        String    @default("UTC")
+  locale          String    @default("en")
+  theme           String    @default("dark")
+  notifyEmail     Boolean   @default(true)
+  notifySlack     Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @default(now()) @updatedAt
+
+  sessions        Session[]
+  memberships     Membership[]
+  invitationsGiven Invitation[] @relation("invitedBy")
+  apiKeys         ApiKey[]
+  runsStarted     TestRun[]
+  auditLogs       AuditLog[]
+
+  @@index([email])
+}
+
+model Session {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash   String    @unique
+  userAgent   String?
+  ipAddress   String?
+  lastActiveAt DateTime @default(now())
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+
+  @@index([userId, expiresAt])
+}
+
+model VerificationToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  type      String   // email_verification | password_reset
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, type])
+}
+
+// ─── Organizations & Membership ───────────────────────────────────────────────
 
 model Organization {
   id          String       @id @default(cuid())
   name        String
   slug        String       @unique
+  description String?
+  avatarUrl   String?
+  website     String?
+  plan        String       @default("free") // free | pro | enterprise
   createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @default(now()) @updatedAt
 
-  memberships Membership[]
-  projects    Project[]
-  testRuns    TestRun[]
+  memberships    Membership[]
+  invitations    Invitation[]
+  projects       Project[]
+  apiKeys        ApiKey[]
+  webhooks       Webhook[]
+  integrations   Integration[]
+  auditLogs      AuditLog[]
+
+  @@index([slug])
 }
 
 model Membership {
@@ -55,32 +233,133 @@ model Membership {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   userId         String
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role           Role         @default(MEMBER)
+  role           Role         @default(VIEWER)
   createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @default(now()) @updatedAt
 
   @@unique([organizationId, userId])
+  @@index([userId])
 }
 
-model Project {
-  id             String            @id @default(cuid())
+model Invitation {
+  id             String           @id @default(cuid())
   organizationId String
-  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  name           String
-  baseUrl        String?
-  targetUrl      String
-  defaultMethod  String            @default("GET")
-  defaultHeaders Json?
-  apiKey         String            @unique @default(cuid())
-  apiKeyPrefix   String            @default("strim_live_")
-  status         String            @default("PENDING_SDK") // PENDING_SDK, ACTIVE, DEGRADED, INCIDENT
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  role           Role             @default(VIEWER)
+  invitedById    String
+  invitedBy      User             @relation("invitedBy", fields: [invitedById], references: [id], onDelete: Cascade)
+  tokenHash      String           @unique
+  status         InvitationStatus @default(PENDING)
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime         @default(now())
 
+  @@unique([organizationId, email])
+  @@index([organizationId, status])
+}
+
+// ─── Projects & Services ──────────────────────────────────────────────────────
+
+model Project {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  description    String?
+  status         ProjectStatus @default(PENDING_SDK)
+  ingestKey      String        @unique @default(cuid())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @default(now()) @updatedAt
+
+  services         Service[]
   testRuns         TestRun[]
   discoveredRoutes DiscoveredRoute[]
   telemetryMetrics TelemetryMetric[]
+  alertRules       AlertRule[]
+  incidents        Incident[]
+  dashboards       Dashboard[]
+  notifChannels    NotificationChannel[]
 
   @@index([organizationId, createdAt])
+  @@index([ingestKey])
+}
+
+model Service {
+  id          String        @id @default(cuid())
+  projectId   String
+  project     Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  baseUrl     String
+  status      ServiceStatus @default(PENDING)
+  framework   String?       // hono | express | fastify | nextjs | other
+  language    String?       // typescript | python | go | java | other
+  environment String        @default("production") // production | staging | development
+  tags        String[]      @default([])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @default(now()) @updatedAt
+
+  discoveryRuns  DiscoveryRun[]
+  specifications Specification[]
+  endpoints      Endpoint[]
+  telemetry      TelemetryMetric[]
+
+  @@unique([projectId, name, environment])
+  @@index([projectId, status])
+}
+
+model DiscoveryRun {
+  id          String             @id @default(cuid())
+  serviceId   String
+  service     Service            @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  status      DiscoveryRunStatus @default(RUNNING)
+  source      DiscoveryRunSource
+  specUrl     String?
+  endpointsFound Int             @default(0)
+  error       String?
+  startedAt   DateTime           @default(now())
+  completedAt DateTime?
+  createdAt   DateTime           @default(now())
+
+  @@index([serviceId, createdAt])
+}
+
+model Specification {
+  id          String   @id @default(cuid())
+  serviceId   String
+  service     Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  version     String?
+  title       String?
+  format      String   @default("openapi_3_1") // openapi_3_1 | openapi_3_0 | swagger_2
+  specUrl     String?
+  rawSpec     Json?
+  createdAt   DateTime @default(now())
+
+  @@index([serviceId])
+}
+
+model Endpoint {
+  id          String   @id @default(cuid())
+  serviceId   String
+  service     Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  path        String
+  method      String
+  summary     String?
+  description String?
+  operationId String?
+  tags        String[]
+  deprecated  Boolean  @default(false)
+  isSafe      Boolean  @default(true) // GET/HEAD/OPTIONS
+  parameters  Json?
+  requestBody Json?
+  responses   Json?
+  source      String   @default("manual") // manual | openapi | crawler | sdk
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  @@unique([serviceId, method, path])
+  @@index([serviceId])
 }
 
 model DiscoveredRoute {
@@ -101,31 +380,128 @@ model DiscoveredRoute {
   @@index([projectId, lastSeenAt])
 }
 
+// ─── Telemetry & Metrics ──────────────────────────────────────────────────────
+
 model TelemetryMetric {
   id            String   @id @default(cuid())
   projectId     String
   project       Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  serviceId     String?
+  service       Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
   timestamp     DateTime @default(now())
   totalRequests Int      @default(0)
-  successCount  Int      @default(0) // 2xx
-  warningCount  Int      @default(0) // 4xx
-  errorCount    Int      @default(0) // 5xx
+  successCount  Int      @default(0)
+  warningCount  Int      @default(0)
+  errorCount    Int      @default(0)
   p50Ms         Float    @default(0)
   p95Ms         Float    @default(0)
   p99Ms         Float    @default(0)
+  rps           Float    @default(0)
+  errorRate     Float    @default(0)
 
   @@index([projectId, timestamp])
+  @@index([serviceId, timestamp])
 }
+
+// ─── Alerts & Incidents ───────────────────────────────────────────────────────
+
+model AlertRule {
+  id          String              @id @default(cuid())
+  projectId   String
+  project     Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  enabled     Boolean             @default(true)
+  severity    AlertSeverity       @default(WARNING)
+  condition   AlertConditionType
+  threshold   Float?
+  window      Int                 @default(60) // seconds
+  channelIds  String[]            @default([])
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @default(now()) @updatedAt
+
+  incidents   Incident[]
+
+  @@index([projectId])
+}
+
+model Incident {
+  id          String         @id @default(cuid())
+  projectId   String
+  project     Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  ruleId      String?
+  rule        AlertRule?     @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  title       String
+  description String?
+  severity    AlertSeverity  @default(WARNING)
+  status      IncidentStatus @default(OPEN)
+  openedAt    DateTime       @default(now())
+  acknowledgedAt DateTime?
+  resolvedAt  DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @default(now()) @updatedAt
+
+  @@index([projectId, status])
+}
+
+model NotificationChannel {
+  id        String                  @id @default(cuid())
+  projectId String
+  project   Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  type      NotificationChannelType
+  config    Json                    // channel-type specific config (webhook url, email, etc.)
+  enabled   Boolean                 @default(true)
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @default(now()) @updatedAt
+
+  @@index([projectId])
+}
+
+// ─── Dashboards ───────────────────────────────────────────────────────────────
+
+model Dashboard {
+  id          String   @id @default(cuid())
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  panels      DashboardPanel[]
+
+  @@index([projectId])
+}
+
+model DashboardPanel {
+  id          String    @id @default(cuid())
+  dashboardId String
+  dashboard   Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  type        PanelType @default(TIMESERIES)
+  title       String
+  description String?
+  query       Json      // metric query definition
+  layout      Json      // { x, y, w, h }
+  options     Json?     // chart-specific options
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
+
+  @@index([dashboardId])
+}
+
+// ─── Load Testing ─────────────────────────────────────────────────────────────
 
 model TestRun {
   id             String       @id @default(cuid())
   organizationId String
-  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   projectId      String
   project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
   userId         String?
   user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
   name           String
+  description    String?
   profile        RunProfile   @default(RAMP_UP)
   status         RunStatus    @default(QUEUED)
   targetUrl      String
@@ -134,7 +510,8 @@ model TestRun {
   body           Json?
   concurrency    Int          @default(50)
   durationSec    Int          @default(30)
-  
+  rampUpSec      Int          @default(10)
+
   // Summary Results
   totalRequests  Int          @default(0)
   avgRps         Float        @default(0)
@@ -143,16 +520,20 @@ model TestRun {
   p95Ms          Float        @default(0)
   p99Ms          Float        @default(0)
   errorRate      Float        @default(0)
-  statusCodes    Json?        // e.g. { "200": 14200, "429": 412, "500": 8 }
-  
-  // Automated Breaking Point Diagnosis
-  breakingPoint  Json?        // { kneeRps: 850, failureRps: 1120, bottleneck: "RATE_LIMIT_429", verdict: "..." }
-  
+  statusCodes    Json?
+
+  // Diagnosis
+  breakingPoint  Json?
+  diagnostics    Json?
+
   startedAt      DateTime?
   completedAt    DateTime?
   createdAt      DateTime     @default(now())
-  
+  updatedAt      DateTime     @default(now()) @updatedAt
+
   samples        TestSample[]
+  comparisons    TestComparison[] @relation("baselineRun")
+  comparedWith   TestComparison[] @relation("candidateRun")
 
   @@index([organizationId, createdAt])
   @@index([projectId, createdAt])
@@ -172,4 +553,109 @@ model TestSample {
   statusCodes Json
 
   @@index([testRunId, timestamp])
+}
+
+model TestComparison {
+  id          String   @id @default(cuid())
+  baselineId  String
+  baseline    TestRun  @relation("baselineRun", fields: [baselineId], references: [id], onDelete: Cascade)
+  candidateId String
+  candidate   TestRun  @relation("candidateRun", fields: [candidateId], references: [id], onDelete: Cascade)
+  result      Json?    // regression analysis result
+  verdict     String?  // IMPROVED | REGRESSED | STABLE | INCONCLUSIVE
+  createdAt   DateTime @default(now())
+
+  @@index([baselineId])
+  @@index([candidateId])
+}
+
+// ─── API Keys ─────────────────────────────────────────────────────────────────
+
+model ApiKey {
+  id             String      @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  type           ApiKeyType  @default(PERSONAL)
+  keyHash        String      @unique
+  prefix         String      // first 12 chars for display
+  scopes         String[]    @default([])
+  lastUsedAt     DateTime?
+  expiresAt      DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime    @default(now())
+
+  @@index([organizationId])
+  @@index([keyHash])
+}
+
+// ─── Webhooks & Integrations ──────────────────────────────────────────────────
+
+model Webhook {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  url            String
+  secret         String           // HMAC-SHA256 signing secret (stored hashed)
+  events         WebhookEventType[]
+  enabled        Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @default(now()) @updatedAt
+
+  deliveries     WebhookDelivery[]
+
+  @@index([organizationId])
+}
+
+model WebhookDelivery {
+  id          String   @id @default(cuid())
+  webhookId   String
+  webhook     Webhook  @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  eventType   WebhookEventType
+  payload     Json
+  statusCode  Int?
+  responseBody String?
+  success     Boolean  @default(false)
+  attemptedAt DateTime @default(now())
+  duration    Int?     // ms
+
+  @@index([webhookId, attemptedAt])
+}
+
+model Integration {
+  id             String          @id @default(cuid())
+  organizationId String
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  type           IntegrationType
+  name           String
+  config         Json            // encrypted / masked integration config
+  enabled        Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @default(now()) @updatedAt
+
+  @@unique([organizationId, type])
+  @@index([organizationId])
+}
+
+// ─── Audit Log ────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action         AuditAction
+  resourceType   String       // User | Organization | Project | Service | TestRun | ApiKey | ...
+  resourceId     String?
+  metadata       Json?        // contextual data (before/after values, IP, etc.)
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([userId, createdAt])
 }
