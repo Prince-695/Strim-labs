@@ -1,79 +1,121 @@
 "use client";
 
-import { MailCheck } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import Link from "next/link";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Loader2, ArrowLeft, MailCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Field } from "@/components/ui/label";
-import { sleep } from "@/lib/utils";
-import { validateEmail } from "@/lib/validation";
+import { Label } from "@/components/ui/label";
+import { fetchApi } from "@/lib/api";
 
-/**
- * The backend has no reset endpoint in the current contract, so this page shows the neutral confirmation state
- * without sending anything. Wire it to POST /v1/auth/forgot-password when that exists.
- */
+const forgotPasswordSchema = z.object({
+  email: z.string().email("Please enter a valid work email"),
+});
+
+type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>;
+
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState("");
-  const [error, setError] = useState<string | undefined>();
-  const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
-  async function submit() {
-    const e = validateEmail(email);
-    setError(e);
-    if (e) return;
-    setLoading(true);
-    await sleep(700);
-    setLoading(false);
-    setSent(true);
-  }
+  const {
+    register,
+    handleSubmit,
+    getValues,
+    formState: { errors, isSubmitting },
+  } = useForm<ForgotPasswordValues>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: { email: "" },
+  });
 
-  if (sent) {
-    return (
-      <div className="space-y-6 text-center">
-        <div className="mx-auto grid size-14 place-items-center rounded-2xl bg-brand-subtle text-brand-strong dark:text-brand">
-          <MailCheck className="size-6" />
-        </div>
-        <div className="space-y-2">
-          <h1 className="text-[26px] font-semibold tracking-[-0.03em]">Check your inbox</h1>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            If an account exists for <span className="font-medium text-foreground">{email}</span>, a reset link is on its way. It can take a few minutes.
-          </p>
-        </div>
-        <Link href="/login" className={buttonVariants({ variant: "outline", className: "w-full" })}>
-          Back to sign in
-        </Link>
-      </div>
-    );
-  }
+  const onSubmit = async (values: ForgotPasswordValues) => {
+    setServerError(null);
+    try {
+      await fetchApi("/api/v1/auth/forgot-password", {
+        method: "POST",
+        body: JSON.stringify(values),
+      });
+      setSubmitted(true);
+    } catch (err: any) {
+      setServerError(err.message || "Failed to process request. Please try again.");
+    }
+  };
 
   return (
-    <div className="space-y-7">
-      <div className="space-y-2">
-        <h1 className="text-[28px] font-semibold tracking-[-0.03em]">Reset your password</h1>
-        <p className="text-sm text-muted-foreground">Enter your email and we'll send a link to choose a new one.</p>
+    <div className="w-full max-w-sm space-y-6">
+      <div className="space-y-1.5 text-center sm:text-left">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">Reset your password</h1>
+        <p className="text-sm text-muted-foreground">
+          Enter your registered work email and we will send password reset instructions.
+        </p>
       </div>
-      <form
-        className="space-y-4"
-        noValidate
-        onSubmit={(e) => {
-          e.preventDefault();
-          void submit();
-        }}
-      >
-        <Field id="email" label="Work email" error={error}>
-          <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} aria-invalid={Boolean(error)} aria-describedby={error ? "email-error" : undefined} />
-        </Field>
-        <Button type="submit" size="lg" className="w-full" loading={loading}>
-          Send reset link
-        </Button>
-      </form>
-      <p className="text-center text-sm">
-        <Link href="/login" className="font-medium text-brand-strong hover:underline dark:text-brand">
-          Back to sign in
-        </Link>
-      </p>
+
+      {serverError && (
+        <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 p-3 text-xs text-rose-500 leading-relaxed">
+          {serverError}
+        </div>
+      )}
+
+      {submitted ? (
+        <div className="rounded-xl border border-border bg-card p-6 text-center space-y-4">
+          <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500">
+            <MailCheck className="size-6" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold text-foreground">Instructions Sent</h3>
+            <p className="text-xs text-muted-foreground">
+              If an account exists for <strong className="text-foreground">{getValues("email")}</strong>, an email has been sent with recovery instructions.
+            </p>
+          </div>
+          <Button asChild variant="outline" className="w-full text-xs">
+            <Link href="/sign-in">Return to Sign In</Link>
+          </Button>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="email">Registered Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="developer@acme.com"
+              autoComplete="email"
+              disabled={isSubmitting}
+              {...register("email")}
+              className={errors.email ? "border-rose-500" : ""}
+            />
+            {errors.email && <p className="text-xs text-rose-500">{errors.email.message}</p>}
+          </div>
+
+          <Button
+            type="submit"
+            className="w-full bg-brand text-brand-foreground hover:bg-brand-strong font-medium"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Sending Link...
+              </>
+            ) : (
+              "Send Reset Link"
+            )}
+          </Button>
+
+          <div className="text-center pt-2">
+            <Link
+              href="/sign-in"
+              className="inline-flex items-center text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="mr-1.5 size-3.5" />
+              Back to Sign In
+            </Link>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

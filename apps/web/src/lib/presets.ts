@@ -1,3 +1,4 @@
+import { API_URL } from "./api";
 import type { TestProfile } from "./types";
 
 export type Preset = {
@@ -56,8 +57,8 @@ export const PRESETS: Preset[] = [
 ];
 
 export const DEMO_TARGET = {
-  name: "Local demo API",
-  targetUrl: "http://localhost:8080/health",
+  name: "STRIM Demo API",
+  targetUrl: `${API_URL}/health`,
   defaultMethod: "GET" as const,
 };
 

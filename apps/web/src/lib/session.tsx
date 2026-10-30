@@ -108,7 +108,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [userRaw]);
 
   const call = useCallback(
-    <T,>(path: string, init: ApiInit = {}) => api<T>(path, { token, orgId: storedOrgId, ...init }),
+    <T,>(path: string, init: ApiInit = {}) => api<T>(path, { token, orgId: storedOrgId ?? undefined, ...init }),
     [token, storedOrgId],
   );
 
@@ -186,7 +186,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const projects = useMemo(() => projectsQuery.data ?? [], [projectsQuery.data]);
   const project = useMemo(
-    () => projects.find((p) => p.id === storedProjectId) ?? projects[0] ?? null,
+    () => projects.find((p: any) => p.id === storedProjectId) ?? projects[0] ?? null,
     [projects, storedProjectId],
   );
 
@@ -217,8 +217,28 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
 }
 
+const defaultOldSessionValue: SessionValue = {
+  ready: false,
+  token: null,
+  user: null,
+  orgs: [],
+  org: null,
+  orgId: null,
+  projects: [],
+  projectsLoading: false,
+  projectsError: false,
+  project: null,
+  projectId: null,
+  setSession: () => {},
+  clear: () => {},
+  setOrgId: () => {},
+  setProjectId: () => {},
+  refreshProjects: async () => {},
+  refreshOrgs: async () => {},
+  call: async () => ({} as any),
+};
+
 export function useSession(): SessionValue {
   const ctx = useContext(SessionContext);
-  if (!ctx) throw new Error("useSession must be used inside <SessionProvider>");
-  return ctx;
+  return ctx ?? defaultOldSessionValue;
 }
