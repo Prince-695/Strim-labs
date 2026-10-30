@@ -1,63 +1,117 @@
-# STRIM Labs web console (`apps/web`)
+# STRIM Labs — Frontend Application (`apps/web`)
 
-Next.js 16 (App Router) + React 19 + TypeScript (strict) + Tailwind CSS v4.
+Production-grade, multi-tenant Next.js App Router frontend for **STRIM Labs**: the API discovery, continuous observability, distributed load testing, breaking point detection, and performance diagnostics platform.
 
-## Run it
+---
+
+## 1. Tech Stack
+
+- **Framework**: Next.js 16 (App Router) + React 19
+- **Language**: TypeScript (strict mode, zero implicit any, zero ts-ignore)
+- **Styling**: Tailwind CSS v4 + Design Tokens (dark-first developer tool aesthetic)
+- **UI Components**: Radix UI primitives + custom shadcn/ui components
+- **Motion & Animation**: Motion (Framer Motion v12) + GSAP v3 (respecting `prefers-reduced-motion`)
+- **Server State**: TanStack Query v5 (automatic background refetch, cache invalidation, smart retries)
+- **Forms & Validation**: React Hook Form + Zod schema resolvers
+- **API Typing**: Generated from backend OpenAPI 3.1 specification via `openapi-typescript`
+- **Charts & Telemetry**: Recharts v3 (responsive time-series, latency percentiles, breaking point knee curves)
+- **Icons**: Lucide React
+- **Package Manager**: `bun` (monorepo workspaces)
+
+---
+
+## 2. Prerequisites & Setup
+
+- **Node.js**: >= 20.0.0
+- **Bun**: >= 1.2.0
+- **Backend Service**: Hono API running on `http://localhost:8080` with OpenAPI 3.1 contract exposed at `/api/v1/openapi.json`.
+
+### Environment Configuration
+
+Copy the example environment file:
 
 ```bash
-# from the monorepo root, with the API running on :8080
-cd apps/web
-cp .env.example .env.local     # NEXT_PUBLIC_API_URL=http://localhost:8080
-bun install
-bun run dev                    # http://localhost:3000
+cp apps/web/.env.example apps/web/.env.local
 ```
 
-Other scripts: `bun run typecheck`, `bun run build`, `bun run start`.
-
-> This package was generated without network access to a package registry, so it has **not** been installed, type-checked or built yet. Run `bun run typecheck && bun run build` first and fix anything that surfaces.
-
-## Routes
-
-| Route | What it is |
-|---|---|
-| `/` | Marketing page for guests, capacity dashboard when signed in |
-| `/how-it-works`, `/docs` | Public architecture guide and documentation |
-| `/login`, `/signup`, `/forgot-password` | Auth (two-column layout with the 3D surface) |
-| `/runner` | Load runner cockpit: presets, live SSE telemetry, abort |
-| `/tests`, `/tests/[id]` | Run history; run detail with capacity gauge and diagnosis |
-| `/compare` | Regression studio with live gate sliders |
-| `/settings` | Workspace, CI/CD API keys, members |
-
-## Architecture
-
-```
-src/
-  app/            routes (route groups: (auth), (app))
-  components/
-    ui/           primitives: button, dialog, tabs, slider, table…
-    fx/           motion + 3D: terrain-canvas, tilt-card, animated-number, magnetic, reveal
-    marketing/    header, footer, hero, simulator, sections, docs, diagram
-    runner/       preset cards, live cockpit
-  lib/
-    api.ts        fetch client + ApiError (401/403/404/409/422/429/5xx normalised)
-    session.tsx   localStorage session via useSyncExternalStore
-    sse.ts        fetch-based SSE client with bounded backoff and de-duplication
-    gate.ts       regression-gate logic and run compatibility checks
-    analysis.ts   evidence diagnosis (observed / likely explanation / next checks)
-    format.ts     the one place for number, unit and "—" formatting
+Configured variables:
+```dotenv
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+NEXT_PUBLIC_API_URL="http://localhost:8080"
+NEXT_PUBLIC_API_BASE_URL="http://localhost:8080"
 ```
 
-Motion lives in `fx/` and is limited to: the hero latency surface, tilt on key cards, spring-tweened live numbers, and the verdict stamp. Everything respects `prefers-reduced-motion`.
+---
 
-## Assumptions about the backend (verify these)
+## 3. Development Workflow
 
-- **Error rate** is a 0–1 fraction. If the API returns percent, flip `ERROR_RATE_IS_FRACTION` in `src/lib/format.ts`.
-- **Aborted status**: the spec says `ABORTED`, the README says `CANCELLED`. Both are handled.
-- **SSE** is read with `fetch` (not `EventSource`) so the `Authorization` header can be sent. Events: `sample`, `done`, `abort`.
-- **Targets** are `projects` (1:1), per the spec.
-- **Forgot password** has no endpoint in the contract, so that page only shows the neutral confirmation state. Wire it to a real endpoint when one exists.
-- Member invites/removal and a `/targets` management page are not in the API contract and are intentionally absent.
+```bash
+# From workspace root:
+bun dev:web               # Start Next.js dev server on http://localhost:3000
+bun dev:server            # Start Hono backend on http://localhost:8080
+bun dev                   # Start both concurrently
 
-## Not done yet
+# Typecheck & Tests:
+bun run --cwd apps/web typecheck   # Strict TypeScript verification
+bun run --cwd apps/web test        # Execute unit test suites
+bun run --cwd apps/web build       # Next.js production build
+bun run --cwd apps/web start       # Run production server
+```
 
-Unit tests for `gate.ts`, `analysis.ts` and `format.ts`, and E2E tests, are recommended before shipping.
+### OpenAPI Type Synchronization
+
+Whenever the backend OpenAPI 3.1 schemas change:
+
+```bash
+bun run --cwd apps/web codegen:api
+```
+This updates `apps/web/src/lib/api/generated/schema.d.ts` directly from `http://localhost:8080/api/v1/openapi.json`.
+
+---
+
+## 4. Production Repository Architecture
+
+```
+apps/web/src/
+├── app/
+│   ├── (marketing)/             # Public product pages (landing, features, docs, pricing, contact, legal)
+│   ├── (auth)/                  # Authentication (sign-in, sign-up, forgot-pwd, reset-pwd, verify-email)
+│   ├── (onboarding)/            # Progressive setup wizard (account -> org -> project -> service connection)
+│   ├── (dashboard)/app/         # Authenticated multi-tenant workspace
+│   │   ├── organizations/       # Org switcher, creation, settings, members, audit-logs, api-keys, usage
+│   │   │   └── [orgId]/projects/
+│   │   │       └── [projectId]/ # Telemetry overview, services, monitoring, load-tests, diagnostics, alerts
+│   │   └── settings/            # User profile, security, sessions, preferences, notifications
+│   ├── invite/[token]/          # Organization invitation onboarding
+│   ├── auth/callback/           # OAuth exchange handler
+│   ├── layout.tsx               # Root application shell + theme initialization
+│   └── globals.css              # Design tokens and custom utilities
+├── components/
+│   ├── ui/                      # Radix UI primitives (Button, Dialog, Badge, Input, Table, etc.)
+│   ├── layout/                  # PageHeader, AppHeader, AppSidebar, DashboardShell
+│   ├── feedback/                # LoadingState, ErrorState, EmptyState
+│   └── data-display/            # MetricCard, HttpMethodBadge, StatusBadge, CopyButton
+├── lib/
+│   ├── api/                     # Central API layer (fetchApi, openapi client, errors, queryKeys, schema.d.ts)
+│   ├── auth/                    # SessionProvider, useAuth (hydration-safe, auto-401 sign-out)
+│   ├── env.ts                   # Validated runtime environment
+│   └── utils.ts                 # Styling utilities (cn, clsx, tailwind-merge)
+└── tests/
+    └── unit/                    # ApiError, queryKeys, and validation test suites
+```
+
+---
+
+## 5. Multi-Tenant Tenancy & Backend Integration
+
+1. **Zero Mock Data**: Every chart, table, metric card, and mutation connects directly to `/api/v1/...` on the live Hono backend.
+2. **Tenancy Quotas**:
+   - Enforced by backend: Maximum of 3 organization memberships per user.
+   - Enforced by backend: Maximum of 5 projects per organization.
+   - UI displays live quota progress indicators and disables creation actions when limits are reached.
+3. **Session State**:
+   - Stored in browser storage (`strim_token`, `strim_user`, `strim_org_id`, `strim_project_id`).
+   - Read safely across SSR and hydration using `useSyncExternalStore`.
+   - Automatic 401 interceptor purges credentials and redirects to `/sign-in`.
+4. **Breaking Point & Diagnostics**:
+   - Integrates with the distributed load testing engine to display confirmed saturation knee RPS, sustainable throughput, breaking cliff, bottleneck classifications, and actionable remediation findings.
