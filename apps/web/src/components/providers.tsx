@@ -3,8 +3,8 @@
 import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { Toaster } from "sonner";
-import { ApiError } from "@/lib/api";
-import { onUnauthorized, SessionProvider } from "@/lib/session";
+import { ApiError, triggerUnauthorized } from "@/lib/api";
+import { SessionProvider } from "@/lib/auth/session-provider";
 import { ThemeProvider, useTheme } from "./theme-provider";
 
 function ThemedToaster() {
@@ -18,7 +18,7 @@ export function Providers({ children }: { children: ReactNode }) {
       new QueryClient({
         queryCache: new QueryCache({
           onError: (error) => {
-            if (error instanceof ApiError && error.status === 401) onUnauthorized();
+            if (error instanceof ApiError && error.status === 401) triggerUnauthorized();
           },
         }),
         defaultOptions: {

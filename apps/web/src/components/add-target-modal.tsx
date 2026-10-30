@@ -19,7 +19,7 @@ import {
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ApiError } from "@/lib/api";
+import { ApiError, API_URL } from "@/lib/api";
 import { useCreateProject } from "@/lib/queries";
 import { useSession } from "@/lib/session";
 import { normalizeUrl, validateRequired, validateTargetUrl, type FieldErrors } from "@/lib/validation";
@@ -131,7 +131,7 @@ export function AddTargetModal({
     if (!apiKey || !createdProject) return;
     setSimulating(true);
     try {
-      await fetch("http://localhost:8080/v1/ingest", {
+      await fetch(`${API_URL}/v1/ingest`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

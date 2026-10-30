@@ -28,10 +28,33 @@ export const buttonVariants = cva(
   },
 );
 
-export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
-  VariantProps<typeof buttonVariants> & { loading?: boolean };
+import { Slot } from "@radix-ui/react-slot";
 
-export function Button({ className, variant, size, loading, disabled, children, type = "button", ...props }: ButtonProps) {
+export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
+  VariantProps<typeof buttonVariants> & { loading?: boolean; asChild?: boolean };
+
+export function Button({
+  className,
+  variant,
+  size,
+  loading,
+  disabled,
+  children,
+  asChild = false,
+  type = "button",
+  ...props
+}: ButtonProps) {
+  if (asChild) {
+    return (
+      <Slot
+        className={cn(buttonVariants({ variant, size }), className)}
+        {...(props as any)}
+      >
+        {children}
+      </Slot>
+    );
+  }
+
   return (
     <button
       type={type}
@@ -45,3 +68,4 @@ export function Button({ className, variant, size, loading, disabled, children, 
     </button>
   );
 }
+

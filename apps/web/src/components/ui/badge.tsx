@@ -22,6 +22,18 @@ const badgeVariants = cva(
 
 export type BadgeTone = NonNullable<VariantProps<typeof badgeVariants>["tone"]>;
 
-export function Badge({ className, tone, ...props }: HTMLAttributes<HTMLSpanElement> & VariantProps<typeof badgeVariants>) {
-  return <span className={cn(badgeVariants({ tone }), className)} {...props} />;
+export interface BadgeProps extends HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {
+  variant?: "default" | "secondary" | "destructive" | "outline" | BadgeTone;
+}
+
+const variantToTone: Record<string, BadgeTone> = {
+  default: "brand",
+  secondary: "neutral",
+  destructive: "danger",
+  outline: "outline",
+};
+
+export function Badge({ className, tone, variant, ...props }: BadgeProps) {
+  const resolvedTone: BadgeTone = tone || (variant && variantToTone[variant] ? variantToTone[variant] : (variant as BadgeTone)) || "neutral";
+  return <span className={cn(badgeVariants({ tone: resolvedTone }), className)} {...props} />;
 }

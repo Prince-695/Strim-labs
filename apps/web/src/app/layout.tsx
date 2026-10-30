@@ -1,25 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
-import { IBM_Plex_Mono } from "next/font/google";
+import { IBM_Plex_Mono, Figtree } from "next/font/google";
 import type { ReactNode } from "react";
 import { Providers } from "@/components/providers";
 import { themeInitScript } from "@/components/theme-provider";
 import "./globals.css";
+import { cn } from "@/lib/utils";
 
-const satoshi = localFont({
-  src: [
-    {
-      path: "../../public/fonts/Satoshi-Variable.woff2",
-      style: "normal",
-    },
-    {
-      path: "../../public/fonts/Satoshi-VariableItalic.woff2",
-      style: "italic",
-    },
-  ],
-  variable: "--font-sans",
-  display: "swap",
-});
+const figtree = Figtree({subsets:['latin'],variable:'--font-sans'});
 
 const ibmPlexMono = IBM_Plex_Mono({
   subsets: ["latin"],
@@ -60,7 +48,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${satoshi.variable} ${ibmPlexMono.variable}`}>
+    <html lang="en" suppressHydrationWarning className={cn(ibmPlexMono.variable, "font-sans", figtree.variable)}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
