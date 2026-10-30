@@ -12,7 +12,7 @@ export const apiKeyAuth = createMiddleware<AppEnv>(async (c, next) => {
   }
 
   const db = c.get("db");
-  const project = await db.project.findUnique({ where: { apiKey: rawKey } });
+  const project = await db.project.findUnique({ where: { ingestKey: rawKey } });
   
   if (!project) {
     return c.json({ error: "UNAUTHORIZED", message: "Invalid STRIM Project API key" }, 401);
@@ -20,7 +20,7 @@ export const apiKeyAuth = createMiddleware<AppEnv>(async (c, next) => {
 
   c.set("projectId", project.id);
   c.set("organizationId", project.organizationId);
-  c.set("projectApiKey", project.apiKey);
+  c.set("ingestKey", project.ingestKey);
   await next();
 });
 

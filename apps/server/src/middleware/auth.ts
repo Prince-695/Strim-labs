@@ -1,27 +1,50 @@
 import { createMiddleware } from "hono/factory";
-import type { AppEnv } from "../types";
 import { verifySession } from "../lib/crypto";
+import type { AppEnv } from "../types";
 
+// Global optional auth — extracts JWT from Bearer header or session cookie
 export const optionalAuth = createMiddleware<AppEnv>(async (c, next) => {
-  const header = c.req.header("authorization");
-  const cookie = c.req.header("cookie") ?? "";
-  const bearer = header?.startsWith("Bearer ") ? header.slice(7) : null;
-  const cookieToken = cookie.match(/(?:^|;\s*)strim_session=([^;]+)/)?.[1] ?? null;
-  const token = bearer ?? cookieToken;
+  c.set("requestId", crypto.randomUUID());
 
-  if (token && !token.startsWith("strim_")) {
-    const session = verifySession(token);
+  const authHeader = c.req.header("authorization");
+  const bearer = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+  if (bearer && !bearer.startsWith("strim_")) {
+    const session = verifySession(bearer);
     if (session) {
-      c.set("userId", session.userId);
-      c.set("email", session.email);
+      const db = c.get("db");
+      if (db) {
+        try {
+          const user = await db.user.findUnique({
+            where: { id: session.userId },
+            select: { id: true, email: true },
+          });
+          if (user) {
+            c.set("userId", user.id);
+            c.set("email", user.email);
+            c.set("sessionId", session.sessionId);
+          }
+        } catch {
+          // DB error, do not set invalid userId
+        }
+      }
     }
   }
+
   await next();
 });
 
+// Require authenticated user
 export const requireAuth = createMiddleware<AppEnv>(async (c, next) => {
   if (!c.get("userId")) {
-    return c.json({ error: "UNAUTHORIZED", message: "Sign in required" }, 401);
+    return c.json(
+      {
+        code: "UNAUTHORIZED",
+        message: "Authentication required. Provide a valid Bearer token.",
+        requestId: c.get("requestId"),
+      },
+      401,
+    );
   }
   await next();
 });

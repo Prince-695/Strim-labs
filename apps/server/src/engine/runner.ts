@@ -11,7 +11,7 @@ export type RunConfig = {
   body?: unknown;
   concurrency: number;
   durationSec: number;
-  profile: "SUSTAINED" | "RAMP_UP" | "SPIKE";
+  profile: "SUSTAINED" | "RAMP_UP" | "SPIKE" | "BREAKING_HUNT";
 };
 
 export type EngineEvent =
