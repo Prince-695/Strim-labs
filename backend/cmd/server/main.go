@@ -51,7 +51,7 @@ func main() {
 
 	// 2. Initialize Structured slog JSON Logger
 	appLogger := logger.New(cfg.LogLevel, os.Stdout)
-	appLogger.Info("Initializing STRIM Labs API Server",
+	appLogger.Debug("Initializing STRIM Labs API Server",
 		slog.String("env", cfg.AppEnv),
 		slog.String("port", cfg.ServerPort),
 	)
@@ -66,7 +66,7 @@ func main() {
 			slog.Any("error", err),
 		)
 	} else {
-		appLogger.Info("PostgreSQL GORM connection pool established successfully")
+		appLogger.Debug("PostgreSQL GORM connection pool established successfully")
 		defer func() {
 			if closeErr := db.Close(); closeErr != nil {
 				appLogger.Error("Error closing database connections", slog.Any("error", closeErr))
@@ -114,7 +114,7 @@ func main() {
 	serverErrors := make(chan error, 1)
 
 	go func() {
-		appLogger.Info(fmt.Sprintf("STRIM Labs server listening on %s (Swagger UI: /swagger/index.html)", listenAddr))
+		appLogger.Debug(fmt.Sprintf("STRIM Labs server listening on %s (Swagger UI: /swagger/index.html)", listenAddr))
 		serverErrors <- app.Listen(listenAddr)
 	}()
 

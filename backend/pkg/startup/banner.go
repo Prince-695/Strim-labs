@@ -24,7 +24,6 @@ const (
 	ansiBrightYellow = "\033[93m"
 	ansiWhite        = "\033[37m"
 	ansiBrightWhite  = "\033[97m"
-	ansiMagenta      = "\033[35m"
 	ansiGray         = "\033[90m"
 )
 
@@ -59,23 +58,15 @@ func PrintWorkerBanner(cfg Config) {
 	PrintBanner(os.Stdout, cfg)
 }
 
-// PrintBanner writes the formatted box banner to the supplied writer.
+// PrintBanner writes the formatted compact box banner to the supplied writer.
 func PrintBanner(w io.Writer, cfg Config) {
 	fmt.Fprint(w, FormatBanner(cfg))
 }
 
-// FormatBanner renders the box-style startup banner as a string.
+// FormatBanner renders a compact, elegant box-style startup banner (Seasyn / Fiber style).
 func FormatBanner(cfg Config) string {
 	useColor := !cfg.NoColor && os.Getenv("NO_COLOR") == ""
 
-	// Ensure reasonable defaults
-	if cfg.ServiceName == "" {
-		if cfg.IsWorker {
-			cfg.ServiceName = "STRIM Labs Background Worker"
-		} else {
-			cfg.ServiceName = "STRIM Labs API Server"
-		}
-	}
 	if cfg.Version == "" {
 		cfg.Version = "1.0.0"
 	}
@@ -89,28 +80,25 @@ func FormatBanner(cfg Config) string {
 		cfg.Status = "ONLINE"
 	}
 
-	// Resolve Base URL & Endpoints
+	port := cfg.Port
+	if port == "" {
+		port = "8080"
+	}
+
 	baseURL := strings.TrimRight(cfg.APIBaseURL, "/")
-	if baseURL == "" && cfg.Port != "" {
-		baseURL = fmt.Sprintf("http://localhost:%s", cfg.Port)
+	if baseURL == "" {
+		baseURL = fmt.Sprintf("http://0.0.0.0:%s", port)
 	}
 
-	healthURL := cfg.HealthEndpoint
-	if healthURL == "" {
-		healthURL = "/health"
-	}
-	if baseURL != "" && strings.HasPrefix(healthURL, "/") {
-		healthURL = baseURL + healthURL
+	healthPath := cfg.HealthEndpoint
+	if healthPath == "" {
+		healthPath = "/health"
 	}
 
-	docsURL := cfg.DocsEndpoint
-	if docsURL != "" && baseURL != "" && strings.HasPrefix(docsURL, "/") {
-		docsURL = baseURL + docsURL
+	docsPath := cfg.DocsEndpoint
+	if docsPath == "" {
+		docsPath = "/swagger/index.html"
 	}
-
-	runtimeInfo := fmt.Sprintf("%s (%s/%s)", runtime.Version(), runtime.GOOS, runtime.GOARCH)
-
-	const innerWidth = 72
 
 	// Helper for coloring
 	colorize := func(code, text string) string {
@@ -120,98 +108,114 @@ func FormatBanner(cfg Config) string {
 		return code + text + ansiReset
 	}
 
+	const innerWidth = 51
+
 	var sb strings.Builder
 
-	// Top Border: ╭──────...──────╮
+	// Top Border:  ┌───────────────────────────────────────────────────┐
 	sb.WriteString("\n")
-	sb.WriteString(colorize(ansiCyan, "╭"+strings.Repeat("─", innerWidth)+"╮") + "\n")
+	sb.WriteString(" " + colorize(ansiCyan, "┌"+strings.Repeat("─", innerWidth)+"┐") + "\n")
 
-	// Empty Spacing Line
+	// Header Title & Address (Seasyn style)
+	if !cfg.IsWorker {
+		title := "⚡ STRIM LABS (LABS) · API"
+		sb.WriteString(formatCenteredLine(colorize(ansiBold+ansiBrightCyan, title), innerWidth, useColor, ansiCyan) + "\n")
+
+		listenURL := fmt.Sprintf("http://0.0.0.0:%s", port)
+		sb.WriteString(formatCenteredLine(colorize(ansiBrightGreen, listenURL), innerWidth, useColor, ansiCyan) + "\n")
+
+		bindDesc := fmt.Sprintf("(bound on host 0.0.0.0 and port %s)", port)
+		sb.WriteString(formatCenteredLine(colorize(ansiDim+ansiWhite, bindDesc), innerWidth, useColor, ansiCyan) + "\n")
+	} else {
+		title := "⚡ STRIM LABS (LABS) · WORKER"
+		sb.WriteString(formatCenteredLine(colorize(ansiBold+ansiBrightCyan, title), innerWidth, useColor, ansiCyan) + "\n")
+
+		workerDesc := "(distributed background queue & job processor)"
+		sb.WriteString(formatCenteredLine(colorize(ansiDim+ansiWhite, workerDesc), innerWidth, useColor, ansiCyan) + "\n")
+	}
+
+	// Spacer Line
 	sb.WriteString(formatBoxLine("", innerWidth, useColor, ansiCyan) + "\n")
 
-	// ASCII Art Logo Header
-	logoLines := []string{
-		`   ███████╗████████╗██████╗ ██╗███╗   ███╗    ██╗      █████╗ ██████╗   `,
-		`   ██╔════╝╚══██╔══╝██╔══██╗██║████╗ ████║    ██║     ██╔══██╗██╔══██╗  `,
-		`   ███████╗   ██║   ██████╔╝██║██╔████╔██║    ██║     ███████║██████╔╝  `,
-		`   ╚════██║   ██║   ██╔══██╗██║██║╚██╔╝██║    ██║     ██╔══██║██╔══██╗  `,
-		`   ███████║   ██║   ██║  ██║██║██║ ╚═╝ ██║    ███████╗██║  ██║██████╔╝  `,
-		`   ╚══════╝   ╚═╝   ╚═╝  ╚═╝╚═╝╚═╝     ╚═╝    ╚══════╝╚═╝  ╚═╝╚═════╝   `,
-	}
-	for _, line := range logoLines {
-		sb.WriteString(formatBoxLine(colorize(ansiBrightCyan, line), innerWidth, useColor, ansiCyan) + "\n")
-	}
+	// Metadata Rows (with dotted leader)
+	runtimeShort := fmt.Sprintf("%s (%s/%s)", runtime.Version(), runtime.GOOS, runtime.GOARCH)
 
-	// Subtitle
-	sb.WriteString(formatBoxLine("", innerWidth, useColor, ansiCyan) + "\n")
-	tagline := "   High-Performance Observability, Testing & Resilience Engine"
-	sb.WriteString(formatBoxLine(colorize(ansiGray, tagline), innerWidth, useColor, ansiCyan) + "\n")
-
-	// Divider: ├──────...──────┤
-	sb.WriteString(colorize(ansiCyan, "├"+strings.Repeat("─", innerWidth)+"┤") + "\n")
-
-	// Formatted Metadata Items
 	items := []struct {
 		Label string
 		Value string
 	}{
-		{Label: "Service", Value: colorize(ansiBrightWhite+ansiBold, cfg.ServiceName)},
-		{Label: "Version", Value: fmt.Sprintf("%s %s", colorize(ansiWhite, "v"+strings.TrimPrefix(cfg.Version, "v")), colorize(ansiGray, "(commit: "+cfg.Commit+")"))},
 		{Label: "Environment", Value: formatEnv(cfg.Environment, colorize)},
-		{Label: "Go Runtime", Value: colorize(ansiWhite, runtimeInfo)},
+		{Label: "Version", Value: fmt.Sprintf("%s %s", colorize(ansiWhite, "v"+strings.TrimPrefix(cfg.Version, "v")), colorize(ansiGray, "("+cfg.Commit+")"))},
+		{Label: "Runtime", Value: colorize(ansiWhite, runtimeShort)},
+		{Label: "Status", Value: formatStatus(cfg.Status, cfg.StatusDetails, colorize)},
 	}
 
 	if !cfg.IsWorker {
-		if baseURL != "" {
-			items = append(items, struct {
+		items = append(items,
+			struct {
 				Label string
 				Value string
-			}{Label: "API Base URL", Value: colorize(ansiBrightCyan, baseURL)})
-		}
-		if healthURL != "" {
-			items = append(items, struct {
+			}{Label: "Health", Value: colorize(ansiBrightCyan, healthPath)},
+			struct {
 				Label string
 				Value string
-			}{Label: "Health Probe", Value: colorize(ansiBrightGreen, healthURL)})
-		}
-		if docsURL != "" {
-			items = append(items, struct {
-				Label string
-				Value string
-			}{Label: "API Docs", Value: colorize(ansiYellow, docsURL)})
-		}
-	} else {
-		items = append(items, struct {
-			Label string
-			Value string
-		}{Label: "Worker Mode", Value: colorize(ansiBrightCyan, "Distributed Background Queue & Heartbeat Engine")})
+			}{Label: "Docs", Value: colorize(ansiYellow, docsPath)},
+		)
 	}
 
-	// Status line
-	statusVal := formatStatus(cfg.Status, cfg.StatusDetails, colorize)
-	items = append(items, struct {
-		Label string
-		Value string
-	}{Label: "Status", Value: statusVal})
-
-	// Startup Duration
 	if cfg.StartupDuration > 0 {
-		durationStr := formatDuration(cfg.StartupDuration)
 		items = append(items, struct {
 			Label string
 			Value string
-		}{Label: "Startup Time", Value: colorize(ansiBrightGreen, durationStr)})
+		}{Label: "Startup", Value: colorize(ansiBrightGreen, formatDuration(cfg.StartupDuration))})
 	}
 
-	for _, item := range items {
-		line := fmt.Sprintf("  %-14s: %s", colorize(ansiDim+ansiWhite, item.Label), item.Value)
+	// Render dotted rows
+	for _, it := range items {
+		line := formatDottedRow(it.Label, it.Value, innerWidth, colorize)
 		sb.WriteString(formatBoxLine(line, innerWidth, useColor, ansiCyan) + "\n")
 	}
 
-	// Bottom Border: ╰──────...──────╯
-	sb.WriteString(colorize(ansiCyan, "╰"+strings.Repeat("─", innerWidth)+"╯") + "\n\n")
+	// Bottom Border:  └───────────────────────────────────────────────────┘
+	sb.WriteString(" " + colorize(ansiCyan, "└"+strings.Repeat("─", innerWidth)+"┘") + "\n\n")
 
 	return sb.String()
+}
+
+// formatDottedRow builds " Label .......... Value " with exact alignment.
+func formatDottedRow(label, value string, innerWidth int, colorize func(code, text string) string) string {
+	plainLabel := stripANSI(label)
+	plainVal := stripANSI(value)
+
+	// Box interior: 1 leading space + label + 1 space + dots + 1 space + value + 1 trailing space = innerWidth
+	dotCount := innerWidth - utf8.RuneCountInString(plainLabel) - utf8.RuneCountInString(plainVal) - 4
+	if dotCount < 1 {
+		dotCount = 1
+	}
+
+	dots := colorize(ansiGray, strings.Repeat(".", dotCount))
+	coloredLabel := colorize(ansiWhite, label)
+
+	return fmt.Sprintf(" %s %s %s ", coloredLabel, dots, value)
+}
+
+// formatCenteredLine centers text within innerWidth surrounded by borders.
+func formatCenteredLine(content string, innerWidth int, useColor bool, borderCode string) string {
+	visibleLen := utf8.RuneCountInString(stripANSI(content))
+	totalPadding := innerWidth - visibleLen
+	if totalPadding < 0 {
+		totalPadding = 0
+	}
+
+	leftPad := totalPadding / 2
+	rightPad := totalPadding - leftPad
+
+	border := "│"
+	if useColor && borderCode != "" {
+		border = borderCode + border + ansiReset
+	}
+
+	return " " + border + strings.Repeat(" ", leftPad) + content + strings.Repeat(" ", rightPad) + border
 }
 
 // formatBoxLine wraps text with box borders `│` and pads it to exact innerWidth.
@@ -227,7 +231,7 @@ func formatBoxLine(content string, innerWidth int, useColor bool, borderCode str
 		border = borderCode + border + ansiReset
 	}
 
-	return border + content + strings.Repeat(" ", padding) + border
+	return " " + border + content + strings.Repeat(" ", padding) + border
 }
 
 // stripANSI removes ANSI escape sequences to compute exact visual column width.
@@ -239,9 +243,9 @@ func formatEnv(env string, colorize func(code, text string) string) string {
 	lower := strings.ToLower(env)
 	switch lower {
 	case "production", "prod":
-		return colorize(ansiBrightYellow+ansiBold, strings.ToUpper(lower))
+		return colorize(ansiBrightYellow+ansiBold, "production")
 	case "staging", "stage":
-		return colorize(ansiMagenta+ansiBold, strings.ToUpper(lower))
+		return colorize(ansiCyan+ansiBold, "staging")
 	default:
 		return colorize(ansiGreen, lower)
 	}

@@ -31,7 +31,7 @@ func main() {
 	}
 
 	appLogger := logger.New(cfg.LogLevel, os.Stdout)
-	appLogger.Info("Initializing STRIM Labs Background Worker",
+	appLogger.Debug("Initializing STRIM Labs Background Worker",
 		slog.String("version", Version),
 		slog.String("commit", Commit),
 		slog.String("env", cfg.AppEnv),
@@ -49,7 +49,7 @@ func main() {
 		_ = db.Close()
 	}()
 
-	appLogger.Info("Worker successfully connected to database. Ready to process background jobs.")
+	appLogger.Debug("Worker successfully connected to database. Ready to process background jobs.")
 
 	startup.PrintWorkerBanner(startup.Config{
 		ServiceName:     "STRIM Labs Background Worker",
