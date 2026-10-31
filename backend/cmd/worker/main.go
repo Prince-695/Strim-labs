@@ -31,12 +31,6 @@ func main() {
 	}
 
 	appLogger := logger.New(cfg.LogLevel, os.Stdout)
-	appLogger.Debug("Initializing STRIM Labs Background Worker",
-		slog.String("version", Version),
-		slog.String("commit", Commit),
-		slog.String("env", cfg.AppEnv),
-	)
-
 	clk := clock.NewRealClock()
 
 	// Initialize Database Connection
@@ -49,15 +43,13 @@ func main() {
 		_ = db.Close()
 	}()
 
-	appLogger.Debug("Worker successfully connected to database. Ready to process background jobs.")
-
 	startup.PrintWorkerBanner(startup.Config{
-		ServiceName:     "STRIM Labs Background Worker",
+		ServiceName:     "STRIM LABS",
 		Version:         Version,
 		Commit:          Commit,
 		Environment:     cfg.AppEnv,
 		Status:          "ACTIVE",
-		StatusDetails:   "Database connected (Worker ready)",
+		StatusDetails:   "Database connected",
 		StartupDuration: time.Since(startTime),
 	})
 
@@ -87,9 +79,6 @@ func main() {
 		}
 	}()
 
-	sig := <-shutdownSignals
-	appLogger.Info("Worker received shutdown signal, draining jobs...", slog.String("signal", sig.String()))
+	<-shutdownSignals
 	cancel()
-	time.Sleep(500 * time.Millisecond)
-	appLogger.Info("Worker gracefully stopped")
 }
