@@ -4,11 +4,18 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"regexp"
 	"runtime"
 	"strings"
 	"time"
 	"unicode/utf8"
 )
+
+var ansiRegex = regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+
+func stripANSI(s string) string {
+	return ansiRegex.ReplaceAllString(s, "")
+}
 
 const (
 	reset  = "\033[0m"
@@ -110,7 +117,6 @@ func FormatBanner(cfg Config) string {
 
 	const width = 52
 	border := style(cyan, "│")
-	line := style(cyan, " "+strings.Repeat("─", width))
 
 	var b strings.Builder
 
@@ -143,13 +149,14 @@ func FormatBanner(cfg Config) string {
 		center(apiURL)
 	}
 
-	b.WriteString(" " + border + strings.Repeat(" ", width) + border + "\n")
-	b.WriteString(" " + line + "\n")
+	b.WriteString(style(cyan, " ├"+strings.Repeat("─", width)+"┤") + "\n")
 
 	row := func(label, value string) {
-		valueLength := utf8.RuneCountInString(value)
-		labelLength := utf8.RuneCountInString(label)
-		dots := max(2, width-labelLength-valueLength-5)
+		plainValue := stripANSI(value)
+		plainLabel := stripANSI(label)
+		valueLength := utf8.RuneCountInString(plainValue)
+		labelLength := utf8.RuneCountInString(plainLabel)
+		dots := max(2, width-labelLength-valueLength-4)
 
 		b.WriteString(" " + border + " " +
 			style(white, label) + " " +
@@ -183,10 +190,14 @@ func FormatBanner(cfg Config) string {
 	}
 
 	if cfg.StartupDuration > 0 {
-		row("Startup", style(green, cfg.StartupDuration.Round(time.Microsecond).String()))
+		durationStr := cfg.StartupDuration.Round(time.Millisecond).String()
+		if cfg.StartupDuration < time.Millisecond {
+			durationStr = cfg.StartupDuration.Round(time.Microsecond).String()
+		}
+		row("Startup", style(green, durationStr))
 	}
 
-	b.WriteString(" " + style(cyan, " ╰"+strings.Repeat("─", width)+"╯") + "\n\n")
+	b.WriteString(style(cyan, " ╰"+strings.Repeat("─", width)+"╯") + "\n\n")
 
 	return b.String()
 }
