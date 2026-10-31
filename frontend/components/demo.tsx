@@ -52,7 +52,25 @@ import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Copy01Icon, AlertCircleIcon, Delete02Icon, Share03Icon, ShoppingBag01Icon, MoreHorizontalCircle01Icon, Loading03Icon, PlusSignIcon, MinusSignIcon, ArrowLeft02Icon, ArrowRight02Icon, Tick02Icon, ArrowDown01Icon, ArrowRight01Icon, Search01Icon, Settings01Icon, ArrowUp01Icon } from "@hugeicons/core-free-icons"
+import {
+  Copy01Icon,
+  AlertCircleIcon,
+  Delete02Icon,
+  Share03Icon,
+  ShoppingBag01Icon,
+  MoreHorizontalCircle01Icon,
+  Loading03Icon,
+  PlusSignIcon,
+  MinusSignIcon,
+  ArrowLeft02Icon,
+  ArrowRight02Icon,
+  Tick02Icon,
+  ArrowDown01Icon,
+  ArrowRight01Icon,
+  Search01Icon,
+  Settings01Icon,
+  ArrowUp01Icon,
+} from "@hugeicons/core-free-icons"
 
 export function Demo() {
   const [sliderValue, setSliderValue] = React.useState<number[]>([500])
@@ -134,7 +152,10 @@ export function Demo() {
                   <HugeiconsIcon icon={ShoppingBag01Icon} strokeWidth={2} />
                 </Card>
                 <Card className="flex size-8 items-center justify-center p-0 shadow-none *:[svg]:size-4">
-                  <HugeiconsIcon icon={MoreHorizontalCircle01Icon} strokeWidth={2} />
+                  <HugeiconsIcon
+                    icon={MoreHorizontalCircle01Icon}
+                    strokeWidth={2}
+                  />
                 </Card>
                 <Card className="flex size-8 items-center justify-center p-0 shadow-none *:[svg]:size-4">
                   <HugeiconsIcon icon={Loading03Icon} strokeWidth={2} />
