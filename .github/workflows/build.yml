@@ -9,7 +9,7 @@ on:
 jobs:
 
   # ======================
-  # 🔍 DETECT CHANGES
+  # DETECT CHANGES
   # ======================
   changes:
     name: Detect Changes
@@ -27,7 +27,7 @@ jobs:
         uses: dorny/paths-filter@v3
         id: filter
         with:
-          base: ${{ github.ref }}
+          base: ${{ github.event.before }}
           filters: |
             backend:
               - 'backend/**'
@@ -36,14 +36,14 @@ jobs:
 
 
   # ======================
-  # 🔵 BACKEND BUILD
+  # BACKEND BUILD
   # ======================
   backend:
     name: Backend Build
     runs-on: ubuntu-latest
 
     needs: changes
-    if: ${{ needs.changes.outputs.backend == 'true' }}
+    if: needs.changes.outputs.backend == 'true'
 
     defaults:
       run:
@@ -86,7 +86,7 @@ jobs:
 
 
   # ======================
-  # 🚀 BACKEND DEPLOY (Render)
+  # BACKEND DEPLOY (RENDER)
   # ======================
   deploy-backend:
     name: Deploy Backend (Render)
@@ -117,11 +117,6 @@ jobs:
           body="${response%$'\n'*}"
 
           echo "Render HTTP response: $http_code"
-
-          if [ "$http_code" = "202" ]; then
-            echo "::error::Render has another deployment in progress."
-            exit 1
-          fi
 
           if [ "$http_code" != "200" ]; then
             echo "::error::Render deployment trigger failed: $body"
@@ -185,14 +180,14 @@ jobs:
 
 
   # ======================
-  # 🟡 FRONTEND BUILD
+  # FRONTEND BUILD
   # ======================
   frontend:
     name: Frontend Build
     runs-on: ubuntu-latest
 
     needs: changes
-    if: ${{ needs.changes.outputs.frontend == 'true' }}
+    if: needs.changes.outputs.frontend == 'true'
 
     steps:
       - name: Checkout code
@@ -232,7 +227,7 @@ jobs:
 
 
   # ======================
-  # 🚀 FRONTEND DEPLOY (Vercel)
+  # FRONTEND DEPLOY (VERCEL)
   # ======================
   deploy-frontend:
     name: Deploy Frontend (Vercel)
