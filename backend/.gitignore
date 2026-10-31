@@ -1,0 +1,64 @@
+# =========================
+# Go build files
+# =========================
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+*.cover
+*.log
+
+# =========================
+# Go modules
+# =========================
+# ❌ DO NOT ignore go.mod & go.sum
+# They should be committed
+
+# =========================
+# Binaries / build output
+# =========================
+bin/
+build/
+dist/
+
+# =========================
+# Vendor folder (optional)
+# =========================
+vendor/
+
+# =========================
+# Environment files
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# IDE / Editor files
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Test / coverage
+# =========================
+coverage.out
+coverage.html
+
+# =========================
+# Temporary files
+# =========================
+tmp/
+temp/
