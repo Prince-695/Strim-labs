@@ -51,10 +51,6 @@ func main() {
 
 	// 2. Initialize Structured slog JSON Logger
 	appLogger := logger.New(cfg.LogLevel, os.Stdout)
-	appLogger.Info("Initializing STRIM Labs API Server",
-		slog.String("env", cfg.AppEnv),
-		slog.String("port", cfg.ServerPort),
-	)
 
 	// 3. Platform Utilities (UUIDv7 ID generator)
 	idGen := ids.NewUUIDv7Generator()
@@ -66,7 +62,6 @@ func main() {
 			slog.Any("error", err),
 		)
 	} else {
-		appLogger.Info("PostgreSQL GORM connection pool established successfully")
 		defer func() {
 			if closeErr := db.Close(); closeErr != nil {
 				appLogger.Error("Error closing database connections", slog.Any("error", closeErr))
@@ -96,7 +91,7 @@ func main() {
 	}
 
 	startup.PrintServerBanner(startup.Config{
-		ServiceName:     "STRIM Labs API Server",
+		ServiceName:     "STRIM LABS",
 		Version:         Version,
 		Commit:          Commit,
 		Environment:     cfg.AppEnv,
@@ -114,7 +109,6 @@ func main() {
 	serverErrors := make(chan error, 1)
 
 	go func() {
-		appLogger.Info(fmt.Sprintf("STRIM Labs server listening on %s (Swagger UI: /swagger/index.html)", listenAddr))
 		serverErrors <- app.Listen(listenAddr)
 	}()
 
@@ -127,17 +121,9 @@ func main() {
 		appLogger.Error("Fatal server error occurred", slog.Any("error", err))
 		os.Exit(1)
 
-	case sig := <-shutdownSignals:
-		appLogger.Info("Received shutdown signal, terminating gracefully...", slog.String("signal", sig.String()))
-
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	case <-shutdownSignals:
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-
-		if err := app.ShutdownWithContext(ctx); err != nil {
-			appLogger.Error("Server forced to shutdown with error", slog.Any("error", err))
-			_ = app.Shutdown()
-		} else {
-			appLogger.Info("STRIM Labs API Server gracefully terminated")
-		}
+		_ = app.ShutdownWithContext(ctx)
 	}
 }

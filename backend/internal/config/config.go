@@ -55,10 +55,12 @@ func Load() (*Config, error) {
 	// Attempt loading .env file if it exists; do not fail if absent
 	_ = godotenv.Load()
 
+	serverPort := getEnvFirst([]string{"PORT", "SERVER_PORT"}, "8080")
+
 	cfg := &Config{
 		AppEnv:         getEnv("APP_ENV", "development"),
-		ServerPort:     getEnvFirst([]string{"PORT", "SERVER_PORT"}, "8080"),
-		APIBaseURL:     getEnv("API_BASE_URL", "http://localhost:8080"),
+		ServerPort:     serverPort,
+		APIBaseURL:     getEnvFirst([]string{"API_BASE_URL", "RENDER_EXTERNAL_URL"}, fmt.Sprintf("http://localhost:%s", serverPort)),
 		WebOrigin:      getEnv("WEB_ORIGIN", "http://localhost:3000"),
 		AllowedOrigins: parseCommaSeparated(getEnv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8080")),
 		LogLevel:       getEnv("LOG_LEVEL", "info"),
