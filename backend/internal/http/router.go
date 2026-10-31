@@ -38,6 +38,18 @@ func NewRouter(
 	app.Use(middleware.CORSConfig(cfg))
 	app.Use(middleware.Timeout(cfg.RequestTimeout))
 
+	// Root endpoint for platform probes and basic service status
+	app.Get("/", func(c *fiber.Ctx) error {
+		return domain.SendOK(c, fiber.Map{
+			"name":   "STRIM Labs API",
+			"status": "healthy",
+			"docs":   "/swagger/index.html",
+		}, nil)
+	})
+	app.Head("/", func(c *fiber.Ctx) error {
+		return c.SendStatus(fiber.StatusOK)
+	})
+
 	// System Health Route
 	app.Get("/health", handlers.System.Health)
 
