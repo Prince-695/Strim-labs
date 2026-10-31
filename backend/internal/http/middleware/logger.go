@@ -30,18 +30,17 @@ func HTTPLogger(l *slog.Logger) fiber.Handler {
 			slog.String("user_agent", c.Get("User-Agent")),
 		}
 
-		// Don't clutter logs on repeated health checks unless error
-		if path == "/health" && status == fiber.StatusOK {
+		// Quiet down routine platform probes
+		if (path == "/" || path == "/health" || path == "/favicon.ico") && status < 500 {
 			l.LogAttrs(c.UserContext(), slog.LevelDebug, "HTTP request", attrs...)
 			return err
 		}
 
 		if status >= 500 {
 			l.LogAttrs(c.UserContext(), slog.LevelError, "HTTP server error", attrs...)
-		} else if status >= 400 {
-			l.LogAttrs(c.UserContext(), slog.LevelWarn, "HTTP client warning", attrs...)
 		} else {
-			l.LogAttrs(c.UserContext(), slog.LevelInfo, "HTTP request completed", attrs...)
+			// Routine requests and client warnings are kept at Debug level to prevent console noise
+			l.LogAttrs(c.UserContext(), slog.LevelDebug, "HTTP request completed", attrs...)
 		}
 
 		return err

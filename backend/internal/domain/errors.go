@@ -139,7 +139,7 @@ func CentralErrorHandler(logger *slog.Logger) fiber.ErrorHandler {
 					slog.Any("error", appErr.InternalErr),
 				)
 			} else {
-				logger.Warn("Client error",
+				logger.Debug("Client error",
 					slog.String("request_id", reqID),
 					slog.String("error_code", appErr.ErrorCode),
 					slog.String("message", appErr.Message),

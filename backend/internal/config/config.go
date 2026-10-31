@@ -57,7 +57,7 @@ func Load() (*Config, error) {
 
 	cfg := &Config{
 		AppEnv:         getEnv("APP_ENV", "development"),
-		ServerPort:     getEnv("SERVER_PORT", "8080"),
+		ServerPort:     getEnvFirst([]string{"PORT", "SERVER_PORT"}, "8080"),
 		APIBaseURL:     getEnv("API_BASE_URL", "http://localhost:8080"),
 		WebOrigin:      getEnv("WEB_ORIGIN", "http://localhost:3000"),
 		AllowedOrigins: parseCommaSeparated(getEnv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8080")),
@@ -96,6 +96,15 @@ func Load() (*Config, error) {
 }
 
 // Helper utilities for environment extraction
+func getEnvFirst(keys []string, defaultVal string) string {
+	for _, key := range keys {
+		if val, ok := os.LookupEnv(key); ok && strings.TrimSpace(val) != "" {
+			return strings.TrimSpace(val)
+		}
+	}
+	return defaultVal
+}
+
 func getEnv(key, defaultVal string) string {
 	if val, ok := os.LookupEnv(key); ok && strings.TrimSpace(val) != "" {
 		return strings.TrimSpace(val)
