@@ -17,6 +17,12 @@ import (
 	"github.com/Prince-695/strim/backend/internal/platform/logger"
 	"github.com/Prince-695/strim/backend/internal/repository"
 	"github.com/Prince-695/strim/backend/internal/service"
+	"github.com/Prince-695/strim/backend/pkg/startup"
+)
+
+var (
+	Version = "1.0.0"
+	Commit  = "dev"
 )
 
 // @title STRIM Labs API
@@ -34,6 +40,8 @@ import (
 // @name Authorization
 // @description Type "Bearer" followed by a space and then your token.
 func main() {
+	startTime := time.Now()
+
 	// 1. Load strongly-typed Configuration
 	cfg, err := config.Load()
 	if err != nil {
@@ -79,7 +87,29 @@ func main() {
 	// 8. Build Router & Middlewares
 	app := http.NewRouter(cfg, handlerContainer, appLogger, idGen)
 
-	// 9. Start Server in Background Goroutine
+	// 9. Display Startup Banner
+	serverStatus := "ONLINE"
+	statusDetails := "Database connected"
+	if db == nil {
+		serverStatus = "DEGRADED"
+		statusDetails = "Database unreachable"
+	}
+
+	startup.PrintServerBanner(startup.Config{
+		ServiceName:     "STRIM Labs API Server",
+		Version:         Version,
+		Commit:          Commit,
+		Environment:     cfg.AppEnv,
+		Port:            cfg.ServerPort,
+		APIBaseURL:      cfg.APIBaseURL,
+		HealthEndpoint:  "/health",
+		DocsEndpoint:    "/swagger/index.html",
+		Status:          serverStatus,
+		StatusDetails:   statusDetails,
+		StartupDuration: time.Since(startTime),
+	})
+
+	// 10. Start Server in Background Goroutine
 	listenAddr := fmt.Sprintf(":%s", cfg.ServerPort)
 	serverErrors := make(chan error, 1)
 
@@ -88,7 +118,7 @@ func main() {
 		serverErrors <- app.Listen(listenAddr)
 	}()
 
-	// 10. Graceful Shutdown on Interrupt Signals
+	// 11. Graceful Shutdown on Interrupt Signals
 	shutdownSignals := make(chan os.Signal, 1)
 	signal.Notify(shutdownSignals, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 

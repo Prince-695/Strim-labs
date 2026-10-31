@@ -13,6 +13,7 @@ import (
 	"github.com/Prince-695/strim/backend/internal/platform/clock"
 	"github.com/Prince-695/strim/backend/internal/platform/database"
 	"github.com/Prince-695/strim/backend/internal/platform/logger"
+	"github.com/Prince-695/strim/backend/pkg/startup"
 )
 
 var (
@@ -21,6 +22,8 @@ var (
 )
 
 func main() {
+	startTime := time.Now()
+
 	cfg, err := config.Load()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "CRITICAL: Worker configuration failure: %v\n", err)
@@ -47,6 +50,16 @@ func main() {
 	}()
 
 	appLogger.Info("Worker successfully connected to database. Ready to process background jobs.")
+
+	startup.PrintWorkerBanner(startup.Config{
+		ServiceName:     "STRIM Labs Background Worker",
+		Version:         Version,
+		Commit:          Commit,
+		Environment:     cfg.AppEnv,
+		Status:          "ACTIVE",
+		StatusDetails:   "Database connected (Worker ready)",
+		StartupDuration: time.Since(startTime),
+	})
 
 	// Context for background jobs cancellation
 	ctx, cancel := context.WithCancel(context.Background())
