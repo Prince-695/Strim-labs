@@ -107,6 +107,13 @@ func New(cfg *config.Config, l *slog.Logger) (*DB, error) {
 	sqlDB.SetConnMaxLifetime(cfg.DatabaseConnMaxLife)
 	sqlDB.SetConnMaxIdleTime(10 * time.Minute)
 
+	// Verify connectivity with a bounded 3-second timeout so slow/unreachable DB never stalls startup
+	pingCtx, pingCancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer pingCancel()
+	if pingErr := sqlDB.PingContext(pingCtx); pingErr != nil {
+		return nil, fmt.Errorf("database connectivity check failed: %w", pingErr)
+	}
+
 	return &DB{
 		DB:    db,
 		sqlDB: sqlDB,
