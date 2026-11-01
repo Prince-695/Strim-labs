@@ -17,7 +17,14 @@ import (
 	"github.com/Prince-695/strim/backend/internal/repository"
 )
 
-// AuthService defines all business operations for authentication and sessions.
+// GraceCachedTokenPair holds cached token pairs for concurrent in-flight refresh deduplication.
+type GraceCachedTokenPair struct {
+	User         *domain.UserResponse
+	AccessToken  string
+	RefreshToken string
+}
+
+// AuthService defines all business operations for stateless dual-token authentication.
 type AuthService interface {
 	Signup(ctx context.Context, req domain.SignupRequest, userAgent, ip string) (*domain.UserResponse, string, string, error)
 	Login(ctx context.Context, req domain.LoginRequest, userAgent, ip string) (*domain.UserResponse, string, string, error)
@@ -29,16 +36,14 @@ type AuthService interface {
 	ChangePassword(ctx context.Context, userID string, req domain.ChangePasswordRequest) error
 	SendVerificationOTP(ctx context.Context, userID string) error
 	VerifyOTP(ctx context.Context, userID, code string) (*domain.UserResponse, error)
-	ListSessions(ctx context.Context, userID, currentSessionID string) ([]domain.SessionResponse, error)
-	RevokeSession(ctx context.Context, userID, sessionID string) error
 	HandleOAuthLogin(ctx context.Context, provider, providerUserID, email, firstName, lastName, userAgent, ip string) (*domain.UserResponse, string, string, error)
 	IsTokenRevoked(jti string) bool
+	IsUserRevoked(userID string, tokenIssuedAt time.Time) bool
 }
 
 type authService struct {
 	cfg      *config.Config
 	userRepo repository.UserRepository
-	authRepo repository.AuthRepository
 	otpRepo  repository.OTPRepository
 	mailer   mailer.Mailer
 	denylist cache.Cache
@@ -47,11 +52,10 @@ type authService struct {
 	logger   *slog.Logger
 }
 
-// NewAuthService creates a new AuthService instance with all dependencies injected.
+// NewAuthService creates a new AuthService instance with stateless dual-token support.
 func NewAuthService(
 	cfg *config.Config,
 	userRepo repository.UserRepository,
-	authRepo repository.AuthRepository,
 	otpRepo repository.OTPRepository,
 	mailer mailer.Mailer,
 	denylist cache.Cache,
@@ -62,7 +66,6 @@ func NewAuthService(
 	return &authService{
 		cfg:      cfg,
 		userRepo: userRepo,
-		authRepo: authRepo,
 		otpRepo:  otpRepo,
 		mailer:   mailer,
 		denylist: denylist,
@@ -72,7 +75,7 @@ func NewAuthService(
 	}
 }
 
-// Signup registers a new user, sends email verification OTP, and issues session tokens.
+// Signup registers a new user, sends email verification OTP, and issues stateless dual-token pair.
 func (s *authService) Signup(ctx context.Context, req domain.SignupRequest, userAgent, ip string) (*domain.UserResponse, string, string, error) {
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 
@@ -100,44 +103,28 @@ func (s *authService) Signup(ctx context.Context, req domain.SignupRequest, user
 		ID:           userID,
 		Email:        req.Email,
 		PasswordHash: passwordHash,
-		FirstName:    strings.TrimSpace(req.FirstName),
-		LastName:     strings.TrimSpace(req.LastName),
+		FirstName:    req.FirstName,
+		LastName:     req.LastName,
 		IsVerified:   false,
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
-		if strings.Contains(strings.ToLower(err.Error()), "unique") || strings.Contains(strings.ToLower(err.Error()), "duplicate") {
+		if strings.Contains(strings.ToLower(err.Error()), "duplicate") || strings.Contains(strings.ToLower(err.Error()), "unique") {
 			return nil, "", "", domain.NewEmailTakenError()
 		}
 		return nil, "", "", domain.NewInternalError(err)
 	}
 
-	// 4. Issue session tokens (Family rotation)
-	familyID := s.idGen.MustNewUUIDv7()
+	// 4. Issue stateless dual-token pair (Access JWT 30m, Refresh JWT 7d)
 	sessionID := s.idGen.MustNewUUIDv7()
-	rawRefreshToken, tokenHash, err := crypto.GenerateOpaqueToken()
+	accessToken, _, err := crypto.GenerateAccessToken(user.ID, sessionID, user.Email, user.IsVerified, s.cfg.AccessTokenTTL, s.cfg.JWTSecret)
 	if err != nil {
 		return nil, "", "", domain.NewInternalError(err)
 	}
 
-	refreshTokenModel := &domain.RefreshToken{
-		ID:        sessionID,
-		UserID:    user.ID,
-		FamilyID:  familyID,
-		TokenHash: tokenHash,
-		UserAgent: userAgent,
-		IP:        ip,
-		ExpiresAt: now.Add(s.cfg.RefreshTokenTTL),
-		CreatedAt: now,
-	}
-
-	if err := s.authRepo.CreateRefreshToken(ctx, refreshTokenModel); err != nil {
-		return nil, "", "", domain.NewInternalError(err)
-	}
-
-	accessToken, _, err := crypto.GenerateAccessToken(user.ID, sessionID, user.Email, user.IsVerified, s.cfg.AccessTokenTTL, s.cfg.JWTSecret)
+	refreshToken, _, err := crypto.GenerateRefreshToken(user.ID, sessionID, user.Email, user.IsVerified, s.cfg.RefreshTokenTTL, s.cfg.JWTSecret)
 	if err != nil {
 		return nil, "", "", domain.NewInternalError(err)
 	}
@@ -160,10 +147,10 @@ func (s *authService) Signup(ctx context.Context, req domain.SignupRequest, user
 	}
 
 	resp := domain.ToUserResponse(user)
-	return &resp, accessToken, rawRefreshToken, nil
+	return &resp, accessToken, refreshToken, nil
 }
 
-// Login authenticates credentials, tracks failed attempts, and creates a new session.
+// Login authenticates credentials, checks lockout, and issues stateless dual-token pair.
 func (s *authService) Login(ctx context.Context, req domain.LoginRequest, userAgent, ip string) (*domain.UserResponse, string, string, error) {
 	req.Email = strings.ToLower(strings.TrimSpace(req.Email))
 	lockKey := "login_fail:" + req.Email
@@ -196,121 +183,120 @@ func (s *authService) Login(ctx context.Context, req domain.LoginRequest, userAg
 	// Reset failed attempts on success
 	s.denylist.Delete(lockKey)
 
-	// Issue session tokens
-	now := s.clk.Now()
-	familyID := s.idGen.MustNewUUIDv7()
+	// Issue stateless dual-token pair (Access JWT 30m, Refresh JWT 7d)
 	sessionID := s.idGen.MustNewUUIDv7()
-	rawRefreshToken, tokenHash, err := crypto.GenerateOpaqueToken()
-	if err != nil {
-		return nil, "", "", domain.NewInternalError(err)
-	}
-
-	refreshTokenModel := &domain.RefreshToken{
-		ID:        sessionID,
-		UserID:    user.ID,
-		FamilyID:  familyID,
-		TokenHash: tokenHash,
-		UserAgent: userAgent,
-		IP:        ip,
-		ExpiresAt: now.Add(s.cfg.RefreshTokenTTL),
-		CreatedAt: now,
-	}
-
-	if err := s.authRepo.CreateRefreshToken(ctx, refreshTokenModel); err != nil {
-		return nil, "", "", domain.NewInternalError(err)
-	}
-
 	accessToken, _, err := crypto.GenerateAccessToken(user.ID, sessionID, user.Email, user.IsVerified, s.cfg.AccessTokenTTL, s.cfg.JWTSecret)
 	if err != nil {
 		return nil, "", "", domain.NewInternalError(err)
 	}
 
+	refreshToken, _, err := crypto.GenerateRefreshToken(user.ID, sessionID, user.Email, user.IsVerified, s.cfg.RefreshTokenTTL, s.cfg.JWTSecret)
+	if err != nil {
+		return nil, "", "", domain.NewInternalError(err)
+	}
+
 	resp := domain.ToUserResponse(user)
-	return &resp, accessToken, rawRefreshToken, nil
+	return &resp, accessToken, refreshToken, nil
 }
 
-// Refresh rotates a refresh token and detects reuse attacks.
+// Refresh rotates a refresh token using Refresh Token Rotation (RTR) with a 30-second in-memory grace cache.
 func (s *authService) Refresh(ctx context.Context, rawRefreshToken, userAgent, ip string) (*domain.UserResponse, string, string, error) {
 	if rawRefreshToken == "" {
 		return nil, "", "", domain.NewTokenExpiredError()
 	}
 
-	tokenHash := crypto.HashToken(rawRefreshToken)
-	token, err := s.authRepo.FindRefreshTokenByHash(ctx, tokenHash)
+	// 1. Validate refresh JWT signature, expiration, and mandatory token_type="refresh"
+	claims, err := crypto.ValidateRefreshToken(rawRefreshToken, s.cfg.JWTSecret)
 	if err != nil {
+		return nil, "", "", domain.NewTokenExpiredError()
+	}
+
+	// 2. Check in-memory 30-second grace cache to deduplicate concurrent in-flight refresh requests from parallel client calls
+	graceKey := "grace:refresh:" + claims.ID
+	if cached, ok := s.denylist.Get(graceKey); ok {
+		if pair, valid := cached.(*GraceCachedTokenPair); valid {
+			s.logger.DebugContext(ctx, "Serving deduplicated refresh token from grace cache", slog.String("jti", claims.ID))
+			return pair.User, pair.AccessToken, pair.RefreshToken, nil
+		}
+	}
+
+	// 3. Check in-memory TTL denylist (if JTI is revoked and beyond grace period, reject immediately)
+	if s.IsTokenRevoked(claims.ID) {
+		return nil, "", "", domain.NewTokenExpiredError()
+	}
+
+	// 4. Check user-level revocation (e.g. password changed/reset across all devices)
+	if claims.IssuedAt != nil && s.IsUserRevoked(claims.Subject, claims.IssuedAt.Time) {
+		return nil, "", "", domain.NewTokenExpiredError()
+	}
+
+	// 5. Verify user record exists in database
+	user, err := s.userRepo.FindByID(ctx, claims.Subject)
+	if err != nil || user == nil {
 		return nil, "", "", domain.NewTokenExpiredError()
 	}
 
 	now := s.clk.Now()
 
-	// Reuse detection: If token was already revoked, an adversary has replayed a stolen token!
-	if token.RevokedAt != nil {
-		s.logger.WarnContext(ctx, "CRITICAL: Refresh token reuse detected, revoking session family",
-			slog.String("family_id", token.FamilyID),
-			slog.String("user_id", token.UserID),
-		)
-		_ = s.authRepo.RevokeFamily(ctx, token.FamilyID)
-		return nil, "", "", domain.NewTokenReusedError()
+	// 6. Invalidate old refresh token: add JTI to in-memory TTL denylist until natural expiration
+	remaining := s.cfg.RefreshTokenTTL
+	if claims.ExpiresAt != nil {
+		remaining = claims.ExpiresAt.Time.Sub(now)
 	}
-
-	// Expiration check
-	if now.After(token.ExpiresAt) {
-		return nil, "", "", domain.NewTokenExpiredError()
+	if remaining <= 0 {
+		remaining = time.Minute
 	}
+	s.denylist.Set("jti:"+claims.ID, true, remaining)
 
-	// Fetch user
-	user, err := s.userRepo.FindByID(ctx, token.UserID)
-	if err != nil {
-		return nil, "", "", domain.NewTokenExpiredError()
-	}
-
-	// Generate new token in same family
-	newRawToken, newHash, err := crypto.GenerateOpaqueToken()
-	if err != nil {
-		return nil, "", "", domain.NewInternalError(err)
-	}
-
+	// 7. Generate brand-new token pair (Access JWT 30m, Refresh JWT 7d)
 	newSessionID := s.idGen.MustNewUUIDv7()
-	newToken := &domain.RefreshToken{
-		ID:        newSessionID,
-		UserID:    user.ID,
-		FamilyID:  token.FamilyID,
-		TokenHash: newHash,
-		UserAgent: userAgent,
-		IP:        ip,
-		ExpiresAt: now.Add(s.cfg.RefreshTokenTTL),
-		CreatedAt: now,
-	}
-
-	// Revoke old token and link replaced_by
-	if err := s.authRepo.RevokeRefreshToken(ctx, tokenHash, newHash); err != nil {
-		return nil, "", "", domain.NewInternalError(err)
-	}
-
-	if err := s.authRepo.CreateRefreshToken(ctx, newToken); err != nil {
-		return nil, "", "", domain.NewInternalError(err)
-	}
-
-	accessToken, _, err := crypto.GenerateAccessToken(user.ID, newSessionID, user.Email, user.IsVerified, s.cfg.AccessTokenTTL, s.cfg.JWTSecret)
+	newAccessToken, _, err := crypto.GenerateAccessToken(user.ID, newSessionID, user.Email, user.IsVerified, s.cfg.AccessTokenTTL, s.cfg.JWTSecret)
 	if err != nil {
 		return nil, "", "", domain.NewInternalError(err)
 	}
 
-	resp := domain.ToUserResponse(user)
-	return &resp, accessToken, newRawToken, nil
+	newRefreshToken, _, err := crypto.GenerateRefreshToken(user.ID, newSessionID, user.Email, user.IsVerified, s.cfg.RefreshTokenTTL, s.cfg.JWTSecret)
+	if err != nil {
+		return nil, "", "", domain.NewInternalError(err)
+	}
+
+	userResp := domain.ToUserResponse(user)
+
+	// 8. Cache the new token pair in the 30-second grace cache under the old token's JTI
+	s.denylist.Set(graceKey, &GraceCachedTokenPair{
+		User:         &userResp,
+		AccessToken:  newAccessToken,
+		RefreshToken: newRefreshToken,
+	}, 30*time.Second)
+
+	return &userResp, newAccessToken, newRefreshToken, nil
 }
 
-// Logout revokes the refresh token and adds the access token JTI to the denylist.
+// Logout revokes the refresh token and adds the access token JTI to the in-memory TTL denylist.
 func (s *authService) Logout(ctx context.Context, rawRefreshToken, accessJTI string, accessExpiresAt time.Time) error {
-	if rawRefreshToken != "" {
-		tokenHash := crypto.HashToken(rawRefreshToken)
-		_ = s.authRepo.RevokeRefreshToken(ctx, tokenHash, "")
+	now := s.clk.Now()
+
+	// 1. Invalidate access token JTI if provided
+	if accessJTI != "" {
+		remaining := accessExpiresAt.Sub(now)
+		if remaining <= 0 {
+			remaining = s.cfg.AccessTokenTTL
+		}
+		s.denylist.Set("jti:"+accessJTI, true, remaining)
 	}
 
-	if accessJTI != "" {
-		remaining := accessExpiresAt.Sub(s.clk.Now())
-		if remaining > 0 {
-			s.denylist.Set("jti:"+accessJTI, true, remaining)
+	// 2. Invalidate refresh token JTI if provided
+	if rawRefreshToken != "" {
+		if claims, err := crypto.ValidateRefreshToken(rawRefreshToken, s.cfg.JWTSecret); err == nil && claims.ID != "" {
+			remaining := s.cfg.RefreshTokenTTL
+			if claims.ExpiresAt != nil {
+				remaining = claims.ExpiresAt.Time.Sub(now)
+			}
+			if remaining <= 0 {
+				remaining = time.Minute
+			}
+			s.denylist.Set("jti:"+claims.ID, true, remaining)
+			s.denylist.Delete("grace:refresh:" + claims.ID)
 		}
 	}
 
@@ -323,6 +309,18 @@ func (s *authService) IsTokenRevoked(jti string) bool {
 	}
 	_, found := s.denylist.Get("jti:" + jti)
 	return found
+}
+
+func (s *authService) IsUserRevoked(userID string, tokenIssuedAt time.Time) bool {
+	if userID == "" {
+		return false
+	}
+	if revVal, ok := s.denylist.Get("user_revoked:" + userID); ok {
+		if revTime, ok := revVal.(time.Time); ok {
+			return !tokenIssuedAt.After(revTime)
+		}
+	}
+	return false
 }
 
 // GetMe retrieves authenticated user information.
@@ -373,7 +371,7 @@ func (s *authService) ForgotPassword(ctx context.Context, email string) error {
 	return s.mailer.SendPasswordResetOTP(ctx, user.Email, user.FirstName, code)
 }
 
-// ResetPassword validates OTP, sets the new password, and revokes all active sessions.
+// ResetPassword validates OTP, sets the new password, and invalidates all active tokens across devices.
 func (s *authService) ResetPassword(ctx context.Context, req domain.ResetPasswordRequest) error {
 	normalizedEmail := strings.ToLower(strings.TrimSpace(req.Email))
 
@@ -414,12 +412,12 @@ func (s *authService) ResetPassword(ctx context.Context, req domain.ResetPasswor
 		return domain.NewInternalError(err)
 	}
 
-	// Revoke all sessions across all devices
-	_ = s.authRepo.RevokeAllUserSessions(ctx, user.ID)
+	// Invalidate all tokens for user across all devices with zero database lock overhead
+	s.denylist.Set("user_revoked:"+user.ID, s.clk.Now(), s.cfg.RefreshTokenTTL)
 	return nil
 }
 
-// ChangePassword updates password for an authenticated user and revokes other sessions.
+// ChangePassword updates password for an authenticated user and invalidates other sessions.
 func (s *authService) ChangePassword(ctx context.Context, userID string, req domain.ChangePasswordRequest) error {
 	user, err := s.userRepo.FindByID(ctx, userID)
 	if err != nil {
@@ -444,8 +442,8 @@ func (s *authService) ChangePassword(ctx context.Context, userID string, req dom
 		return domain.NewInternalError(err)
 	}
 
-	// Revoke other sessions
-	_ = s.authRepo.RevokeAllUserSessions(ctx, user.ID)
+	// Invalidate previous tokens for user across all devices
+	s.denylist.Set("user_revoked:"+user.ID, s.clk.Now(), s.cfg.RefreshTokenTTL)
 	return nil
 }
 
@@ -518,33 +516,8 @@ func (s *authService) VerifyOTP(ctx context.Context, userID, code string) (*doma
 	return &resp, nil
 }
 
-// ListSessions lists active sessions for user.
-func (s *authService) ListSessions(ctx context.Context, userID, currentSessionID string) ([]domain.SessionResponse, error) {
-	tokens, err := s.authRepo.ListActiveSessions(ctx, userID)
-	if err != nil {
-		return nil, domain.NewInternalError(err)
-	}
-
-	res := make([]domain.SessionResponse, len(tokens))
-	for i, t := range tokens {
-		res[i] = domain.SessionResponse{
-			ID:        t.ID,
-			UserAgent: t.UserAgent,
-			IP:        t.IP,
-			CreatedAt: t.CreatedAt,
-			IsCurrent: t.ID == currentSessionID,
-		}
-	}
-	return res, nil
-}
-
-// RevokeSession revokes an active session.
-func (s *authService) RevokeSession(ctx context.Context, userID, sessionID string) error {
-	return s.authRepo.RevokeSession(ctx, sessionID, userID)
-}
-
 // HandleOAuthLogin authenticates or provisions a user using an OAuth provider (e.g. Google),
-// automatically marking email as verified and issuing session tokens in a unified users table.
+// automatically marking email as verified and issuing stateless dual-tokens.
 func (s *authService) HandleOAuthLogin(ctx context.Context, provider, providerUserID, email, firstName, lastName, userAgent, ip string) (*domain.UserResponse, string, string, error) {
 	normEmail := strings.ToLower(strings.TrimSpace(email))
 	now := s.clk.Now()
@@ -590,36 +563,20 @@ func (s *authService) HandleOAuthLogin(ctx context.Context, provider, providerUs
 		}
 	}
 
-	// 3. Issue fresh session tokens
-	familyID := s.idGen.MustNewUUIDv7()
+	// 3. Issue stateless dual-tokens
 	sessionID := s.idGen.MustNewUUIDv7()
-	rawRefreshToken, tokenHash, err := crypto.GenerateOpaqueToken()
-	if err != nil {
-		return nil, "", "", domain.NewInternalError(err)
-	}
-
-	refreshTokenModel := &domain.RefreshToken{
-		ID:        sessionID,
-		UserID:    user.ID,
-		FamilyID:  familyID,
-		TokenHash: tokenHash,
-		UserAgent: userAgent,
-		IP:        ip,
-		ExpiresAt: now.Add(s.cfg.RefreshTokenTTL),
-		CreatedAt: now,
-	}
-
-	if err := s.authRepo.CreateRefreshToken(ctx, refreshTokenModel); err != nil {
-		return nil, "", "", domain.NewInternalError(err)
-	}
-
 	accessToken, _, err := crypto.GenerateAccessToken(user.ID, sessionID, user.Email, user.IsVerified, s.cfg.AccessTokenTTL, s.cfg.JWTSecret)
 	if err != nil {
 		return nil, "", "", domain.NewInternalError(err)
 	}
 
+	refreshToken, _, err := crypto.GenerateRefreshToken(user.ID, sessionID, user.Email, user.IsVerified, s.cfg.RefreshTokenTTL, s.cfg.JWTSecret)
+	if err != nil {
+		return nil, "", "", domain.NewInternalError(err)
+	}
+
 	resp := domain.ToUserResponse(user)
-	return &resp, accessToken, rawRefreshToken, nil
+	return &resp, accessToken, refreshToken, nil
 }
 
 func (s *authService) incrementFailedLogin(key string) {

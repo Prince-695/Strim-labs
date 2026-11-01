@@ -78,7 +78,7 @@ func Load() (*Config, error) {
 		SwaggerPassword: getEnv("SWAGGER_PASSWORD", "admin"),
 
 		JWTSecret:       getEnv("JWT_SECRET", "strim-labs-development-super-secret-jwt-key-32chars"),
-		AccessTokenTTL:  time.Duration(getEnvInt("ACCESS_TOKEN_TTL_MINUTES", 15)) * time.Minute,
+		AccessTokenTTL:  time.Duration(getEnvInt("ACCESS_TOKEN_TTL_MINUTES", 30)) * time.Minute,
 		RefreshTokenTTL: time.Duration(getEnvInt("REFRESH_TOKEN_TTL_DAYS", 7)) * 24 * time.Hour,
 
 		IngestMaxRPS:   getEnvInt("INGEST_MAX_RPS", 2000),

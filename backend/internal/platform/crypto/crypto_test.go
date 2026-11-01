@@ -60,19 +60,23 @@ func TestJWTGenerationAndValidation(t *testing.T) {
 	email := "dev@strimlabs.dev"
 	isVerified := true
 
-	token, jti, err := GenerateAccessToken(userID, sessionID, email, isVerified, 15*time.Minute, secret)
+	// 1. Access Token Generation & Validation
+	accessToken, accessJTI, err := GenerateAccessToken(userID, sessionID, email, isVerified, 30*time.Minute, secret)
 	if err != nil {
 		t.Fatalf("unexpected error generating access token: %v", err)
 	}
-	if token == "" || jti == "" {
-		t.Fatalf("token or jti should not be empty")
+	if accessToken == "" || accessJTI == "" {
+		t.Fatalf("access token or jti should not be empty")
 	}
 
-	claims, err := ValidateAccessToken(token, secret)
+	claims, err := ValidateAccessToken(accessToken, secret)
 	if err != nil {
 		t.Fatalf("unexpected error validating access token: %v", err)
 	}
 
+	if claims.TokenType != TokenTypeAccess {
+		t.Errorf("expected token_type %q, got %q", TokenTypeAccess, claims.TokenType)
+	}
 	if claims.Subject != userID {
 		t.Errorf("expected subject %q, got %q", userID, claims.Subject)
 	}
@@ -85,17 +89,47 @@ func TestJWTGenerationAndValidation(t *testing.T) {
 	if claims.IsVerified != isVerified {
 		t.Errorf("expected is_verified %v, got %v", isVerified, claims.IsVerified)
 	}
-	if claims.ID != jti {
-		t.Errorf("expected claims.ID to equal jti %q, got %q", jti, claims.ID)
+	if claims.ID != accessJTI {
+		t.Errorf("expected claims.ID to equal jti %q, got %q", accessJTI, claims.ID)
 	}
 
-	// Test invalid secret
-	_, err = ValidateAccessToken(token, "wrong-secret-key-that-does-not-match")
+	// 2. Refresh Token Generation & Validation
+	refreshToken, refreshJTI, err := GenerateRefreshToken(userID, sessionID, email, isVerified, 7*24*time.Hour, secret)
+	if err != nil {
+		t.Fatalf("unexpected error generating refresh token: %v", err)
+	}
+	if refreshToken == "" || refreshJTI == "" {
+		t.Fatalf("refresh token or jti should not be empty")
+	}
+
+	refreshClaims, err := ValidateRefreshToken(refreshToken, secret)
+	if err != nil {
+		t.Fatalf("unexpected error validating refresh token: %v", err)
+	}
+	if refreshClaims.TokenType != TokenTypeRefresh {
+		t.Errorf("expected token_type %q, got %q", TokenTypeRefresh, refreshClaims.TokenType)
+	}
+
+	// 3. Cross-Type Rejection Security:
+	// A refresh token must NEVER be valid as an access token
+	_, err = ValidateAccessToken(refreshToken, secret)
+	if err == nil {
+		t.Errorf("expected ValidateAccessToken to reject refresh token")
+	}
+
+	// An access token must NEVER be valid as a refresh token
+	_, err = ValidateRefreshToken(accessToken, secret)
+	if err == nil {
+		t.Errorf("expected ValidateRefreshToken to reject access token")
+	}
+
+	// 4. Test invalid secret
+	_, err = ValidateAccessToken(accessToken, "wrong-secret-key-that-does-not-match")
 	if err == nil {
 		t.Errorf("expected validation to fail with wrong secret")
 	}
 
-	// Test expired token
+	// 5. Test expired token
 	expiredToken, _, err := GenerateAccessToken(userID, sessionID, email, isVerified, -1*time.Minute, secret)
 	if err != nil {
 		t.Fatalf("failed to generate expired token: %v", err)

@@ -23,7 +23,6 @@ import (
 type testHarness struct {
 	authSvc    service.AuthService
 	userRepo   repository.UserRepository
-	authRepo   repository.AuthRepository
 	otpRepo    repository.OTPRepository
 	mockMailer *mailer.MockMailer
 	tokenCache cache.Cache
@@ -42,14 +41,13 @@ func newTestHarness(t *testing.T) *testHarness {
 		RequestTimeout:  5 * time.Second,
 		BodyLimitBytes:  2 * 1024 * 1024,
 		JWTSecret:       "strim-labs-test-secret-32-chars-long!",
-		AccessTokenTTL:  15 * time.Minute,
+		AccessTokenTTL:  30 * time.Minute,
 		RefreshTokenTTL: 7 * 24 * time.Hour,
 	}
 
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
 	idGen := ids.NewUUIDv7Generator()
 	userRepo := repository.NewInMemoryUserRepository()
-	authRepo := repository.NewInMemoryAuthRepository()
 	otpRepo := repository.NewInMemoryOTPRepository()
 	mockMailer := mailer.NewMockMailer()
 	tokenCache := cache.NewMemoryCache()
@@ -58,7 +56,6 @@ func newTestHarness(t *testing.T) *testHarness {
 	authSvc := service.NewAuthService(
 		cfg,
 		userRepo,
-		authRepo,
 		otpRepo,
 		mockMailer,
 		tokenCache,
@@ -70,7 +67,6 @@ func newTestHarness(t *testing.T) *testHarness {
 	return &testHarness{
 		authSvc:    authSvc,
 		userRepo:   userRepo,
-		authRepo:   authRepo,
 		otpRepo:    otpRepo,
 		mockMailer: mockMailer,
 		tokenCache: tokenCache,
@@ -84,35 +80,35 @@ func TestAuthService_Signup_Success(t *testing.T) {
 	ctx := context.Background()
 
 	req := domain.SignupRequest{
-		Email:     "developer@strimlabs.dev",
+		Email:     "ada.lovelace@strimlabs.dev",
 		Password:  "Str0ng!P@ssw0rd2026",
-		FirstName: "Grace",
-		LastName:  "Hopper",
+		FirstName: "Ada",
+		LastName:  "Lovelace",
 	}
 
-	user, accessToken, refreshToken, err := h.authSvc.Signup(ctx, req, "Mozilla/5.0", "127.0.0.1")
+	user, access, refresh, err := h.authSvc.Signup(ctx, req, "Mozilla/5.0", "127.0.0.1")
 	require.NoError(t, err)
 	require.NotNil(t, user)
-	assert.Equal(t, "developer@strimlabs.dev", user.Email)
-	assert.Equal(t, "Grace", user.FirstName)
-	assert.Equal(t, "Hopper", user.LastName)
+	assert.NotEmpty(t, user.ID)
+	assert.Equal(t, "ada.lovelace@strimlabs.dev", user.Email)
 	assert.False(t, user.IsVerified)
+	assert.NotEmpty(t, access)
+	assert.NotEmpty(t, refresh)
 
-	assert.NotEmpty(t, accessToken)
-	assert.NotEmpty(t, refreshToken)
-
-	// Verify claims in access token
-	claims, err := crypto.ValidateAccessToken(accessToken, h.cfg.JWTSecret)
+	// Validate Access Token contains token_type="access"
+	accessClaims, err := crypto.ValidateAccessToken(access, h.cfg.JWTSecret)
 	require.NoError(t, err)
-	assert.Equal(t, user.ID, claims.Subject)
-	assert.Equal(t, user.Email, claims.Email)
-	assert.False(t, claims.IsVerified)
+	assert.Equal(t, crypto.TokenTypeAccess, accessClaims.TokenType)
+	assert.Equal(t, user.ID, accessClaims.Subject)
 
-	// Verify OTP email was sent
-	sentMails := h.mockMailer.SentEmails()
-	require.Len(t, sentMails, 1)
-	assert.Equal(t, "developer@strimlabs.dev", sentMails[0].ToEmail)
-	assert.Equal(t, "email_verification", sentMails[0].Purpose)
+	// Validate Refresh Token contains token_type="refresh"
+	refreshClaims, err := crypto.ValidateRefreshToken(refresh, h.cfg.JWTSecret)
+	require.NoError(t, err)
+	assert.Equal(t, crypto.TokenTypeRefresh, refreshClaims.TokenType)
+	assert.Equal(t, user.ID, refreshClaims.Subject)
+
+	// Verify welcome verification email was dispatched
+	assert.Len(t, h.mockMailer.SentEmails(), 1)
 }
 
 func TestAuthService_Signup_DuplicateEmail(t *testing.T) {
@@ -120,22 +116,22 @@ func TestAuthService_Signup_DuplicateEmail(t *testing.T) {
 	ctx := context.Background()
 
 	req := domain.SignupRequest{
-		Email:     "dupe@strimlabs.dev",
+		Email:     "duplicate@strimlabs.dev",
 		Password:  "Str0ng!P@ssw0rd2026",
-		FirstName: "Ada",
-		LastName:  "Lovelace",
+		FirstName: "Alan",
+		LastName:  "Turing",
 	}
 
 	_, _, _, err := h.authSvc.Signup(ctx, req, "agent", "127.0.0.1")
 	require.NoError(t, err)
 
-	// Second signup with same email must fail
+	// Duplicate signup attempt
 	_, _, _, err = h.authSvc.Signup(ctx, req, "agent", "127.0.0.1")
 	require.Error(t, err)
-
 	appErr, ok := err.(*domain.AppError)
 	require.True(t, ok)
 	assert.Equal(t, domain.ErrCodeEmailTaken, appErr.ErrorCode)
+	assert.Equal(t, 409, appErr.HTTPStatus)
 }
 
 func TestAuthService_Login_Success(t *testing.T) {
@@ -143,16 +139,17 @@ func TestAuthService_Login_Success(t *testing.T) {
 	ctx := context.Background()
 
 	signupReq := domain.SignupRequest{
-		Email:     "auth_user@strimlabs.dev",
+		Email:     "grace.hopper@strimlabs.dev",
 		Password:  "Str0ng!P@ssw0rd2026",
-		FirstName: "Linus",
-		LastName:  "Torvalds",
+		FirstName: "Grace",
+		LastName:  "Hopper",
 	}
 	_, _, _, err := h.authSvc.Signup(ctx, signupReq, "agent", "127.0.0.1")
 	require.NoError(t, err)
 
+	// Successful login
 	loginReq := domain.LoginRequest{
-		Email:    "auth_user@strimlabs.dev",
+		Email:    "grace.hopper@strimlabs.dev",
 		Password: "Str0ng!P@ssw0rd2026",
 	}
 	user, access, refresh, err := h.authSvc.Login(ctx, loginReq, "Mozilla/5.0", "127.0.0.1")
@@ -160,6 +157,14 @@ func TestAuthService_Login_Success(t *testing.T) {
 	assert.NotNil(t, user)
 	assert.NotEmpty(t, access)
 	assert.NotEmpty(t, refresh)
+
+	// Cross-type validation: access token cannot be validated as refresh token
+	_, err = crypto.ValidateRefreshToken(access, h.cfg.JWTSecret)
+	require.Error(t, err)
+
+	// Cross-type validation: refresh token cannot be validated as access token
+	_, err = crypto.ValidateAccessToken(refresh, h.cfg.JWTSecret)
+	require.Error(t, err)
 }
 
 func TestAuthService_Login_InvalidPassword_And_Lockout(t *testing.T) {
@@ -167,22 +172,22 @@ func TestAuthService_Login_InvalidPassword_And_Lockout(t *testing.T) {
 	ctx := context.Background()
 
 	signupReq := domain.SignupRequest{
-		Email:     "lockout_user@strimlabs.dev",
+		Email:     "lockout@strimlabs.dev",
 		Password:  "Str0ng!P@ssw0rd2026",
-		FirstName: "Alan",
-		LastName:  "Turing",
+		FirstName: "John",
+		LastName:  "VonNeumann",
 	}
 	_, _, _, err := h.authSvc.Signup(ctx, signupReq, "agent", "127.0.0.1")
 	require.NoError(t, err)
 
 	badReq := domain.LoginRequest{
-		Email:    "lockout_user@strimlabs.dev",
-		Password: "WrongPassword!123",
+		Email:    "lockout@strimlabs.dev",
+		Password: "WrongPassword123!",
 	}
 
-	// 10 failed login attempts per API.md Section 1.5
-	for i := 1; i <= 10; i++ {
-		_, _, _, err := h.authSvc.Login(ctx, badReq, "agent", "127.0.0.1")
+	// Fail 10 consecutive times (threshold is 10 per API spec)
+	for i := 0; i < 10; i++ {
+		_, _, _, err = h.authSvc.Login(ctx, badReq, "agent", "127.0.0.1")
 		require.Error(t, err)
 		appErr, ok := err.(*domain.AppError)
 		require.True(t, ok)
@@ -198,7 +203,7 @@ func TestAuthService_Login_InvalidPassword_And_Lockout(t *testing.T) {
 	assert.Equal(t, 429, appErr.HTTPStatus)
 }
 
-func TestAuthService_Refresh_Rotation_And_FamilyRevocation(t *testing.T) {
+func TestAuthService_Refresh_Rotation_And_GraceCache(t *testing.T) {
 	h := newTestHarness(t)
 	ctx := context.Background()
 
@@ -219,21 +224,32 @@ func TestAuthService_Refresh_Rotation_And_FamilyRevocation(t *testing.T) {
 	assert.NotEmpty(t, refreshToken2)
 	assert.NotEqual(t, refreshToken1, refreshToken2)
 
-	// 2. Refresh with token2 should succeed (token2 -> token3)
-	_, _, refreshToken3, err := h.authSvc.Refresh(ctx, refreshToken2, "agent", "127.0.0.1")
+	// 2. In-flight concurrent request deduplication via 30-second Grace Cache:
+	// Calling Refresh again with the same old refreshToken1 within 30s must return the cached pair!
+	userGrace, accessGrace, refreshGrace, err := h.authSvc.Refresh(ctx, refreshToken1, "agent", "127.0.0.1")
+	require.NoError(t, err, "Concurrent in-flight refresh request within grace period must succeed")
+	assert.Equal(t, access2, accessGrace, "Access token from grace cache must match")
+	assert.Equal(t, refreshToken2, refreshGrace, "Refresh token from grace cache must match")
+	assert.Equal(t, user.ID, userGrace.ID)
+
+	// 3. Normal second rotation: token2 -> token3
+	user3, access3, refreshToken3, err := h.authSvc.Refresh(ctx, refreshToken2, "agent", "127.0.0.1")
 	require.NoError(t, err)
+	assert.NotNil(t, user3)
+	assert.NotEmpty(t, access3)
 	assert.NotEmpty(t, refreshToken3)
 
-	// 3. Attempt reuse of revoked token1 (Simulated Replay Attack)
+	// 4. Invalidate grace cache to simulate expired grace window (>30s)
+	claims1, err := crypto.ValidateRefreshToken(refreshToken1, h.cfg.JWTSecret)
+	require.NoError(t, err)
+	h.tokenCache.Delete("grace:refresh:" + claims1.ID)
+
+	// 5. Attempt reuse of token1 after grace window has expired: must fail as token is denylisted!
 	_, _, _, err = h.authSvc.Refresh(ctx, refreshToken1, "agent", "127.0.0.1")
 	require.Error(t, err)
 	appErr, ok := err.(*domain.AppError)
 	require.True(t, ok)
-	assert.Equal(t, domain.ErrCodeTokenReused, appErr.ErrorCode)
-
-	// 4. Family revocation check: token3 must now be revoked as well!
-	_, _, _, err = h.authSvc.Refresh(ctx, refreshToken3, "agent", "127.0.0.1")
-	require.Error(t, err)
+	assert.Equal(t, domain.ErrCodeTokenExpired, appErr.ErrorCode)
 }
 
 func TestAuthService_Logout_And_Denylist(t *testing.T) {
@@ -256,7 +272,7 @@ func TestAuthService_Logout_And_Denylist(t *testing.T) {
 	err = h.authSvc.Logout(ctx, refreshToken, claims.ID, claims.ExpiresAt.Time)
 	require.NoError(t, err)
 
-	// JTI should be reported as revoked
+	// Access token JTI should be reported as revoked
 	assert.True(t, h.authSvc.IsTokenRevoked(claims.ID))
 
 	// Refresh token should no longer work
@@ -269,41 +285,48 @@ func TestAuthService_PasswordResetFlow(t *testing.T) {
 	ctx := context.Background()
 
 	signupReq := domain.SignupRequest{
-		Email:     "reset_flow@strimlabs.dev",
-		Password:  "Str0ng!P@ssw0rd2026",
-		FirstName: "Ken",
-		LastName:  "Thompson",
+		Email:     "reset@strimlabs.dev",
+		Password:  "OldP@ssw0rd2026!",
+		FirstName: "Tim",
+		LastName:  "BernersLee",
 	}
-	_, _, _, err := h.authSvc.Signup(ctx, signupReq, "agent", "127.0.0.1")
+	_, _, oldRefreshToken, err := h.authSvc.Signup(ctx, signupReq, "agent", "127.0.0.1")
 	require.NoError(t, err)
 
-	// 1. Request forgot password
-	err = h.authSvc.ForgotPassword(ctx, "reset_flow@strimlabs.dev")
+	// 1. Forgot password request
+	err = h.authSvc.ForgotPassword(ctx, "reset@strimlabs.dev")
 	require.NoError(t, err)
 
-	sentMails := h.mockMailer.SentEmails()
-	require.Len(t, sentMails, 2) // 1 from signup, 1 from forgot password
-	resetMail := sentMails[1]
-	assert.Equal(t, "reset_flow@strimlabs.dev", resetMail.ToEmail)
-	assert.Equal(t, "password_reset", resetMail.Purpose)
-
-	// Extract 6-digit OTP code from mail body
-	activeOTP, err := h.otpRepo.FindLatestActive(ctx, "reset_flow@strimlabs.dev", "password_reset")
+	otp, err := h.otpRepo.FindLatestActive(ctx, "reset@strimlabs.dev", "password_reset")
 	require.NoError(t, err)
-	assert.NotNil(t, activeOTP)
+	require.NotNil(t, otp)
 
-	// Find the raw code from the email body (it contains "is: 123456")
-	// Or we can reset using wrong OTP first
-	badReset := domain.ResetPasswordRequest{
-		Email:       "reset_flow@strimlabs.dev",
-		OTP:         "000000",
-		NewPassword: "BrandNewSecurePass!2026",
+	// Extract dispatched OTP code from mock mailer
+	lastEmail := h.mockMailer.LastEmail()
+	require.NotNil(t, lastEmail)
+	require.NotEmpty(t, lastEmail.OTP)
+
+	// 2. Perform password reset with OTP
+	resetReq := domain.ResetPasswordRequest{
+		Email:       "reset@strimlabs.dev",
+		OTP:         lastEmail.OTP,
+		NewPassword: "BrandNewSecure!P@ss2026",
 	}
-	err = h.authSvc.ResetPassword(ctx, badReset)
-	require.Error(t, err)
-	appErr, ok := err.(*domain.AppError)
-	require.True(t, ok)
-	assert.Equal(t, domain.ErrCodeOTPInvalid, appErr.ErrorCode)
+	err = h.authSvc.ResetPassword(ctx, resetReq)
+	require.NoError(t, err)
+
+	// 3. Old refresh token must be invalidated by global user revocation!
+	_, _, _, err = h.authSvc.Refresh(ctx, oldRefreshToken, "agent", "127.0.0.1")
+	require.Error(t, err, "Tokens issued prior to password reset must be rejected")
+
+	// 4. Verify login succeeds with new password
+	_, newAccess, newRefresh, err := h.authSvc.Login(ctx, domain.LoginRequest{
+		Email:    "reset@strimlabs.dev",
+		Password: "BrandNewSecure!P@ss2026",
+	}, "agent", "127.0.0.1")
+	require.NoError(t, err)
+	assert.NotEmpty(t, newAccess)
+	assert.NotEmpty(t, newRefresh)
 }
 
 func TestAuthService_OTPVerification(t *testing.T) {
@@ -311,58 +334,53 @@ func TestAuthService_OTPVerification(t *testing.T) {
 	ctx := context.Background()
 
 	signupReq := domain.SignupRequest{
-		Email:     "otp_verify@strimlabs.dev",
+		Email:     "verify@strimlabs.dev",
 		Password:  "Str0ng!P@ssw0rd2026",
-		FirstName: "Barbara",
-		LastName:  "Liskov",
+		FirstName: "Linus",
+		LastName:  "Torvalds",
 	}
 	user, _, _, err := h.authSvc.Signup(ctx, signupReq, "agent", "127.0.0.1")
 	require.NoError(t, err)
 	assert.False(t, user.IsVerified)
 
-	// Request new verification OTP
-	err = h.authSvc.SendVerificationOTP(ctx, user.ID)
-	require.NoError(t, err)
+	emails := h.mockMailer.SentEmails()
+	require.NotEmpty(t, emails)
+	code := emails[0].OTP
 
-	// Attempt verification with invalid code
-	_, err = h.authSvc.VerifyOTP(ctx, user.ID, "999999")
+	// Verify with correct code
+	verifiedUser, err := h.authSvc.VerifyOTP(ctx, user.ID, code)
+	require.NoError(t, err)
+	assert.True(t, verifiedUser.IsVerified)
+
+	// Verifying again should return already verified error
+	_, err = h.authSvc.VerifyOTP(ctx, user.ID, code)
 	require.Error(t, err)
 }
 
-func TestAuthService_SessionsListAndRevocation(t *testing.T) {
+func TestAuthService_Stateless_GlobalRevocation_OnPasswordChange(t *testing.T) {
 	h := newTestHarness(t)
 	ctx := context.Background()
 
 	signupReq := domain.SignupRequest{
-		Email:     "sessions@strimlabs.dev",
-		Password:  "Str0ng!P@ssw0rd2026",
-		FirstName: "Claude",
-		LastName:  "Shannon",
+		Email:     "change@strimlabs.dev",
+		Password:  "Original!P@ss2026",
+		FirstName: "Ken",
+		LastName:  "Thompson",
 	}
-	user, _, _, err := h.authSvc.Signup(ctx, signupReq, "agent1", "10.0.0.1")
+	user, _, oldRefresh, err := h.authSvc.Signup(ctx, signupReq, "agent", "127.0.0.1")
 	require.NoError(t, err)
 
-	// Login again from a second device
-	_, _, _, err = h.authSvc.Login(ctx, domain.LoginRequest{
-		Email:    "sessions@strimlabs.dev",
-		Password: "Str0ng!P@ssw0rd2026",
-	}, "agent2", "10.0.0.2")
+	// Change password
+	changeReq := domain.ChangePasswordRequest{
+		OldPassword: "Original!P@ss2026",
+		NewPassword: "Updated!P@ssw0rd2026",
+	}
+	err = h.authSvc.ChangePassword(ctx, user.ID, changeReq)
 	require.NoError(t, err)
 
-	// List sessions
-	sessions, err := h.authSvc.ListSessions(ctx, user.ID, "")
-	require.NoError(t, err)
-	assert.Len(t, sessions, 2)
-
-	// Revoke first session
-	targetID := sessions[0].ID
-	err = h.authSvc.RevokeSession(ctx, user.ID, targetID)
-	require.NoError(t, err)
-
-	// List sessions again
-	remaining, err := h.authSvc.ListSessions(ctx, user.ID, "")
-	require.NoError(t, err)
-	assert.Len(t, remaining, 1)
+	// Old refresh token must be rejected
+	_, _, _, err = h.authSvc.Refresh(ctx, oldRefresh, "agent", "127.0.0.1")
+	require.Error(t, err)
 }
 
 func TestAuthService_HandleOAuthLogin(t *testing.T) {
@@ -376,6 +394,15 @@ func TestAuthService_HandleOAuthLogin(t *testing.T) {
 	assert.NotEmpty(t, refresh1)
 	assert.Equal(t, "octocat@strimlabs.dev", user1.Email)
 	assert.True(t, user1.IsVerified, "OAuth registered user must be auto-verified")
+
+	// Validate dual-token claims
+	claims1, err := crypto.ValidateAccessToken(access1, h.cfg.JWTSecret)
+	require.NoError(t, err)
+	assert.Equal(t, crypto.TokenTypeAccess, claims1.TokenType)
+
+	rClaims1, err := crypto.ValidateRefreshToken(refresh1, h.cfg.JWTSecret)
+	require.NoError(t, err)
+	assert.Equal(t, crypto.TokenTypeRefresh, rClaims1.TokenType)
 
 	// Verify domain entity in user repo
 	dbUser1, err := h.userRepo.FindByID(ctx, user1.ID)

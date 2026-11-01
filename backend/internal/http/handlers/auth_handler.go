@@ -140,6 +140,15 @@ func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
 	if rawToken == "" {
 		rawToken = c.Cookies("refresh_token")
 	}
+	if rawToken == "" {
+		rawToken = strings.TrimSpace(c.Get("X-Refresh-Token"))
+	}
+	if rawToken == "" {
+		authHeader := c.Get(fiber.HeaderAuthorization)
+		if strings.HasPrefix(strings.ToLower(authHeader), "bearer ") {
+			rawToken = strings.TrimSpace(authHeader[7:])
+		}
+	}
 
 	if rawToken == "" {
 		return domain.NewTokenExpiredError()
@@ -176,6 +185,9 @@ func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
 // @Router /v1/auth/logout [post]
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	rawRefresh := c.Cookies("refresh_token")
+	if rawRefresh == "" {
+		rawRefresh = strings.TrimSpace(c.Get("X-Refresh-Token"))
+	}
 	var jti string
 	var exp time.Time
 

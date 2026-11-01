@@ -22,19 +22,6 @@ type User struct {
 	DeletedAt       gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
-// RefreshToken stores session rotation tokens with family reuse detection.
-type RefreshToken struct {
-	ID         string     `gorm:"type:uuid;primaryKey" json:"id"`
-	UserID     string     `gorm:"type:uuid;index;not null" json:"user_id"`
-	FamilyID   string     `gorm:"type:uuid;index;not null" json:"family_id"`
-	TokenHash  string     `gorm:"type:varchar(64);uniqueIndex;not null" json:"-"`
-	UserAgent  string     `gorm:"type:text" json:"user_agent"`
-	IP         string     `gorm:"type:varchar(45)" json:"ip"`
-	ExpiresAt  time.Time  `gorm:"not null;index" json:"expires_at"`
-	RevokedAt  *time.Time `gorm:"index" json:"revoked_at,omitempty"`
-	ReplacedBy *string    `gorm:"type:varchar(64)" json:"replaced_by,omitempty"`
-	CreatedAt  time.Time  `gorm:"not null;autoCreateTime" json:"created_at"`
-}
 
 // OTPCode tracks 6-digit numeric codes for email verification and password resets.
 type OTPCode struct {

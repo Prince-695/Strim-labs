@@ -56,7 +56,6 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
 	idGen := ids.NewUUIDv7Generator()
 	userRepo := repository.NewInMemoryUserRepository()
-	authRepo := repository.NewInMemoryAuthRepository()
 	otpRepo := repository.NewInMemoryOTPRepository()
 	mockMailer := mailer.NewMockMailer()
 	tokenCache := cache.NewMemoryCache()
@@ -66,7 +65,6 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 	authSvc := service.NewAuthService(
 		cfg,
 		userRepo,
-		authRepo,
 		otpRepo,
 		mockMailer,
 		tokenCache,

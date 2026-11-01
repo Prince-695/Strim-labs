@@ -61,8 +61,13 @@ func RequireAuth(authSvc service.AuthService, secret string) fiber.Handler {
 			return domain.NewAppError(fiber.StatusUnauthorized, domain.ErrCodeTokenInvalid, "Invalid authentication token", err)
 		}
 
-		// Check if token JTI has been revoked via logout
+		// Check if token JTI has been revoked via logout or rotation
 		if authSvc.IsTokenRevoked(claims.ID) {
+			return domain.NewTokenExpiredError()
+		}
+
+		// Check if user was globally revoked (e.g. password reset / change)
+		if claims.IssuedAt != nil && authSvc.IsUserRevoked(claims.Subject, claims.IssuedAt.Time) {
 			return domain.NewTokenExpiredError()
 		}
 
