@@ -205,25 +205,36 @@ curl -i -X GET "${API_URL}/v1/auth/me" \
 
 ## 4. Refresh Token Rotation (`POST /v1/auth/refresh`)
 
-### 4.1 Legitimate Token Rotation
+### 4.1 Legitimate Token Rotation (RTR)
 ```bash
 curl -i -X POST "${API_URL}/v1/auth/refresh" \
   -b "$COOKIE_JAR" \
   -c "$COOKIE_JAR"
 ```
 **Expected HTTP Status**: `200 OK`  
-A new `access_token` and rotated `refresh_token` are returned and updated in the cookie jar.
+A new `access_token` (JWT with `token_type: "access"`, 30 min TTL) and rotated `refresh_token` (JWT with `token_type: "refresh"`, 7 days TTL) are returned and updated in the cookie jar. Old refresh token JTI is added to in-memory TTL denylist.
 
-### 4.2 Replay / Token Reuse Detection Attack
-Save the old refresh token before rotation and replay it:
+### 4.2 In-Flight Concurrent Request Deduplication (30-second Grace Cache)
+If multiple client browser tabs or parallel API calls refresh simultaneously with the same old refresh token within 30 seconds:
+```bash
+# Replay within 30 seconds
+curl -i -X POST "${API_URL}/v1/auth/refresh" \
+  -H "Content-Type: application/json" \
+  -d '{"refresh_token": "<previous_refresh_jwt>"}'
+```
+**Expected HTTP Status**: `200 OK`  
+**Result**: Serves the exact same freshly generated token pair from the 30-second in-memory grace cache, preventing race condition errors across tabs!
+
+### 4.3 Revoked Token Replay (>30 Seconds After Rotation)
+Attempting to replay an old rotated token after the 30-second grace window expires:
 ```bash
 curl -i -X POST "${API_URL}/v1/auth/refresh" \
   -H "Content-Type: application/json" \
-  -d '{"refresh_token": "<old_revoked_token>"}'
+  -d '{"refresh_token": "<expired_grace_refresh_jwt>"}'
 ```
 **Expected HTTP Status**: `401 Unauthorized`  
-**Expected Error Code**: `TOKEN_REUSED`  
-**Result**: Entire token family is invalidated immediately.
+**Expected Error Code**: `TOKEN_EXPIRED`  
+**Result**: In-memory TTL denylist immediately rejects the request with zero persistent database session overhead.
 
 ---
 
@@ -351,15 +362,18 @@ done
 ## ✅ Phase 1 Verification Checklist
 
 - [x] OWASP Argon2id password hashing with password complexity enforcement
-- [x] HS256 JWT access tokens with UUIDv7 JTIs & claims
-- [x] Opaque hex refresh tokens with SHA-256 storage
-- [x] Refresh token rotation with family revocation upon reuse attack
+- [x] Stateless dual-token authentication: short-lived access JWT (30m) & long-lived refresh JWT (7d)
+- [x] Mandatory `token_type` claim differentiation ("access" vs "refresh") with strict cross-type rejection
+- [x] Zero database lookups on API incoming requests (pure in-memory verification)
+- [x] Refresh Token Rotation (RTR) with 30-second in-memory grace cache deduplication for parallel client requests
+- [x] In-memory TTL denylisting and user-level revocation on logout, rotation, and password reset
+- [x] Dropped persistent `refresh_tokens` database table
 - [x] Memory sliding-window rate limiting on all public auth endpoints
 - [x] Strict CSRF origin protection on cookie-authenticated mutating requests
 - [x] Swagger referer guard preventing cookie fallback in documentation UI
 - [x] Account lockout after 10 failed login attempts within 15 minutes
-- [x] In-memory JTI denylisting on logout
 - [x] 6-digit numeric OTP code dispatch and verification with attempt limits
+- [x] Unified OAuth in `users` table with auto-verified status
 - [x] Environment variable `DB_RUN` controls schema migrations with vibrant purple database logs
 - [x] OpenAPI Swagger documentation synchronized and up to date
 - [x] 100% automated test suite passing with race detection (`go test -race ./...`)
