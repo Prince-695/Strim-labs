@@ -35,9 +35,9 @@ type Config struct {
 	SwaggerPassword string `validate:"required"`
 
 	// JWT & Security
-	JWTSecret       string        `validate:"required,min=16"`
-	AccessTokenTTL  time.Duration `validate:"required"`
-	RefreshTokenTTL time.Duration `validate:"required"`
+	JWTSecret          string        `validate:"required,min=16"`
+	AccessTokenExpiry  time.Duration `validate:"required"`
+	RefreshTokenExpiry time.Duration `validate:"required"`
 
 	// Limits
 	IngestMaxRPS   int `validate:"required,min=10"`
@@ -77,9 +77,9 @@ func Load() (*Config, error) {
 		SwaggerUser:     getEnv("SWAGGER_USER", "admin"),
 		SwaggerPassword: getEnv("SWAGGER_PASSWORD", "admin"),
 
-		JWTSecret:       getEnv("JWT_SECRET", "strim-labs-development-super-secret-jwt-key-32chars"),
-		AccessTokenTTL:  time.Duration(getEnvInt("ACCESS_TOKEN_TTL_MINUTES", 30)) * time.Minute,
-		RefreshTokenTTL: time.Duration(getEnvInt("REFRESH_TOKEN_TTL_DAYS", 7)) * 24 * time.Hour,
+		JWTSecret:          getEnv("JWT_SECRET", "strim-labs-development-super-secret-jwt-key-32chars"),
+		AccessTokenExpiry:  getEnvDuration("ACCESS_TOKEN_EXPIRY", time.Duration(getEnvInt("ACCESS_TOKEN_TTL_MINUTES", 30))*time.Minute),
+		RefreshTokenExpiry: getEnvDuration("REFRESH_TOKEN_EXPIRY", time.Duration(getEnvInt("REFRESH_TOKEN_TTL_DAYS", 7))*24*time.Hour),
 
 		IngestMaxRPS:   getEnvInt("INGEST_MAX_RPS", 2000),
 		LoadTestMaxRPS: getEnvInt("LOADTEST_MAX_RPS", 5000),
@@ -141,6 +141,26 @@ func getEnvBool(key string, defaultVal bool) bool {
 	if valStr, ok := os.LookupEnv(key); ok && strings.TrimSpace(valStr) != "" {
 		lower := strings.ToLower(strings.TrimSpace(valStr))
 		return lower == "true" || lower == "1" || lower == "yes" || lower == "on"
+	}
+	return defaultVal
+}
+
+func getEnvDuration(key string, defaultVal time.Duration) time.Duration {
+	if valStr, ok := os.LookupEnv(key); ok && strings.TrimSpace(valStr) != "" {
+		trimmed := strings.TrimSpace(valStr)
+		// Support "d" suffix (e.g. "7d")
+		if strings.HasSuffix(trimmed, "d") {
+			daysStr := strings.TrimSuffix(trimmed, "d")
+			if days, err := strconv.Atoi(daysStr); err == nil {
+				return time.Duration(days) * 24 * time.Hour
+			}
+		}
+		if d, err := time.ParseDuration(trimmed); err == nil {
+			return d
+		}
+		if mins, err := strconv.Atoi(trimmed); err == nil {
+			return time.Duration(mins) * time.Minute
+		}
 	}
 	return defaultVal
 }

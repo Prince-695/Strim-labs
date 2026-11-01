@@ -119,12 +119,12 @@ func (s *authService) Signup(ctx context.Context, req domain.SignupRequest, user
 
 	// 4. Issue stateless dual-token pair (Access JWT 30m, Refresh JWT 7d)
 	sessionID := s.idGen.MustNewUUIDv7()
-	accessToken, _, err := crypto.GenerateAccessToken(user.ID, sessionID, user.Email, user.IsVerified, s.cfg.AccessTokenTTL, s.cfg.JWTSecret)
+	accessToken, _, err := crypto.GenerateAccessToken(user.ID, sessionID, user.Email, user.IsVerified, s.cfg.AccessTokenExpiry, s.cfg.JWTSecret)
 	if err != nil {
 		return nil, "", "", domain.NewInternalError(err)
 	}
 
-	refreshToken, _, err := crypto.GenerateRefreshToken(user.ID, sessionID, user.Email, user.IsVerified, s.cfg.RefreshTokenTTL, s.cfg.JWTSecret)
+	refreshToken, _, err := crypto.GenerateRefreshToken(user.ID, sessionID, user.Email, user.IsVerified, s.cfg.RefreshTokenExpiry, s.cfg.JWTSecret)
 	if err != nil {
 		return nil, "", "", domain.NewInternalError(err)
 	}
@@ -185,12 +185,12 @@ func (s *authService) Login(ctx context.Context, req domain.LoginRequest, userAg
 
 	// Issue stateless dual-token pair (Access JWT 30m, Refresh JWT 7d)
 	sessionID := s.idGen.MustNewUUIDv7()
-	accessToken, _, err := crypto.GenerateAccessToken(user.ID, sessionID, user.Email, user.IsVerified, s.cfg.AccessTokenTTL, s.cfg.JWTSecret)
+	accessToken, _, err := crypto.GenerateAccessToken(user.ID, sessionID, user.Email, user.IsVerified, s.cfg.AccessTokenExpiry, s.cfg.JWTSecret)
 	if err != nil {
 		return nil, "", "", domain.NewInternalError(err)
 	}
 
-	refreshToken, _, err := crypto.GenerateRefreshToken(user.ID, sessionID, user.Email, user.IsVerified, s.cfg.RefreshTokenTTL, s.cfg.JWTSecret)
+	refreshToken, _, err := crypto.GenerateRefreshToken(user.ID, sessionID, user.Email, user.IsVerified, s.cfg.RefreshTokenExpiry, s.cfg.JWTSecret)
 	if err != nil {
 		return nil, "", "", domain.NewInternalError(err)
 	}
@@ -239,7 +239,7 @@ func (s *authService) Refresh(ctx context.Context, rawRefreshToken, userAgent, i
 	now := s.clk.Now()
 
 	// 6. Invalidate old refresh token: add JTI to in-memory TTL denylist until natural expiration
-	remaining := s.cfg.RefreshTokenTTL
+	remaining := s.cfg.RefreshTokenExpiry
 	if claims.ExpiresAt != nil {
 		remaining = claims.ExpiresAt.Time.Sub(now)
 	}
@@ -250,12 +250,12 @@ func (s *authService) Refresh(ctx context.Context, rawRefreshToken, userAgent, i
 
 	// 7. Generate brand-new token pair (Access JWT 30m, Refresh JWT 7d)
 	newSessionID := s.idGen.MustNewUUIDv7()
-	newAccessToken, _, err := crypto.GenerateAccessToken(user.ID, newSessionID, user.Email, user.IsVerified, s.cfg.AccessTokenTTL, s.cfg.JWTSecret)
+	newAccessToken, _, err := crypto.GenerateAccessToken(user.ID, newSessionID, user.Email, user.IsVerified, s.cfg.AccessTokenExpiry, s.cfg.JWTSecret)
 	if err != nil {
 		return nil, "", "", domain.NewInternalError(err)
 	}
 
-	newRefreshToken, _, err := crypto.GenerateRefreshToken(user.ID, newSessionID, user.Email, user.IsVerified, s.cfg.RefreshTokenTTL, s.cfg.JWTSecret)
+	newRefreshToken, _, err := crypto.GenerateRefreshToken(user.ID, newSessionID, user.Email, user.IsVerified, s.cfg.RefreshTokenExpiry, s.cfg.JWTSecret)
 	if err != nil {
 		return nil, "", "", domain.NewInternalError(err)
 	}
@@ -280,7 +280,7 @@ func (s *authService) Logout(ctx context.Context, rawRefreshToken, accessJTI str
 	if accessJTI != "" {
 		remaining := accessExpiresAt.Sub(now)
 		if remaining <= 0 {
-			remaining = s.cfg.AccessTokenTTL
+			remaining = s.cfg.AccessTokenExpiry
 		}
 		s.denylist.Set("jti:"+accessJTI, true, remaining)
 	}
@@ -288,7 +288,7 @@ func (s *authService) Logout(ctx context.Context, rawRefreshToken, accessJTI str
 	// 2. Invalidate refresh token JTI if provided
 	if rawRefreshToken != "" {
 		if claims, err := crypto.ValidateRefreshToken(rawRefreshToken, s.cfg.JWTSecret); err == nil && claims.ID != "" {
-			remaining := s.cfg.RefreshTokenTTL
+			remaining := s.cfg.RefreshTokenExpiry
 			if claims.ExpiresAt != nil {
 				remaining = claims.ExpiresAt.Time.Sub(now)
 			}
@@ -334,7 +334,7 @@ func (s *authService) GetMe(ctx context.Context, userID, sessionID string) (*dom
 		User:       domain.ToUserResponse(user),
 		IsVerified: user.IsVerified,
 		SessionID:  sessionID,
-		ExpiresAt:  s.clk.Now().Add(s.cfg.AccessTokenTTL),
+		ExpiresAt:  s.clk.Now().Add(s.cfg.AccessTokenExpiry),
 	}, nil
 }
 
@@ -413,7 +413,7 @@ func (s *authService) ResetPassword(ctx context.Context, req domain.ResetPasswor
 	}
 
 	// Invalidate all tokens for user across all devices with zero database lock overhead
-	s.denylist.Set("user_revoked:"+user.ID, s.clk.Now(), s.cfg.RefreshTokenTTL)
+	s.denylist.Set("user_revoked:"+user.ID, s.clk.Now(), s.cfg.RefreshTokenExpiry)
 	return nil
 }
 
@@ -443,7 +443,7 @@ func (s *authService) ChangePassword(ctx context.Context, userID string, req dom
 	}
 
 	// Invalidate previous tokens for user across all devices
-	s.denylist.Set("user_revoked:"+user.ID, s.clk.Now(), s.cfg.RefreshTokenTTL)
+	s.denylist.Set("user_revoked:"+user.ID, s.clk.Now(), s.cfg.RefreshTokenExpiry)
 	return nil
 }
 
@@ -565,12 +565,12 @@ func (s *authService) HandleOAuthLogin(ctx context.Context, provider, providerUs
 
 	// 3. Issue stateless dual-tokens
 	sessionID := s.idGen.MustNewUUIDv7()
-	accessToken, _, err := crypto.GenerateAccessToken(user.ID, sessionID, user.Email, user.IsVerified, s.cfg.AccessTokenTTL, s.cfg.JWTSecret)
+	accessToken, _, err := crypto.GenerateAccessToken(user.ID, sessionID, user.Email, user.IsVerified, s.cfg.AccessTokenExpiry, s.cfg.JWTSecret)
 	if err != nil {
 		return nil, "", "", domain.NewInternalError(err)
 	}
 
-	refreshToken, _, err := crypto.GenerateRefreshToken(user.ID, sessionID, user.Email, user.IsVerified, s.cfg.RefreshTokenTTL, s.cfg.JWTSecret)
+	refreshToken, _, err := crypto.GenerateRefreshToken(user.ID, sessionID, user.Email, user.IsVerified, s.cfg.RefreshTokenExpiry, s.cfg.JWTSecret)
 	if err != nil {
 		return nil, "", "", domain.NewInternalError(err)
 	}

@@ -40,9 +40,9 @@ func newTestHarness(t *testing.T) *testHarness {
 		LogLevel:        "error",
 		RequestTimeout:  5 * time.Second,
 		BodyLimitBytes:  2 * 1024 * 1024,
-		JWTSecret:       "strim-labs-test-secret-32-chars-long!",
-		AccessTokenTTL:  30 * time.Minute,
-		RefreshTokenTTL: 7 * 24 * time.Hour,
+		JWTSecret:          "strim-labs-test-secret-32-chars-long!",
+		AccessTokenExpiry:  30 * time.Minute,
+		RefreshTokenExpiry: 7 * 24 * time.Hour,
 	}
 
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))

@@ -45,10 +45,10 @@ func setupTestApp(t *testing.T, repoErr error) *fiber.App {
 		RequestTimeout:  5 * time.Second,
 		BodyLimitBytes:  2 * 1024 * 1024,
 		SwaggerUser:     "admin",
-		SwaggerPassword: "secretpassword",
-		JWTSecret:       "strim-labs-test-secret-32-chars-long!",
-		AccessTokenTTL:  15 * time.Minute,
-		RefreshTokenTTL: 7 * 24 * time.Hour,
+		SwaggerPassword:   "secretpassword",
+		JWTSecret:         "strim-labs-test-secret-32-chars-long!",
+		AccessTokenExpiry:  15 * time.Minute,
+		RefreshTokenExpiry: 7 * 24 * time.Hour,
 	}
 
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
