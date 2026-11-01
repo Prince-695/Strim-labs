@@ -75,7 +75,18 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 
 	sysHandler := handlers.NewSystemHandler(sysSvc)
 	authHandler := handlers.NewAuthHandler(authSvc, cfg)
-	container := handlers.NewContainer(sysHandler, authHandler)
+
+	memberRepo := repository.NewInMemoryMemberRepository(userRepo)
+	orgRepo := repository.NewInMemoryOrgRepository(memberRepo)
+	tenantCache := cache.NewTenantCache(tokenCache)
+	userSvc := service.NewUserService(userRepo)
+	orgSvc := service.NewOrgService(orgRepo, memberRepo, userRepo, tenantCache)
+
+	userHandler := handlers.NewUserHandler(userSvc)
+	orgHandler := handlers.NewOrgHandler(orgSvc)
+	memberHandler := handlers.NewMemberHandler(orgSvc)
+
+	container := handlers.NewContainer(sysHandler, authHandler, userHandler, orgHandler, memberHandler)
 
 	app := apphttp.NewRouter(cfg, container, logger, idGen)
 
