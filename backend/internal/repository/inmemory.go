@@ -145,16 +145,16 @@ func (r *InMemoryUserRepository) LinkOAuth(ctx context.Context, userID, provider
 // InMemoryOTPRepository provides an in-memory thread-safe OTPRepository implementation for testing.
 type InMemoryOTPRepository struct {
 	mu   sync.RWMutex
-	otps map[string]*domain.OTPCode
+	otps map[string]*domain.OTP
 }
 
 func NewInMemoryOTPRepository() *InMemoryOTPRepository {
 	return &InMemoryOTPRepository{
-		otps: make(map[string]*domain.OTPCode),
+		otps: make(map[string]*domain.OTP),
 	}
 }
 
-func (r *InMemoryOTPRepository) CreateOTP(ctx context.Context, otp *domain.OTPCode) error {
+func (r *InMemoryOTPRepository) CreateOTP(ctx context.Context, otp *domain.OTP) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if otp.CreatedAt.IsZero() {
@@ -166,11 +166,11 @@ func (r *InMemoryOTPRepository) CreateOTP(ctx context.Context, otp *domain.OTPCo
 	return nil
 }
 
-func (r *InMemoryOTPRepository) FindLatestActive(ctx context.Context, email, purpose string) (*domain.OTPCode, error) {
+func (r *InMemoryOTPRepository) FindLatestActive(ctx context.Context, email, purpose string) (*domain.OTP, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	normEmail := strings.ToLower(strings.TrimSpace(email))
-	var latest *domain.OTPCode
+	var latest *domain.OTP
 	now := time.Now().UTC()
 	for _, o := range r.otps {
 		if strings.EqualFold(o.Email, normEmail) && o.Purpose == purpose && o.UsedAt == nil && o.ExpiresAt.After(now) {

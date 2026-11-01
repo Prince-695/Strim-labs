@@ -23,8 +23,8 @@ type User struct {
 }
 
 
-// OTPCode tracks 6-digit numeric codes for email verification and password resets.
-type OTPCode struct {
+// OTP tracks 6-digit numeric codes for email verification and password resets.
+type OTP struct {
 	ID        string     `gorm:"type:uuid;primaryKey" json:"id"`
 	UserID    *string    `gorm:"type:uuid;index" json:"user_id,omitempty"`
 	Email     string     `gorm:"type:varchar(255);index;not null" json:"email"`
@@ -35,12 +35,4 @@ type OTPCode struct {
 	UsedAt    *time.Time `json:"used_at,omitempty"`
 	CreatedAt time.Time  `gorm:"not null;autoCreateTime" json:"created_at"`
 }
-
-// TableName explicitly overrides GORM pluralization to map OTPCode to the 'otp' table.
-func (OTPCode) TableName() string {
-	return "otp"
-}
-
-// OTP is an alias for OTPCode.
-type OTP = OTPCode
 

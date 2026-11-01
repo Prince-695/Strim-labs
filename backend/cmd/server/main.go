@@ -82,7 +82,7 @@ func main() {
 
 			if err := db.AutoMigrate(
 				&domain.User{},
-				&domain.OTPCode{},
+				&domain.OTP{},
 			); err != nil {
 				fmt.Printf("\033[38;2;239;68;68m[DATABASE]\033[0m \033[31m✗ Auto-migration failed: %v\033[0m\n", err)
 			} else {

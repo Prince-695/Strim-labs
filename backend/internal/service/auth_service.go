@@ -132,7 +132,7 @@ func (s *authService) Signup(ctx context.Context, req domain.SignupRequest, user
 	// 5. Generate and dispatch verification OTP
 	code, codeHash, err := crypto.GenerateOTP()
 	if err == nil {
-		otp := &domain.OTPCode{
+		otp := &domain.OTP{
 			ID:        s.idGen.MustNewUUIDv7(),
 			UserID:    &user.ID,
 			Email:     user.Email,
@@ -353,7 +353,7 @@ func (s *authService) ForgotPassword(ctx context.Context, email string) error {
 		return domain.NewInternalError(err)
 	}
 
-	otp := &domain.OTPCode{
+	otp := &domain.OTP{
 		ID:        s.idGen.MustNewUUIDv7(),
 		UserID:    &user.ID,
 		Email:     user.Email,
@@ -463,7 +463,7 @@ func (s *authService) SendVerificationOTP(ctx context.Context, userID string) er
 		return domain.NewInternalError(err)
 	}
 
-	otp := &domain.OTPCode{
+	otp := &domain.OTP{
 		ID:        s.idGen.MustNewUUIDv7(),
 		UserID:    &user.ID,
 		Email:     user.Email,

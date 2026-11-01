@@ -17,8 +17,8 @@ var (
 
 // OTPRepository defines database operations for one-time verification tokens.
 type OTPRepository interface {
-	CreateOTP(ctx context.Context, otp *domain.OTPCode) error
-	FindLatestActive(ctx context.Context, email, purpose string) (*domain.OTPCode, error)
+	CreateOTP(ctx context.Context, otp *domain.OTP) error
+	FindLatestActive(ctx context.Context, email, purpose string) (*domain.OTP, error)
 	IncrementAttempts(ctx context.Context, otpID string) (int, error)
 	MarkUsed(ctx context.Context, otpID string) error
 }
@@ -32,13 +32,13 @@ func NewOTPRepository(db *database.DB) *GormOTPRepository {
 	return &GormOTPRepository{db: db}
 }
 
-func (r *GormOTPRepository) CreateOTP(ctx context.Context, otp *domain.OTPCode) error {
+func (r *GormOTPRepository) CreateOTP(ctx context.Context, otp *domain.OTP) error {
 	otp.Email = strings.ToLower(strings.TrimSpace(otp.Email))
 	return r.db.WithContext(ctx).Create(otp).Error
 }
 
-func (r *GormOTPRepository) FindLatestActive(ctx context.Context, email, purpose string) (*domain.OTPCode, error) {
-	var otp domain.OTPCode
+func (r *GormOTPRepository) FindLatestActive(ctx context.Context, email, purpose string) (*domain.OTP, error) {
+	var otp domain.OTP
 	normalizedEmail := strings.ToLower(strings.TrimSpace(email))
 	now := time.Now().UTC()
 
@@ -57,7 +57,7 @@ func (r *GormOTPRepository) FindLatestActive(ctx context.Context, email, purpose
 }
 
 func (r *GormOTPRepository) IncrementAttempts(ctx context.Context, otpID string) (int, error) {
-	var otp domain.OTPCode
+	var otp domain.OTP
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.First(&otp, "id = ?", otpID).Error; err != nil {
 			return err
@@ -73,7 +73,7 @@ func (r *GormOTPRepository) IncrementAttempts(ctx context.Context, otpID string)
 
 func (r *GormOTPRepository) MarkUsed(ctx context.Context, otpID string) error {
 	now := time.Now().UTC()
-	return r.db.WithContext(ctx).Model(&domain.OTPCode{}).
+	return r.db.WithContext(ctx).Model(&domain.OTP{}).
 		Where("id = ? AND used_at IS NULL", otpID).
 		Update("used_at", now).Error
 }
