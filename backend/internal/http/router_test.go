@@ -11,11 +11,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Prince-695/strim/backend/internal/cache"
 	"github.com/Prince-695/strim/backend/internal/config"
 	"github.com/Prince-695/strim/backend/internal/domain"
 	apphttp "github.com/Prince-695/strim/backend/internal/http"
 	"github.com/Prince-695/strim/backend/internal/http/handlers"
+	"github.com/Prince-695/strim/backend/internal/platform/clock"
 	"github.com/Prince-695/strim/backend/internal/platform/ids"
+	"github.com/Prince-695/strim/backend/internal/platform/mailer"
+	"github.com/Prince-695/strim/backend/internal/repository"
 	"github.com/Prince-695/strim/backend/internal/service"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
@@ -42,6 +46,9 @@ func setupTestApp(t *testing.T, repoErr error) *fiber.App {
 		BodyLimitBytes:  2 * 1024 * 1024,
 		SwaggerUser:     "admin",
 		SwaggerPassword: "secretpassword",
+		JWTSecret:       "strim-labs-test-secret-32-chars-long!",
+		AccessTokenTTL:  15 * time.Minute,
+		RefreshTokenTTL: 7 * 24 * time.Hour,
 	}
 
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
@@ -50,7 +57,18 @@ func setupTestApp(t *testing.T, repoErr error) *fiber.App {
 	repo := &mockSystemRepo{err: repoErr}
 	sysSvc := service.NewSystemService(repo, logger)
 	sysHandler := handlers.NewSystemHandler(sysSvc)
-	container := handlers.NewContainer(sysHandler)
+
+	userRepo := repository.NewInMemoryUserRepository()
+	authRepo := repository.NewInMemoryAuthRepository()
+	otpRepo := repository.NewInMemoryOTPRepository()
+	oauthRepo := repository.NewInMemoryOAuthRepository()
+	tokenCache := cache.NewMemoryCache()
+	clk := clock.NewRealClock()
+	mockMailer := mailer.NewMockMailer()
+
+	authSvc := service.NewAuthService(cfg, userRepo, authRepo, otpRepo, oauthRepo, mockMailer, tokenCache, clk, idGen, logger)
+	authHandler := handlers.NewAuthHandler(authSvc, cfg)
+	container := handlers.NewContainer(sysHandler, authHandler)
 
 	return apphttp.NewRouter(cfg, container, logger, idGen)
 }

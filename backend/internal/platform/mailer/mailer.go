@@ -96,6 +96,15 @@ func (m *MockMailer) LastEmail() *SentEmail {
 	return &item
 }
 
+// SentEmails returns all captured emails.
+func (m *MockMailer) SentEmails() []SentEmail {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	res := make([]SentEmail, len(m.emails))
+	copy(res, m.emails)
+	return res
+}
+
 // Reset clears recorded emails.
 func (m *MockMailer) Reset() {
 	m.mu.Lock()

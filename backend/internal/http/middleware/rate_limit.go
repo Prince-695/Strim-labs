@@ -19,6 +19,13 @@ var defaultTracker = &rateTracker{
 	history: make(map[string][]time.Time),
 }
 
+// ResetRateLimiter clears all tracked IP sliding windows (useful in tests).
+func ResetRateLimiter() {
+	defaultTracker.mu.Lock()
+	defer defaultTracker.mu.Unlock()
+	defaultTracker.history = make(map[string][]time.Time)
+}
+
 // RateLimit creates a sliding-window rate limiter per client IP.
 func RateLimit(limit int, window time.Duration) fiber.Handler {
 	return func(c *fiber.Ctx) error {
