@@ -1,4 +1,4 @@
-.PHONY: run worker build test lint swag clean help
+.PHONY: run worker build test lint swag clean fmt fmt-check vet ci help
 
 VERSION ?= 1.0.0
 COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "dev")
@@ -25,11 +25,31 @@ swag: ## Generate Swagger API documentation
 	swag init -g cmd/server/main.go -o docs
 	@echo "Swagger documentation generated in docs/"
 
+fmt: ## Format all Go source files
+	@echo "Formatting Go files..."
+	@gofmt -w .
+	@echo "Formatting complete."
+
+fmt-check: ## Check Go source files formatting
+	@echo "Checking Go file formatting..."
+	@UNFORMATTED=$$(gofmt -l .); \
+	if [ -n "$$UNFORMATTED" ]; then \
+		echo "Go files are not formatted:"; \
+		echo "$$UNFORMATTED"; \
+		exit 1; \
+	fi
+	@echo "All Go files are properly formatted."
+
+vet: ## Run go vet static analysis
+	go vet ./...
+
 test: ## Run unit tests with race detection
 	go test -v -race -cover ./...
 
 lint: ## Run golangci-lint
 	golangci-lint run ./...
+
+ci: fmt-check vet lint test build ## Run full CI pipeline checks locally
 
 clean: ## Clean build artifacts
 	rm -rf bin/ docs/

@@ -4,19 +4,23 @@ Run these checks locally before opening a pull request.
 
 ## Backend
 
-From the `backend/` directory:
+From the `backend/` directory, you can run individual checks or `make ci`:
 
 - Format Go files:
-  - `find . -name '*.go' -print0 | xargs -0 gofmt -w`
+  - `make fmt` (or `gofmt -w .`)
 - Check formatting:
-  - `if [ -n "$(find . -name '*.go' -print0 | xargs -0 gofmt -l)" ]; then echo 'Go files are not formatted'; exit 1; fi`
+  - `make fmt-check` (or `if [ -n "$$(gofmt -l .)" ]; then exit 1; fi`)
 - Verify dependencies:
   - `go mod tidy`
 - Run static analysis:
-  - `go vet ./...`
-  - `golangci-lint run ./...`
+  - `make vet` (or `go vet ./...`)
+  - `make lint` (or `golangci-lint run ./...`)
+- Run tests:
+  - `make test` (or `go test -v -race -cover ./...`)
 - Build the backend:
-  - `go build ./...`
+  - `make build` (or `go build ./...`)
+- **Run all backend CI checks locally at once**:
+  - `make ci`
 
 ## Frontend
 
