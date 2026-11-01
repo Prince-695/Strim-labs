@@ -114,6 +114,60 @@ func NewConflictError(code, message string) *AppError {
 	return NewAppError(fiber.StatusConflict, code, message, nil)
 }
 
+func NewInvalidCredentialsError() *AppError {
+	return NewAppError(fiber.StatusUnauthorized, ErrCodeInvalidCredentials, "Invalid email or password", nil)
+}
+
+func NewTokenExpiredError() *AppError {
+	return NewAppError(fiber.StatusUnauthorized, ErrCodeTokenExpired, "Authorization token has expired", nil)
+}
+
+func NewTokenReusedError() *AppError {
+	return NewAppError(fiber.StatusUnauthorized, ErrCodeTokenReused, "Session token reuse detected; all sessions have been revoked", nil)
+}
+
+func NewEmailTakenError() *AppError {
+	return NewAppError(fiber.StatusConflict, ErrCodeEmailTaken, "An account with this email already exists", nil)
+}
+
+func NewAccountLockedError(retryAfterSec int) *AppError {
+	return &AppError{
+		HTTPStatus: fiber.StatusTooManyRequests,
+		ErrorCode:  ErrCodeAccountLocked,
+		Message:    fmt.Sprintf("Account is temporarily locked due to repeated failed login attempts. Retry in %d seconds", retryAfterSec),
+		Details: fiber.Map{
+			"retry_after_seconds": retryAfterSec,
+		},
+	}
+}
+
+func NewRateLimitedError(message string) *AppError {
+	if message == "" {
+		message = "Rate limit exceeded. Please slow down"
+	}
+	return NewAppError(fiber.StatusTooManyRequests, ErrCodeRateLimited, message, nil)
+}
+
+func NewOTPInvalidError() *AppError {
+	return NewAppError(fiber.StatusBadRequest, ErrCodeOTPInvalid, "Invalid verification code", nil)
+}
+
+func NewOTPExpiredError() *AppError {
+	return NewAppError(fiber.StatusBadRequest, ErrCodeOTPExpired, "Verification code has expired. Please request a new one", nil)
+}
+
+func NewOTPAttemptsExceededError() *AppError {
+	return NewAppError(fiber.StatusTooManyRequests, ErrCodeOTPAttemptsExceeded, "Maximum verification attempts exceeded. Please request a new code", nil)
+}
+
+func NewEmailNotVerifiedError() *AppError {
+	return NewAppError(fiber.StatusForbidden, ErrCodeEmailNotVerified, "Email verification is required to perform this action", nil)
+}
+
+func NewAlreadyVerifiedError() *AppError {
+	return NewAppError(fiber.StatusConflict, ErrCodeAlreadyVerified, "Account email is already verified", nil)
+}
+
 func NewInternalError(err error) *AppError {
 	return NewAppError(fiber.StatusInternalServerError, ErrCodeInternalError, "An unexpected internal error occurred", err)
 }
