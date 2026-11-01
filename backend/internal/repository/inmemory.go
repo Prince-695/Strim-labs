@@ -141,7 +141,6 @@ func (r *InMemoryUserRepository) LinkOAuth(ctx context.Context, userID, provider
 	return nil
 }
 
-
 // InMemoryOTPRepository provides an in-memory thread-safe OTPRepository implementation for testing.
 type InMemoryOTPRepository struct {
 	mu   sync.RWMutex

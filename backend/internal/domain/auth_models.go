@@ -22,7 +22,6 @@ type User struct {
 	DeletedAt       gorm.DeletedAt `gorm:"index" json:"-"`
 }
 
-
 // OTP tracks 6-digit numeric codes for email verification and password resets.
 type OTP struct {
 	ID        string     `gorm:"type:uuid;primaryKey" json:"id"`
@@ -35,4 +34,3 @@ type OTP struct {
 	UsedAt    *time.Time `json:"used_at,omitempty"`
 	CreatedAt time.Time  `gorm:"not null;autoCreateTime" json:"created_at"`
 }
-

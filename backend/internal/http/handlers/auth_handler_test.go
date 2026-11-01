@@ -38,17 +38,17 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 	middleware.ResetRateLimiter()
 
 	cfg := &config.Config{
-		AppEnv:          "test",
-		ServerPort:      "8080",
-		APIBaseURL:      "http://localhost:8080",
-		WebOrigin:       "http://localhost:3000",
-		AllowedOrigins:  []string{"http://localhost:3000"},
-		LogLevel:        "error",
-		RequestTimeout:  5 * time.Second,
-		BodyLimitBytes:  2 * 1024 * 1024,
-		SwaggerUser:     "admin",
-		SwaggerPassword:   "secretpassword",
-		JWTSecret:         "strim-labs-test-secret-32-chars-long!",
+		AppEnv:             "test",
+		ServerPort:         "8080",
+		APIBaseURL:         "http://localhost:8080",
+		WebOrigin:          "http://localhost:3000",
+		AllowedOrigins:     []string{"http://localhost:3000"},
+		LogLevel:           "error",
+		RequestTimeout:     5 * time.Second,
+		BodyLimitBytes:     2 * 1024 * 1024,
+		SwaggerUser:        "admin",
+		SwaggerPassword:    "secretpassword",
+		JWTSecret:          "strim-labs-test-secret-32-chars-long!",
 		AccessTokenExpiry:  15 * time.Minute,
 		RefreshTokenExpiry: 7 * 24 * time.Hour,
 	}

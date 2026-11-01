@@ -68,9 +68,9 @@ func (h *AuthHandler) Signup(c *fiber.Ctx) error {
 	setAuthCookies(c, h.cfg, accessToken, refreshToken)
 
 	return c.Status(fiber.StatusCreated).JSON(domain.Response{
-		Success:      true,
-		Message:      "Account created. Please verify your email.",
-		AccessToken:  accessToken,
+		Success:     true,
+		Message:     "Account created. Please verify your email.",
+		AccessToken: accessToken,
 		Data: domain.AuthResponseData{
 			User:         *user,
 			RefreshToken: refreshToken,
@@ -110,9 +110,9 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 	setAuthCookies(c, h.cfg, accessToken, refreshToken)
 
 	return c.Status(fiber.StatusOK).JSON(domain.Response{
-		Success:      true,
-		Message:      "Login successful",
-		AccessToken:  accessToken,
+		Success:     true,
+		Message:     "Login successful",
+		AccessToken: accessToken,
 		Data: domain.AuthResponseData{
 			User:         *user,
 			RefreshToken: refreshToken,
@@ -163,9 +163,9 @@ func (h *AuthHandler) Refresh(c *fiber.Ctx) error {
 	setAuthCookies(c, h.cfg, newAccess, newRefresh)
 
 	return c.Status(fiber.StatusOK).JSON(domain.Response{
-		Success:      true,
-		Message:      "Session refreshed",
-		AccessToken:  newAccess,
+		Success:     true,
+		Message:     "Session refreshed",
+		AccessToken: newAccess,
 		Data: domain.AuthResponseData{
 			User:         *user,
 			RefreshToken: newRefresh,
