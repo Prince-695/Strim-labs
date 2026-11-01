@@ -25,6 +25,7 @@ type UserRepository interface {
 	Update(ctx context.Context, user *domain.User) error
 	UpdatePassword(ctx context.Context, userID, newPasswordHash string) error
 	SetVerified(ctx context.Context, userID string) error
+	SetUsername(ctx context.Context, userID, username string) error
 	LinkOAuth(ctx context.Context, userID, provider, providerUserID string) error
 }
 
@@ -97,6 +98,22 @@ func (r *GormUserRepository) SetVerified(ctx context.Context, userID string) err
 			"is_verified": true,
 			"updated_at":  time.Now().UTC(),
 		}).Error
+}
+
+func (r *GormUserRepository) SetUsername(ctx context.Context, userID, username string) error {
+	res := r.db.WithContext(ctx).Model(&domain.User{}).
+		Where("id = ? AND username IS NULL", userID).
+		Updates(map[string]interface{}{
+			"username":   username,
+			"updated_at": time.Now().UTC(),
+		})
+	if res.Error != nil {
+		return res.Error
+	}
+	if res.RowsAffected == 0 {
+		return domain.NewUsernameAlreadySetError()
+	}
+	return nil
 }
 
 func (r *GormUserRepository) FindByOAuth(ctx context.Context, provider, providerUserID string) (*domain.User, error) {

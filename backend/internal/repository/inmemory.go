@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Prince-695/strim/backend/internal/domain"
+	"gorm.io/gorm"
 )
 
 // InMemoryUserRepository provides an in-memory thread-safe UserRepository implementation for testing.
@@ -114,6 +115,27 @@ func (r *InMemoryUserRepository) SetVerified(ctx context.Context, userID string)
 	return nil
 }
 
+func (r *InMemoryUserRepository) SetUsername(ctx context.Context, userID, username string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	u, ok := r.users[userID]
+	if !ok {
+		return ErrUserNotFound
+	}
+	if u.Username != nil {
+		return domain.NewUsernameAlreadySetError()
+	}
+	cleanUsername := strings.ToLower(strings.TrimSpace(username))
+	for _, other := range r.users {
+		if other.Username != nil && strings.EqualFold(*other.Username, cleanUsername) {
+			return domain.NewUsernameTakenError()
+		}
+	}
+	u.Username = &cleanUsername
+	u.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
 func (r *InMemoryUserRepository) FindByOAuth(ctx context.Context, provider, providerUserID string) (*domain.User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -206,4 +228,334 @@ func (r *InMemoryOTPRepository) MarkUsed(ctx context.Context, otpID string) erro
 	now := time.Now().UTC()
 	o.UsedAt = &now
 	return nil
+}
+
+// InMemoryOrgRepository provides an in-memory thread-safe OrgRepository implementation.
+type InMemoryOrgRepository struct {
+	mu         sync.RWMutex
+	orgs       map[string]*domain.Organization
+	memberRepo *InMemoryMemberRepository
+}
+
+func NewInMemoryOrgRepository(memberRepo *InMemoryMemberRepository) *InMemoryOrgRepository {
+	return &InMemoryOrgRepository{
+		orgs:       make(map[string]*domain.Organization),
+		memberRepo: memberRepo,
+	}
+}
+
+func (r *InMemoryOrgRepository) CreateWithLimitCheck(ctx context.Context, org *domain.Organization, ownerUserID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Check user limit < 3
+	count, err := r.memberRepo.CountUserOrgs(ctx, ownerUserID)
+	if err != nil {
+		return err
+	}
+	if count >= 3 {
+		return domain.NewOrgLimitReachedError()
+	}
+
+	normSlug := strings.ToLower(strings.TrimSpace(org.Slug))
+	for _, o := range r.orgs {
+		if o.DeletedAt.Valid {
+			continue
+		}
+		if strings.EqualFold(o.Slug, normSlug) {
+			return domain.NewSlugTakenError()
+		}
+	}
+
+	if org.ID == "" {
+		org.ID = "org-" + normSlug
+	}
+	org.Slug = normSlug
+	org.CreatedBy = ownerUserID
+	if org.CreatedAt.IsZero() {
+		org.CreatedAt = time.Now().UTC()
+	}
+	org.UpdatedAt = org.CreatedAt
+
+	copyOrg := *org
+	r.orgs[org.ID] = &copyOrg
+
+	// Add owner
+	_ = r.memberRepo.AddMemberDirect(&domain.OrgMember{
+		OrgID:    org.ID,
+		UserID:   ownerUserID,
+		Role:     domain.RoleOwner,
+		JoinedAt: time.Now().UTC(),
+	})
+
+	org.Role = domain.RoleOwner
+	org.MemberCount = 1
+	org.ProjectCount = 0
+
+	return nil
+}
+
+func (r *InMemoryOrgRepository) FindByID(ctx context.Context, id string) (*domain.Organization, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	o, ok := r.orgs[id]
+	if !ok || o.DeletedAt.Valid {
+		return nil, ErrOrgNotFound
+	}
+
+	copyOrg := *o
+	if r.memberRepo != nil {
+		copyOrg.MemberCount = r.memberRepo.CountOrgMembers(id)
+	}
+	return &copyOrg, nil
+}
+
+func (r *InMemoryOrgRepository) FindBySlug(ctx context.Context, slug string) (*domain.Organization, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	norm := strings.ToLower(strings.TrimSpace(slug))
+	for _, o := range r.orgs {
+		if !o.DeletedAt.Valid && strings.EqualFold(o.Slug, norm) {
+			copyOrg := *o
+			if r.memberRepo != nil {
+				copyOrg.MemberCount = r.memberRepo.CountOrgMembers(o.ID)
+			}
+			return &copyOrg, nil
+		}
+	}
+	return nil, ErrOrgNotFound
+}
+
+func (r *InMemoryOrgRepository) ListByUser(ctx context.Context, userID string) ([]*domain.Organization, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var list []*domain.Organization
+	memberships := r.memberRepo.GetUserMemberships(userID)
+	for _, m := range memberships {
+		o, ok := r.orgs[m.OrgID]
+		if ok && !o.DeletedAt.Valid {
+			copyOrg := *o
+			copyOrg.Role = m.Role
+			copyOrg.MemberCount = r.memberRepo.CountOrgMembers(o.ID)
+			copyOrg.ProjectCount = 0
+			list = append(list, &copyOrg)
+		}
+	}
+	return list, nil
+}
+
+func (r *InMemoryOrgRepository) Update(ctx context.Context, org *domain.Organization) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	o, ok := r.orgs[org.ID]
+	if !ok || o.DeletedAt.Valid {
+		return ErrOrgNotFound
+	}
+	o.Name = org.Name
+	o.Description = org.Description
+	o.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+func (r *InMemoryOrgRepository) SoftDelete(ctx context.Context, id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	o, ok := r.orgs[id]
+	if !ok || o.DeletedAt.Valid {
+		return ErrOrgNotFound
+	}
+	o.DeletedAt.Time = time.Now().UTC()
+	o.DeletedAt.Valid = true
+	return nil
+}
+
+func (r *InMemoryOrgRepository) WithTenantContext(ctx context.Context, orgID string, fn func(tx *gorm.DB) error) error {
+	return fn(nil)
+}
+
+// InMemoryMemberRepository provides an in-memory thread-safe MemberRepository implementation.
+type InMemoryMemberRepository struct {
+	mu       sync.RWMutex
+	members  map[string]*domain.OrgMember // key: orgID:userID
+	userRepo *InMemoryUserRepository
+}
+
+func NewInMemoryMemberRepository(userRepo *InMemoryUserRepository) *InMemoryMemberRepository {
+	return &InMemoryMemberRepository{
+		members:  make(map[string]*domain.OrgMember),
+		userRepo: userRepo,
+	}
+}
+
+func (r *InMemoryMemberRepository) memberKey(orgID, userID string) string {
+	return orgID + ":" + userID
+}
+
+func (r *InMemoryMemberRepository) AddMemberDirect(member *domain.OrgMember) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	copyMember := *member
+	r.members[r.memberKey(member.OrgID, member.UserID)] = &copyMember
+	return nil
+}
+
+func (r *InMemoryMemberRepository) AddMemberWithLimitCheck(ctx context.Context, member *domain.OrgMember) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Check target user org limit
+	count := 0
+	for _, m := range r.members {
+		if m.UserID == member.UserID {
+			count++
+		}
+	}
+	if count >= 3 {
+		return domain.NewTargetOrgLimitReachedError()
+	}
+
+	key := r.memberKey(member.OrgID, member.UserID)
+	if _, exists := r.members[key]; exists {
+		return domain.NewAlreadyMemberError()
+	}
+
+	copyMember := *member
+	if copyMember.JoinedAt.IsZero() {
+		copyMember.JoinedAt = time.Now().UTC()
+	}
+	r.members[key] = &copyMember
+	return nil
+}
+
+func (r *InMemoryMemberRepository) FindMember(ctx context.Context, orgID, userID string) (*domain.OrgMember, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	m, ok := r.members[r.memberKey(orgID, userID)]
+	if !ok {
+		return nil, ErrMemberNotFound
+	}
+	copyMember := *m
+	return &copyMember, nil
+}
+
+func (r *InMemoryMemberRepository) ListMembers(ctx context.Context, orgID string, query domain.ListMembersQuery) ([]*domain.OrgMemberDetailResponse, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var details []*domain.OrgMemberDetailResponse
+	for _, m := range r.members {
+		if m.OrgID == orgID {
+			if query.Role != "" && string(m.Role) != query.Role {
+				continue
+			}
+
+			u, err := r.userRepo.FindByID(ctx, m.UserID)
+			if err != nil {
+				continue
+			}
+
+			if query.Q != "" {
+				term := strings.ToLower(strings.TrimSpace(query.Q))
+				match := strings.Contains(strings.ToLower(u.FirstName), term) ||
+					strings.Contains(strings.ToLower(u.LastName), term) ||
+					strings.Contains(strings.ToLower(u.Email), term) ||
+					(u.Username != nil && strings.Contains(strings.ToLower(*u.Username), term))
+				if !match {
+					continue
+				}
+			}
+
+			details = append(details, &domain.OrgMemberDetailResponse{
+				UserID:    u.ID,
+				Email:     u.Email,
+				FirstName: u.FirstName,
+				LastName:  u.LastName,
+				Username:  u.Username,
+				Role:      m.Role,
+				JoinedAt:  m.JoinedAt,
+			})
+		}
+	}
+	return details, nil
+}
+
+func (r *InMemoryMemberRepository) UpdateRole(ctx context.Context, orgID, userID string, newRole domain.OrgRole) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	m, ok := r.members[r.memberKey(orgID, userID)]
+	if !ok {
+		return ErrMemberNotFound
+	}
+	m.Role = newRole
+	return nil
+}
+
+func (r *InMemoryMemberRepository) RemoveMember(ctx context.Context, orgID, userID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	key := r.memberKey(orgID, userID)
+	if _, ok := r.members[key]; !ok {
+		return ErrMemberNotFound
+	}
+	delete(r.members, key)
+	return nil
+}
+
+func (r *InMemoryMemberRepository) CountOwners(ctx context.Context, orgID string) (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	count := 0
+	for _, m := range r.members {
+		if m.OrgID == orgID && m.Role == domain.RoleOwner {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (r *InMemoryMemberRepository) CountUserOrgs(ctx context.Context, userID string) (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	count := 0
+	for _, m := range r.members {
+		if m.UserID == userID {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (r *InMemoryMemberRepository) CountOrgMembers(orgID string) int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	count := 0
+	for _, m := range r.members {
+		if m.OrgID == orgID {
+			count++
+		}
+	}
+	return count
+}
+
+func (r *InMemoryMemberRepository) GetUserMemberships(userID string) []*domain.OrgMember {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var list []*domain.OrgMember
+	for _, m := range r.members {
+		if m.UserID == userID {
+			copyM := *m
+			list = append(list, &copyM)
+		}
+	}
+	return list
 }
