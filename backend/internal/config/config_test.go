@@ -27,8 +27,11 @@ func TestConfigLoadDefaults(t *testing.T) {
 	assert.Equal(t, "9090", cfg.ServerPort)
 	assert.Equal(t, "http://localhost:9090", cfg.APIBaseURL)
 	assert.Equal(t, 30*time.Second, cfg.RequestTimeout)
+	assert.Equal(t, 30*time.Minute, cfg.AccessTokenExpiry)
+	assert.Equal(t, 168*time.Hour, cfg.RefreshTokenExpiry)
 	assert.NotEmpty(t, cfg.AllowedOrigins)
 	assert.Greater(t, cfg.DatabaseMaxOpenConns, 0)
+	assert.False(t, cfg.DBRun)
 }
 
 func TestConfigValidationFailure(t *testing.T) {

@@ -20,17 +20,29 @@ type DB struct {
 	sqlDB *sql.DB
 }
 
+// Purple ANSI styling constants for database logs
+const (
+	ansiPurpleBold = "\033[38;2;168;85;247m"
+	ansiPurpleDim  = "\033[38;2;192;132;252m"
+	ansiReset      = "\033[0m"
+	ansiRed        = "\033[31m"
+	ansiYellow     = "\033[33m"
+	ansiGray       = "\033[90m"
+)
+
 // SlogGormLogger adapts Go's log/slog into GORM's logger interface.
 type SlogGormLogger struct {
 	logger        *slog.Logger
 	slowThreshold time.Duration
+	dbRun         bool
 }
 
-// NewSlogGormLogger creates a GORM logger adapter backed by slog.
-func NewSlogGormLogger(l *slog.Logger, slowThreshold time.Duration) *SlogGormLogger {
+// NewSlogGormLogger creates a GORM logger adapter backed by slog and optional purple console styling.
+func NewSlogGormLogger(l *slog.Logger, slowThreshold time.Duration, dbRun bool) *SlogGormLogger {
 	return &SlogGormLogger{
 		logger:        l,
 		slowThreshold: slowThreshold,
+		dbRun:         dbRun,
 	}
 }
 
@@ -39,14 +51,26 @@ func (s *SlogGormLogger) LogMode(level gormlogger.LogLevel) gormlogger.Interface
 }
 
 func (s *SlogGormLogger) Info(ctx context.Context, msg string, data ...interface{}) {
+	if s.dbRun {
+		fmt.Printf("%s[DATABASE]%s %s%s%s\n", ansiPurpleBold, ansiReset, ansiPurpleDim, fmt.Sprintf(msg, data...), ansiReset)
+		return
+	}
 	s.logger.InfoContext(ctx, fmt.Sprintf(msg, data...))
 }
 
 func (s *SlogGormLogger) Warn(ctx context.Context, msg string, data ...interface{}) {
+	if s.dbRun {
+		fmt.Printf("%s[DATABASE WARN]%s %s%s%s\n", ansiYellow, ansiReset, ansiPurpleDim, fmt.Sprintf(msg, data...), ansiReset)
+		return
+	}
 	s.logger.WarnContext(ctx, fmt.Sprintf(msg, data...))
 }
 
 func (s *SlogGormLogger) Error(ctx context.Context, msg string, data ...interface{}) {
+	if s.dbRun {
+		fmt.Printf("%s[DATABASE ERROR]%s %s%s%s\n", ansiRed, ansiReset, ansiPurpleDim, fmt.Sprintf(msg, data...), ansiReset)
+		return
+	}
 	s.logger.ErrorContext(ctx, fmt.Sprintf(msg, data...))
 }
 
@@ -55,34 +79,46 @@ func (s *SlogGormLogger) Trace(ctx context.Context, begin time.Time, fc func() (
 	sqlStr, rows := fc()
 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		s.logger.ErrorContext(ctx, "database query error",
-			slog.String("sql", sqlStr),
-			slog.Int64("rows", rows),
-			slog.Duration("duration", elapsed),
-			slog.Any("error", err),
-		)
+		if s.dbRun {
+			fmt.Printf("%s[DATABASE ERROR]%s %s%s (rows: %d, duration: %v) error: %v%s\n", ansiRed, ansiReset, ansiRed, sqlStr, rows, elapsed, err, ansiReset)
+		} else {
+			s.logger.ErrorContext(ctx, "database query error",
+				slog.String("sql", sqlStr),
+				slog.Int64("rows", rows),
+				slog.Duration("duration", elapsed),
+				slog.Any("error", err),
+			)
+		}
 		return
 	}
 
 	if s.slowThreshold > 0 && elapsed > s.slowThreshold {
-		s.logger.WarnContext(ctx, "slow database query",
+		if s.dbRun {
+			fmt.Printf("%s[DATABASE SLOW]%s %s%s (rows: %d, duration: %v)%s\n", ansiYellow, ansiReset, ansiPurpleDim, sqlStr, rows, elapsed, ansiReset)
+		} else {
+			s.logger.WarnContext(ctx, "slow database query",
+				slog.String("sql", sqlStr),
+				slog.Int64("rows", rows),
+				slog.Duration("duration", elapsed),
+			)
+		}
+		return
+	}
+
+	if s.dbRun {
+		fmt.Printf("%s[DATABASE SQL]%s %s%s%s %s(rows: %d, duration: %v)%s\n", ansiPurpleBold, ansiReset, ansiPurpleDim, sqlStr, ansiReset, ansiGray, rows, elapsed, ansiReset)
+	} else {
+		s.logger.DebugContext(ctx, "database query trace",
 			slog.String("sql", sqlStr),
 			slog.Int64("rows", rows),
 			slog.Duration("duration", elapsed),
 		)
-		return
 	}
-
-	s.logger.DebugContext(ctx, "database query trace",
-		slog.String("sql", sqlStr),
-		slog.Int64("rows", rows),
-		slog.Duration("duration", elapsed),
-	)
 }
 
 // New connects to PostgreSQL using GORM, applies connection pooling, and sets up logging.
 func New(cfg *config.Config, l *slog.Logger) (*DB, error) {
-	gormLog := NewSlogGormLogger(l, 200*time.Millisecond)
+	gormLog := NewSlogGormLogger(l, 200*time.Millisecond, cfg.DBRun)
 
 	gormConfig := &gorm.Config{
 		Logger:                                   gormLog,

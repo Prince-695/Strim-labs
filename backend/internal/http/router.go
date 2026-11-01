@@ -2,6 +2,7 @@ package http
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/Prince-695/strim/backend/internal/config"
 	"github.com/Prince-695/strim/backend/internal/domain"
@@ -57,6 +58,33 @@ func NewRouter(
 	swaggerGroup := app.Group("/swagger")
 	swaggerGroup.Use(middleware.SwaggerBasicAuth(cfg))
 	swaggerGroup.Get("/*", swagger.HandlerDefault)
+
+	// Route Group: /v1
+	v1 := app.Group("/v1")
+
+	// Auth Middlewares
+	authRateLimit := middleware.RateLimit(5, 1*time.Minute)
+	requireAuth := middleware.RequireAuth(handlers.Auth.AuthService(), cfg.JWTSecret)
+	csrfGuard := middleware.CSRFProtection(cfg)
+
+	// Subgroup: /v1/auth
+	auth := v1.Group("/auth")
+
+	// Public Auth Endpoints
+	auth.Post("/signup", authRateLimit, handlers.Auth.Signup)
+	auth.Post("/login", authRateLimit, handlers.Auth.Login)
+	auth.Post("/refresh", handlers.Auth.Refresh)
+	auth.Post("/forgot-password", authRateLimit, handlers.Auth.ForgotPassword)
+	auth.Post("/reset-password", authRateLimit, handlers.Auth.ResetPassword)
+	auth.Get("/google/login", handlers.Auth.GoogleLogin)
+	auth.Get("/google/callback", handlers.Auth.GoogleCallback)
+
+	// Protected Auth Endpoints
+	auth.Get("/me", requireAuth, handlers.Auth.Me)
+	auth.Post("/logout", requireAuth, csrfGuard, handlers.Auth.Logout)
+	auth.Post("/change-password", requireAuth, csrfGuard, handlers.Auth.ChangePassword)
+	auth.Post("/otp/send", requireAuth, authRateLimit, handlers.Auth.SendOTP)
+	auth.Post("/otp/verify", requireAuth, handlers.Auth.VerifyOTP)
 
 	// Catch-all 404 handler returning standard Response envelope
 	app.Use(func(c *fiber.Ctx) error {

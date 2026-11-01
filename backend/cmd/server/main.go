@@ -9,12 +9,16 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Prince-695/strim/backend/internal/cache"
 	"github.com/Prince-695/strim/backend/internal/config"
+	"github.com/Prince-695/strim/backend/internal/domain"
 	"github.com/Prince-695/strim/backend/internal/http"
 	"github.com/Prince-695/strim/backend/internal/http/handlers"
+	"github.com/Prince-695/strim/backend/internal/platform/clock"
 	"github.com/Prince-695/strim/backend/internal/platform/database"
 	"github.com/Prince-695/strim/backend/internal/platform/ids"
 	"github.com/Prince-695/strim/backend/internal/platform/logger"
+	"github.com/Prince-695/strim/backend/internal/platform/mailer"
 	"github.com/Prince-695/strim/backend/internal/repository"
 	"github.com/Prince-695/strim/backend/internal/service"
 	"github.com/Prince-695/strim/backend/pkg/startup"
@@ -67,17 +71,52 @@ func main() {
 				appLogger.Error("Error closing database connections", slog.Any("error", closeErr))
 			}
 		}()
+
+		// Schema synchronization controlled by DB_RUN
+		if cfg.DBRun {
+			fmt.Printf("\033[38;2;168;85;247m[DATABASE]\033[0m \033[38;2;192;132;252m⚡ DB_RUN=true: Synchronizing database schema and running auto-migrations...\033[0m\n")
+			// Drop deprecated tables if present (stateless JWT dual-token architecture & renamed tables)
+			_ = db.Exec("DROP TABLE IF EXISTS o_auth_accounts CASCADE").Error
+			_ = db.Exec("DROP TABLE IF EXISTS refresh_tokens CASCADE").Error
+			_ = db.Exec("DROP TABLE IF EXISTS otp_codes CASCADE").Error
+
+			if err := db.AutoMigrate(
+				&domain.User{},
+				&domain.OTP{},
+			); err != nil {
+				fmt.Printf("\033[38;2;239;68;68m[DATABASE]\033[0m \033[31m✗ Auto-migration failed: %v\033[0m\n", err)
+			} else {
+				fmt.Printf("\033[38;2;168;85;247m[DATABASE]\033[0m \033[38;2;192;132;252m✓ Schema migration complete: tables synchronized successfully (users, otp)\033[0m\n")
+			}
+		}
 	}
 
-	// 5. Dependency Injection: Repositories
+	// 5. Dependency Injection: Repositories & Platform Caches
 	systemRepo := repository.NewSystemRepository(db)
+	userRepo := repository.NewUserRepository(db)
+	otpRepo := repository.NewOTPRepository(db)
+
+	tokenCache := cache.NewMemoryCache()
+	clk := clock.NewRealClock()
+	mailerClient := mailer.NewConsoleMailer(appLogger)
 
 	// 6. Dependency Injection: Services
 	systemSvc := service.NewSystemService(systemRepo, appLogger)
+	authSvc := service.NewAuthService(
+		cfg,
+		userRepo,
+		otpRepo,
+		mailerClient,
+		tokenCache,
+		clk,
+		idGen,
+		appLogger,
+	)
 
 	// 7. Dependency Injection: HTTP Handlers
 	systemHandler := handlers.NewSystemHandler(systemSvc)
-	handlerContainer := handlers.NewContainer(systemHandler)
+	authHandler := handlers.NewAuthHandler(authSvc, cfg)
+	handlerContainer := handlers.NewContainer(systemHandler, authHandler)
 
 	// 8. Build Router & Middlewares
 	app := http.NewRouter(cfg, handlerContainer, appLogger, idGen)
@@ -88,6 +127,8 @@ func main() {
 	if db == nil {
 		serverStatus = "DEGRADED"
 		statusDetails = "Database unreachable"
+	} else if cfg.DBRun {
+		statusDetails = "Database connected (sync enabled)"
 	}
 
 	startup.PrintServerBanner(startup.Config{

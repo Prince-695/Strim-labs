@@ -11,11 +11,15 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Prince-695/strim/backend/internal/cache"
 	"github.com/Prince-695/strim/backend/internal/config"
 	"github.com/Prince-695/strim/backend/internal/domain"
 	apphttp "github.com/Prince-695/strim/backend/internal/http"
 	"github.com/Prince-695/strim/backend/internal/http/handlers"
+	"github.com/Prince-695/strim/backend/internal/platform/clock"
 	"github.com/Prince-695/strim/backend/internal/platform/ids"
+	"github.com/Prince-695/strim/backend/internal/platform/mailer"
+	"github.com/Prince-695/strim/backend/internal/repository"
 	"github.com/Prince-695/strim/backend/internal/service"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
@@ -32,16 +36,19 @@ func (m *mockSystemRepo) Ping(ctx context.Context) error {
 
 func setupTestApp(t *testing.T, repoErr error) *fiber.App {
 	cfg := &config.Config{
-		AppEnv:          "test",
-		ServerPort:      "8080",
-		APIBaseURL:      "http://localhost:8080",
-		WebOrigin:       "http://localhost:3000",
-		AllowedOrigins:  []string{"http://localhost:3000"},
-		LogLevel:        "error",
-		RequestTimeout:  5 * time.Second,
-		BodyLimitBytes:  2 * 1024 * 1024,
-		SwaggerUser:     "admin",
-		SwaggerPassword: "secretpassword",
+		AppEnv:             "test",
+		ServerPort:         "8080",
+		APIBaseURL:         "http://localhost:8080",
+		WebOrigin:          "http://localhost:3000",
+		AllowedOrigins:     []string{"http://localhost:3000"},
+		LogLevel:           "error",
+		RequestTimeout:     5 * time.Second,
+		BodyLimitBytes:     2 * 1024 * 1024,
+		SwaggerUser:        "admin",
+		SwaggerPassword:    "secretpassword",
+		JWTSecret:          "strim-labs-test-secret-32-chars-long!",
+		AccessTokenExpiry:  15 * time.Minute,
+		RefreshTokenExpiry: 7 * 24 * time.Hour,
 	}
 
 	logger := slog.New(slog.NewJSONHandler(io.Discard, nil))
@@ -50,7 +57,16 @@ func setupTestApp(t *testing.T, repoErr error) *fiber.App {
 	repo := &mockSystemRepo{err: repoErr}
 	sysSvc := service.NewSystemService(repo, logger)
 	sysHandler := handlers.NewSystemHandler(sysSvc)
-	container := handlers.NewContainer(sysHandler)
+
+	userRepo := repository.NewInMemoryUserRepository()
+	otpRepo := repository.NewInMemoryOTPRepository()
+	tokenCache := cache.NewMemoryCache()
+	clk := clock.NewRealClock()
+	mockMailer := mailer.NewMockMailer()
+
+	authSvc := service.NewAuthService(cfg, userRepo, otpRepo, mockMailer, tokenCache, clk, idGen, logger)
+	authHandler := handlers.NewAuthHandler(authSvc, cfg)
+	container := handlers.NewContainer(sysHandler, authHandler)
 
 	return apphttp.NewRouter(cfg, container, logger, idGen)
 }
