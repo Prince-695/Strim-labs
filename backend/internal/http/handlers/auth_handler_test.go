@@ -58,7 +58,6 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 	userRepo := repository.NewInMemoryUserRepository()
 	authRepo := repository.NewInMemoryAuthRepository()
 	otpRepo := repository.NewInMemoryOTPRepository()
-	oauthRepo := repository.NewInMemoryOAuthRepository()
 	mockMailer := mailer.NewMockMailer()
 	tokenCache := cache.NewMemoryCache()
 	clk := clock.NewRealClock()
@@ -69,7 +68,6 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 		userRepo,
 		authRepo,
 		otpRepo,
-		oauthRepo,
 		mockMailer,
 		tokenCache,
 		clk,

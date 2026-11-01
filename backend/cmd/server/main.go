@@ -75,15 +75,17 @@ func main() {
 		// Schema synchronization controlled by DB_RUN
 		if cfg.DBRun {
 			fmt.Printf("\033[38;2;168;85;247m[DATABASE]\033[0m \033[38;2;192;132;252m⚡ DB_RUN=true: Synchronizing database schema and running auto-migrations...\033[0m\n")
+			// Drop deprecated o_auth_accounts table if present
+			_ = db.Exec("DROP TABLE IF EXISTS o_auth_accounts CASCADE").Error
+
 			if err := db.AutoMigrate(
 				&domain.User{},
 				&domain.RefreshToken{},
 				&domain.OTPCode{},
-				&domain.OAuthAccount{},
 			); err != nil {
 				fmt.Printf("\033[38;2;239;68;68m[DATABASE]\033[0m \033[31m✗ Auto-migration failed: %v\033[0m\n", err)
 			} else {
-				fmt.Printf("\033[38;2;168;85;247m[DATABASE]\033[0m \033[38;2;192;132;252m✓ Schema migration complete: tables synchronized successfully\033[0m\n")
+				fmt.Printf("\033[38;2;168;85;247m[DATABASE]\033[0m \033[38;2;192;132;252m✓ Schema migration complete: tables synchronized successfully (users, refresh_tokens, otp_codes)\033[0m\n")
 			}
 		}
 	}
@@ -93,7 +95,6 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	authRepo := repository.NewAuthRepository(db)
 	otpRepo := repository.NewOTPRepository(db)
-	oauthRepo := repository.NewOAuthRepository(db)
 
 	tokenCache := cache.NewMemoryCache()
 	clk := clock.NewRealClock()
@@ -106,7 +107,6 @@ func main() {
 		userRepo,
 		authRepo,
 		otpRepo,
-		oauthRepo,
 		mailerClient,
 		tokenCache,
 		clk,

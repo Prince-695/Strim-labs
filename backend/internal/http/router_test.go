@@ -61,12 +61,11 @@ func setupTestApp(t *testing.T, repoErr error) *fiber.App {
 	userRepo := repository.NewInMemoryUserRepository()
 	authRepo := repository.NewInMemoryAuthRepository()
 	otpRepo := repository.NewInMemoryOTPRepository()
-	oauthRepo := repository.NewInMemoryOAuthRepository()
 	tokenCache := cache.NewMemoryCache()
 	clk := clock.NewRealClock()
 	mockMailer := mailer.NewMockMailer()
 
-	authSvc := service.NewAuthService(cfg, userRepo, authRepo, otpRepo, oauthRepo, mockMailer, tokenCache, clk, idGen, logger)
+	authSvc := service.NewAuthService(cfg, userRepo, authRepo, otpRepo, mockMailer, tokenCache, clk, idGen, logger)
 	authHandler := handlers.NewAuthHandler(authSvc, cfg)
 	container := handlers.NewContainer(sysHandler, authHandler)
 

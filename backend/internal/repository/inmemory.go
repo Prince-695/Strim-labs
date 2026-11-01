@@ -114,6 +114,33 @@ func (r *InMemoryUserRepository) SetVerified(ctx context.Context, userID string)
 	return nil
 }
 
+func (r *InMemoryUserRepository) FindByOAuth(ctx context.Context, provider, providerUserID string) (*domain.User, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	for _, u := range r.users {
+		if u.OAuthProvider != nil && u.OAuthProviderID != nil &&
+			*u.OAuthProvider == provider && *u.OAuthProviderID == providerUserID {
+			copyUser := *u
+			return &copyUser, nil
+		}
+	}
+	return nil, ErrUserNotFound
+}
+
+func (r *InMemoryUserRepository) LinkOAuth(ctx context.Context, userID, provider, providerUserID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	u, ok := r.users[userID]
+	if !ok {
+		return ErrUserNotFound
+	}
+	u.OAuthProvider = &provider
+	u.OAuthProviderID = &providerUserID
+	u.IsVerified = true
+	u.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
 // InMemoryAuthRepository provides an in-memory thread-safe AuthRepository implementation for testing.
 type InMemoryAuthRepository struct {
 	mu     sync.RWMutex
@@ -276,38 +303,5 @@ func (r *InMemoryOTPRepository) MarkUsed(ctx context.Context, otpID string) erro
 	}
 	now := time.Now().UTC()
 	o.UsedAt = &now
-	return nil
-}
-
-// InMemoryOAuthRepository provides an in-memory thread-safe OAuthRepository implementation for testing.
-type InMemoryOAuthRepository struct {
-	mu       sync.RWMutex
-	accounts map[string]*domain.OAuthAccount
-}
-
-func NewInMemoryOAuthRepository() *InMemoryOAuthRepository {
-	return &InMemoryOAuthRepository{
-		accounts: make(map[string]*domain.OAuthAccount),
-	}
-}
-
-func (r *InMemoryOAuthRepository) FindByProvider(ctx context.Context, provider, providerUserID string) (*domain.OAuthAccount, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-	key := provider + ":" + providerUserID
-	acc, ok := r.accounts[key]
-	if !ok {
-		return nil, ErrOAuthAccountNotFound
-	}
-	copyAcc := *acc
-	return &copyAcc, nil
-}
-
-func (r *InMemoryOAuthRepository) Create(ctx context.Context, account *domain.OAuthAccount) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	key := account.Provider + ":" + account.ProviderUserID
-	copyAcc := *account
-	r.accounts[key] = &copyAcc
 	return nil
 }

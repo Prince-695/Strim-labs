@@ -51,7 +51,6 @@ func newTestHarness(t *testing.T) *testHarness {
 	userRepo := repository.NewInMemoryUserRepository()
 	authRepo := repository.NewInMemoryAuthRepository()
 	otpRepo := repository.NewInMemoryOTPRepository()
-	oauthRepo := repository.NewInMemoryOAuthRepository()
 	mockMailer := mailer.NewMockMailer()
 	tokenCache := cache.NewMemoryCache()
 	clk := clock.NewRealClock()
@@ -61,7 +60,6 @@ func newTestHarness(t *testing.T) *testHarness {
 		userRepo,
 		authRepo,
 		otpRepo,
-		oauthRepo,
 		mockMailer,
 		tokenCache,
 		clk,
@@ -365,4 +363,57 @@ func TestAuthService_SessionsListAndRevocation(t *testing.T) {
 	remaining, err := h.authSvc.ListSessions(ctx, user.ID, "")
 	require.NoError(t, err)
 	assert.Len(t, remaining, 1)
+}
+
+func TestAuthService_HandleOAuthLogin(t *testing.T) {
+	h := newTestHarness(t)
+	ctx := context.Background()
+
+	// 1. Provision new OAuth user
+	user1, access1, refresh1, err := h.authSvc.HandleOAuthLogin(ctx, "github", "gh_987654", "octocat@strimlabs.dev", "Octo", "Cat", "Mozilla/5.0", "127.0.0.1")
+	require.NoError(t, err)
+	assert.NotEmpty(t, access1)
+	assert.NotEmpty(t, refresh1)
+	assert.Equal(t, "octocat@strimlabs.dev", user1.Email)
+	assert.True(t, user1.IsVerified, "OAuth registered user must be auto-verified")
+
+	// Verify domain entity in user repo
+	dbUser1, err := h.userRepo.FindByID(ctx, user1.ID)
+	require.NoError(t, err)
+	assert.Empty(t, dbUser1.PasswordHash, "OAuth user should not have a password hash by default")
+	require.NotNil(t, dbUser1.OAuthProvider)
+	assert.Equal(t, "github", *dbUser1.OAuthProvider)
+	require.NotNil(t, dbUser1.OAuthProviderID)
+	assert.Equal(t, "gh_987654", *dbUser1.OAuthProviderID)
+
+	// 2. Existing OAuth user logging in again
+	user2, access2, refresh2, err := h.authSvc.HandleOAuthLogin(ctx, "github", "gh_987654", "octocat@strimlabs.dev", "Octo", "Cat", "Mozilla/5.0", "127.0.0.1")
+	require.NoError(t, err)
+	assert.Equal(t, user1.ID, user2.ID)
+	assert.NotEmpty(t, access2)
+	assert.NotEmpty(t, refresh2)
+
+	// 3. Existing email user linking OAuth account
+	signupReq := domain.SignupRequest{
+		Email:     "standard@strimlabs.dev",
+		Password:  "Str0ng!P@ssw0rd2026",
+		FirstName: "Standard",
+		LastName:  "User",
+	}
+	existingUser, _, _, err := h.authSvc.Signup(ctx, signupReq, "Agent", "127.0.0.1")
+	require.NoError(t, err)
+	assert.False(t, existingUser.IsVerified)
+
+	linkedUser, _, _, err := h.authSvc.HandleOAuthLogin(ctx, "google", "goog_12345", "standard@strimlabs.dev", "Standard", "User", "Agent", "127.0.0.1")
+	require.NoError(t, err)
+	assert.Equal(t, existingUser.ID, linkedUser.ID)
+	assert.True(t, linkedUser.IsVerified, "Email should be verified after linking verified OAuth account")
+
+	dbLinkedUser, err := h.userRepo.FindByID(ctx, linkedUser.ID)
+	require.NoError(t, err)
+	require.NotNil(t, dbLinkedUser.OAuthProvider)
+	assert.Equal(t, "google", *dbLinkedUser.OAuthProvider)
+	require.NotNil(t, dbLinkedUser.OAuthProviderID)
+	assert.Equal(t, "goog_12345", *dbLinkedUser.OAuthProviderID)
+	assert.NotEmpty(t, dbLinkedUser.PasswordHash, "Password should still exist for linked user")
 }

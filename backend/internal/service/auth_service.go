@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"strings"
 	"time"
@@ -30,20 +31,20 @@ type AuthService interface {
 	VerifyOTP(ctx context.Context, userID, code string) (*domain.UserResponse, error)
 	ListSessions(ctx context.Context, userID, currentSessionID string) ([]domain.SessionResponse, error)
 	RevokeSession(ctx context.Context, userID, sessionID string) error
+	HandleOAuthLogin(ctx context.Context, provider, providerUserID, email, firstName, lastName, userAgent, ip string) (*domain.UserResponse, string, string, error)
 	IsTokenRevoked(jti string) bool
 }
 
 type authService struct {
-	cfg       *config.Config
-	userRepo  repository.UserRepository
-	authRepo  repository.AuthRepository
-	otpRepo   repository.OTPRepository
-	oauthRepo repository.OAuthRepository
-	mailer    mailer.Mailer
-	denylist  cache.Cache
-	clk       clock.Clock
-	idGen     ids.IDGenerator
-	logger    *slog.Logger
+	cfg      *config.Config
+	userRepo repository.UserRepository
+	authRepo repository.AuthRepository
+	otpRepo  repository.OTPRepository
+	mailer   mailer.Mailer
+	denylist cache.Cache
+	clk      clock.Clock
+	idGen    ids.IDGenerator
+	logger   *slog.Logger
 }
 
 // NewAuthService creates a new AuthService instance with all dependencies injected.
@@ -52,7 +53,6 @@ func NewAuthService(
 	userRepo repository.UserRepository,
 	authRepo repository.AuthRepository,
 	otpRepo repository.OTPRepository,
-	oauthRepo repository.OAuthRepository,
 	mailer mailer.Mailer,
 	denylist cache.Cache,
 	clk clock.Clock,
@@ -60,16 +60,15 @@ func NewAuthService(
 	logger *slog.Logger,
 ) AuthService {
 	return &authService{
-		cfg:       cfg,
-		userRepo:  userRepo,
-		authRepo:  authRepo,
-		otpRepo:   otpRepo,
-		oauthRepo: oauthRepo,
-		mailer:    mailer,
-		denylist:  denylist,
-		clk:       clk,
-		idGen:     idGen,
-		logger:    logger,
+		cfg:      cfg,
+		userRepo: userRepo,
+		authRepo: authRepo,
+		otpRepo:  otpRepo,
+		mailer:   mailer,
+		denylist: denylist,
+		clk:      clk,
+		idGen:    idGen,
+		logger:   logger,
 	}
 }
 
@@ -184,6 +183,10 @@ func (s *authService) Login(ctx context.Context, req domain.LoginRequest, userAg
 	}
 
 	// Verify Argon2id password
+	if user.PasswordHash == "" {
+		s.incrementFailedLogin(lockKey)
+		return nil, "", "", domain.NewInvalidCredentialsError()
+	}
 	match, err := crypto.VerifyPassword(req.Password, user.PasswordHash)
 	if err != nil || !match {
 		s.incrementFailedLogin(lockKey)
@@ -538,6 +541,85 @@ func (s *authService) ListSessions(ctx context.Context, userID, currentSessionID
 // RevokeSession revokes an active session.
 func (s *authService) RevokeSession(ctx context.Context, userID, sessionID string) error {
 	return s.authRepo.RevokeSession(ctx, sessionID, userID)
+}
+
+// HandleOAuthLogin authenticates or provisions a user using an OAuth provider (e.g. Google),
+// automatically marking email as verified and issuing session tokens in a unified users table.
+func (s *authService) HandleOAuthLogin(ctx context.Context, provider, providerUserID, email, firstName, lastName, userAgent, ip string) (*domain.UserResponse, string, string, error) {
+	normEmail := strings.ToLower(strings.TrimSpace(email))
+	now := s.clk.Now()
+
+	// 1. Try to find user by OAuth provider and provider user ID
+	user, err := s.userRepo.FindByOAuth(ctx, provider, providerUserID)
+	if err != nil && !errors.Is(err, repository.ErrUserNotFound) {
+		return nil, "", "", domain.NewInternalError(err)
+	}
+
+	// 2. If not found by OAuth, try finding by email
+	if user == nil {
+		user, err = s.userRepo.FindByEmail(ctx, normEmail)
+		if err != nil && !errors.Is(err, repository.ErrUserNotFound) {
+			return nil, "", "", domain.NewInternalError(err)
+		}
+
+		if user != nil {
+			// Link OAuth provider to existing user account and mark verified
+			if linkErr := s.userRepo.LinkOAuth(ctx, user.ID, provider, providerUserID); linkErr != nil {
+				return nil, "", "", domain.NewInternalError(linkErr)
+			}
+			user.OAuthProvider = &provider
+			user.OAuthProviderID = &providerUserID
+			user.IsVerified = true
+		} else {
+			// Provision brand-new user (OAuth accounts are automatically verified)
+			newUser := &domain.User{
+				ID:              s.idGen.MustNewUUIDv7(),
+				Email:           normEmail,
+				FirstName:       firstName,
+				LastName:        lastName,
+				OAuthProvider:   &provider,
+				OAuthProviderID: &providerUserID,
+				IsVerified:      true,
+				CreatedAt:       now,
+				UpdatedAt:       now,
+			}
+			if createErr := s.userRepo.Create(ctx, newUser); createErr != nil {
+				return nil, "", "", domain.NewInternalError(createErr)
+			}
+			user = newUser
+		}
+	}
+
+	// 3. Issue fresh session tokens
+	familyID := s.idGen.MustNewUUIDv7()
+	sessionID := s.idGen.MustNewUUIDv7()
+	rawRefreshToken, tokenHash, err := crypto.GenerateOpaqueToken()
+	if err != nil {
+		return nil, "", "", domain.NewInternalError(err)
+	}
+
+	refreshTokenModel := &domain.RefreshToken{
+		ID:        sessionID,
+		UserID:    user.ID,
+		FamilyID:  familyID,
+		TokenHash: tokenHash,
+		UserAgent: userAgent,
+		IP:        ip,
+		ExpiresAt: now.Add(s.cfg.RefreshTokenTTL),
+		CreatedAt: now,
+	}
+
+	if err := s.authRepo.CreateRefreshToken(ctx, refreshTokenModel); err != nil {
+		return nil, "", "", domain.NewInternalError(err)
+	}
+
+	accessToken, _, err := crypto.GenerateAccessToken(user.ID, sessionID, user.Email, user.IsVerified, s.cfg.AccessTokenTTL, s.cfg.JWTSecret)
+	if err != nil {
+		return nil, "", "", domain.NewInternalError(err)
+	}
+
+	resp := domain.ToUserResponse(user)
+	return &resp, accessToken, rawRefreshToken, nil
 }
 
 func (s *authService) incrementFailedLogin(key string) {

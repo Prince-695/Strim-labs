@@ -21,9 +21,11 @@ type UserRepository interface {
 	FindByID(ctx context.Context, id string) (*domain.User, error)
 	FindByEmail(ctx context.Context, email string) (*domain.User, error)
 	FindByUsername(ctx context.Context, username string) (*domain.User, error)
+	FindByOAuth(ctx context.Context, provider, providerUserID string) (*domain.User, error)
 	Update(ctx context.Context, user *domain.User) error
 	UpdatePassword(ctx context.Context, userID, newPasswordHash string) error
 	SetVerified(ctx context.Context, userID string) error
+	LinkOAuth(ctx context.Context, userID, provider, providerUserID string) error
 }
 
 type GormUserRepository struct {
@@ -94,5 +96,27 @@ func (r *GormUserRepository) SetVerified(ctx context.Context, userID string) err
 		Updates(map[string]interface{}{
 			"is_verified": true,
 			"updated_at":  time.Now().UTC(),
+		}).Error
+}
+
+func (r *GormUserRepository) FindByOAuth(ctx context.Context, provider, providerUserID string) (*domain.User, error) {
+	var user domain.User
+	if err := r.db.WithContext(ctx).First(&user, "oauth_provider = ? AND oauth_provider_id = ?", provider, providerUserID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrUserNotFound
+		}
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (r *GormUserRepository) LinkOAuth(ctx context.Context, userID, provider, providerUserID string) error {
+	return r.db.WithContext(ctx).Model(&domain.User{}).
+		Where("id = ?", userID).
+		Updates(map[string]interface{}{
+			"oauth_provider":    provider,
+			"oauth_provider_id": providerUserID,
+			"is_verified":       true,
+			"updated_at":        time.Now().UTC(),
 		}).Error
 }
