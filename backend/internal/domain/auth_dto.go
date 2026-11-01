@@ -90,3 +90,8 @@ type SessionResponse struct {
 	CreatedAt time.Time `json:"created_at"`
 	IsCurrent bool      `json:"current"`
 }
+
+// OAuthLoginResponse payload containing OAuth authorization redirect URL.
+type OAuthLoginResponse struct {
+	URL string `json:"url" example:"https://accounts.google.com/o/oauth2/auth?..."`
+}

@@ -9,12 +9,16 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Prince-695/strim/backend/internal/cache"
 	"github.com/Prince-695/strim/backend/internal/config"
+	"github.com/Prince-695/strim/backend/internal/domain"
 	"github.com/Prince-695/strim/backend/internal/http"
 	"github.com/Prince-695/strim/backend/internal/http/handlers"
+	"github.com/Prince-695/strim/backend/internal/platform/clock"
 	"github.com/Prince-695/strim/backend/internal/platform/database"
 	"github.com/Prince-695/strim/backend/internal/platform/ids"
 	"github.com/Prince-695/strim/backend/internal/platform/logger"
+	"github.com/Prince-695/strim/backend/internal/platform/mailer"
 	"github.com/Prince-695/strim/backend/internal/repository"
 	"github.com/Prince-695/strim/backend/internal/service"
 	"github.com/Prince-695/strim/backend/pkg/startup"
@@ -67,17 +71,48 @@ func main() {
 				appLogger.Error("Error closing database connections", slog.Any("error", closeErr))
 			}
 		}()
+
+		// Auto-migrate core schema models
+		if err := db.AutoMigrate(
+			&domain.User{},
+			&domain.RefreshToken{},
+			&domain.OTPCode{},
+			&domain.OAuthAccount{},
+		); err != nil {
+			appLogger.Error("Auto-migration failed", slog.Any("error", err))
+		}
 	}
 
-	// 5. Dependency Injection: Repositories
+	// 5. Dependency Injection: Repositories & Platform Caches
 	systemRepo := repository.NewSystemRepository(db)
+	userRepo := repository.NewUserRepository(db)
+	authRepo := repository.NewAuthRepository(db)
+	otpRepo := repository.NewOTPRepository(db)
+	oauthRepo := repository.NewOAuthRepository(db)
+
+	tokenCache := cache.NewMemoryCache()
+	clk := clock.NewRealClock()
+	mailerClient := mailer.NewConsoleMailer(appLogger)
 
 	// 6. Dependency Injection: Services
 	systemSvc := service.NewSystemService(systemRepo, appLogger)
+	authSvc := service.NewAuthService(
+		cfg,
+		userRepo,
+		authRepo,
+		otpRepo,
+		oauthRepo,
+		mailerClient,
+		tokenCache,
+		clk,
+		idGen,
+		appLogger,
+	)
 
 	// 7. Dependency Injection: HTTP Handlers
 	systemHandler := handlers.NewSystemHandler(systemSvc)
-	handlerContainer := handlers.NewContainer(systemHandler)
+	authHandler := handlers.NewAuthHandler(authSvc, cfg)
+	handlerContainer := handlers.NewContainer(systemHandler, authHandler)
 
 	// 8. Build Router & Middlewares
 	app := http.NewRouter(cfg, handlerContainer, appLogger, idGen)

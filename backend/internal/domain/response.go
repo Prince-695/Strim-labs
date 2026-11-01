@@ -71,6 +71,16 @@ func SendOK(c *fiber.Ctx, data interface{}, meta *PageMeta) error {
 	return SendSuccess(c, fiber.StatusOK, data, meta, "")
 }
 
+// SendOKMsg sends a 200 OK response with data and a custom message.
+func SendOKMsg(c *fiber.Ctx, data interface{}, message string) error {
+	return SendSuccess(c, fiber.StatusOK, data, nil, message)
+}
+
+// SendMsg sends a 200 OK response with only a message.
+func SendMsg(c *fiber.Ctx, message string) error {
+	return SendSuccess(c, fiber.StatusOK, nil, nil, message)
+}
+
 // SendCreated sends a 201 Created response with data.
 func SendCreated(c *fiber.Ctx, data interface{}) error {
 	return SendSuccess(c, fiber.StatusCreated, data, nil, "Resource created successfully")
