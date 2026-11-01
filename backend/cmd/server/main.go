@@ -83,10 +83,12 @@ func main() {
 			if err := db.AutoMigrate(
 				&domain.User{},
 				&domain.OTP{},
+				&domain.Organization{},
+				&domain.OrgMember{},
 			); err != nil {
 				fmt.Printf("\033[38;2;239;68;68m[DATABASE]\033[0m \033[31m✗ Auto-migration failed: %v\033[0m\n", err)
 			} else {
-				fmt.Printf("\033[38;2;168;85;247m[DATABASE]\033[0m \033[38;2;192;132;252m✓ Schema migration complete: tables synchronized successfully (users, otp)\033[0m\n")
+				fmt.Printf("\033[38;2;168;85;247m[DATABASE]\033[0m \033[38;2;192;132;252m✓ Schema migration complete: tables synchronized successfully (users, otp, organizations, org_members)\033[0m\n")
 			}
 		}
 	}
@@ -95,8 +97,11 @@ func main() {
 	systemRepo := repository.NewSystemRepository(db)
 	userRepo := repository.NewUserRepository(db)
 	otpRepo := repository.NewOTPRepository(db)
+	orgRepo := repository.NewOrgRepository(db)
+	memberRepo := repository.NewMemberRepository(db)
 
 	tokenCache := cache.NewMemoryCache()
+	tenantCache := cache.NewTenantCache(tokenCache)
 	clk := clock.NewRealClock()
 	mailerClient := mailer.NewConsoleMailer(appLogger)
 
@@ -112,11 +117,23 @@ func main() {
 		idGen,
 		appLogger,
 	)
+	userSvc := service.NewUserService(userRepo)
+	orgSvc := service.NewOrgService(orgRepo, memberRepo, userRepo, tenantCache)
 
 	// 7. Dependency Injection: HTTP Handlers
 	systemHandler := handlers.NewSystemHandler(systemSvc)
 	authHandler := handlers.NewAuthHandler(authSvc, cfg)
-	handlerContainer := handlers.NewContainer(systemHandler, authHandler)
+	userHandler := handlers.NewUserHandler(userSvc)
+	orgHandler := handlers.NewOrgHandler(orgSvc)
+	memberHandler := handlers.NewMemberHandler(orgSvc)
+
+	handlerContainer := handlers.NewContainer(
+		systemHandler,
+		authHandler,
+		userHandler,
+		orgHandler,
+		memberHandler,
+	)
 
 	// 8. Build Router & Middlewares
 	app := http.NewRouter(cfg, handlerContainer, appLogger, idGen)

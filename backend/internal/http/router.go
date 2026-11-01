@@ -86,6 +86,42 @@ func NewRouter(
 	auth.Post("/otp/send", requireAuth, authRateLimit, handlers.Auth.SendOTP)
 	auth.Post("/otp/verify", requireAuth, handlers.Auth.VerifyOTP)
 
+	// Middlewares for Phase 2
+	requireVerified := middleware.RequireVerified()
+	usernameRateLimit := middleware.RateLimit(30, 1*time.Minute)
+
+	// Subgroup: /v1/users
+	users := v1.Group("/users")
+	users.Get("/username", usernameRateLimit, handlers.User.CheckUsername)
+	users.Get("/me", requireAuth, handlers.User.GetMe)
+	users.Post("/username", requireAuth, requireVerified, csrfGuard, handlers.User.SetUsername)
+	users.Put("/update", requireAuth, requireVerified, csrfGuard, handlers.User.UpdateProfile)
+
+	// Subgroup: /v1/organizations
+	orgs := v1.Group("/organizations")
+	orgs.Post("/", requireAuth, requireVerified, csrfGuard, handlers.Org.CreateOrg)
+	orgs.Get("/", requireAuth, requireVerified, handlers.Org.ListOrgs)
+
+	// Tenant-Scoped Routes: /v1/organizations/:orgID
+	resolveTenant := middleware.ResolveTenant(handlers.Org.OrgService())
+	requireViewer := middleware.RequireRole(domain.RoleViewer)
+	requireMember := middleware.RequireRole(domain.RoleMember)
+	requireAdmin := middleware.RequireRole(domain.RoleAdmin)
+	requireOwner := middleware.RequireRole(domain.RoleOwner)
+
+	tenant := orgs.Group("/:orgID", requireAuth, requireVerified, resolveTenant)
+	tenant.Get("/", requireViewer, handlers.Org.GetOrg)
+	tenant.Put("/", requireAdmin, csrfGuard, handlers.Org.UpdateOrg)
+	tenant.Delete("/", requireOwner, csrfGuard, handlers.Org.DeleteOrg)
+
+	// Members Sub-Routes: /v1/organizations/:orgID/members
+	members := tenant.Group("/members")
+	members.Post("/", requireAdmin, csrfGuard, handlers.Member.AddMember)
+	members.Get("/", requireViewer, handlers.Member.ListMembers)
+	members.Put("/:userID/role", requireAdmin, csrfGuard, handlers.Member.UpdateRole)
+	members.Delete("/:userID", requireAdmin, csrfGuard, handlers.Member.RemoveMember)
+	members.Post("/leave", requireMember, csrfGuard, handlers.Member.LeaveOrg)
+
 	// Catch-all 404 handler returning standard Response envelope
 	app.Use(func(c *fiber.Ctx) error {
 		return domain.SendError(
