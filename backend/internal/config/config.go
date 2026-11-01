@@ -28,6 +28,7 @@ type Config struct {
 	DatabaseMaxOpenConns int           `validate:"required,min=1"`
 	DatabaseMaxIdleConns int           `validate:"required,min=1"`
 	DatabaseConnMaxLife  time.Duration `validate:"required"`
+	DBRun                bool
 
 	// Swagger Auth
 	SwaggerUser     string `validate:"required"`
@@ -71,6 +72,7 @@ func Load() (*Config, error) {
 		DatabaseMaxOpenConns: getEnvInt("DATABASE_MAX_OPEN_CONNS", 25),
 		DatabaseMaxIdleConns: getEnvInt("DATABASE_MAX_IDLE_CONNS", 10),
 		DatabaseConnMaxLife:  time.Duration(getEnvInt("DATABASE_CONN_MAX_LIFETIME_MINUTES", 15)) * time.Minute,
+		DBRun:                getEnvBool("DB_RUN", false),
 
 		SwaggerUser:     getEnv("SWAGGER_USER", "admin"),
 		SwaggerPassword: getEnv("SWAGGER_PASSWORD", "admin"),
@@ -133,4 +135,12 @@ func parseCommaSeparated(val string) []string {
 		}
 	}
 	return results
+}
+
+func getEnvBool(key string, defaultVal bool) bool {
+	if valStr, ok := os.LookupEnv(key); ok && strings.TrimSpace(valStr) != "" {
+		lower := strings.ToLower(strings.TrimSpace(valStr))
+		return lower == "true" || lower == "1" || lower == "yes" || lower == "on"
+	}
+	return defaultVal
 }

@@ -285,42 +285,9 @@ curl -i -X POST "${API_URL}/v1/auth/reset-password" \
 
 ---
 
-## 7. Session Management
+## 7. CSRF & Security Controls
 
-### 7.1 List Active Sessions (`GET /v1/auth/sessions`)
-```bash
-curl -i -X GET "${API_URL}/v1/auth/sessions" \
-  -H "Authorization: Bearer ${ACCESS_TOKEN}"
-```
-**Expected HTTP Status**: `200 OK`  
-**Expected Body**:
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "id": "0192f1b2-...",
-      "user_agent": "curl/...",
-      "ip": "127.0.0.1",
-      "created_at": "...",
-      "current": true
-    }
-  ]
-}
-```
-
-### 7.2 Revoke Session (`DELETE /v1/auth/sessions/:sessionID`)
-```bash
-curl -i -X DELETE "${API_URL}/v1/auth/sessions/<session_id>" \
-  -H "Authorization: Bearer ${ACCESS_TOKEN}"
-```
-**Expected HTTP Status**: `200 OK`
-
----
-
-## 8. CSRF & Security Controls
-
-### 8.1 CSRF Violation (Cookie Auth without Origin on Mutating Endpoint)
+### 7.1 CSRF Violation (Cookie Auth without Origin on Mutating Endpoint)
 ```bash
 curl -i -X POST "${API_URL}/v1/auth/logout" \
   -b "$COOKIE_JAR"
@@ -328,7 +295,7 @@ curl -i -X POST "${API_URL}/v1/auth/logout" \
 **Expected HTTP Status**: `403 Forbidden`  
 **Expected Error Code**: `CSRF_VIOLATION`
 
-### 8.2 Trusted Origin (Cookie Auth with Valid Origin)
+### 7.2 Trusted Origin (Cookie Auth with Valid Origin)
 ```bash
 curl -i -X POST "${API_URL}/v1/auth/logout" \
   -b "$COOKIE_JAR" \
@@ -336,14 +303,14 @@ curl -i -X POST "${API_URL}/v1/auth/logout" \
 ```
 **Expected HTTP Status**: `200 OK`
 
-### 8.3 Bearer Token Exemption from CSRF
+### 7.3 Bearer Token Exemption from CSRF
 ```bash
 curl -i -X POST "${API_URL}/v1/auth/logout" \
   -H "Authorization: Bearer ${ACCESS_TOKEN}"
 ```
 **Expected HTTP Status**: `200 OK`
 
-### 8.4 JTI Denylist Enforcement After Logout
+### 7.4 JTI Denylist Enforcement After Logout
 Attempting to use the logged-out token again:
 ```bash
 curl -i -X GET "${API_URL}/v1/auth/me" \
@@ -354,7 +321,7 @@ curl -i -X GET "${API_URL}/v1/auth/me" \
 
 ---
 
-## 9. Rate Limiting Verification
+## 8. Rate Limiting Verification
 
 Flood any rate-limited endpoint (`/v1/auth/login`, `/v1/auth/signup`, `/v1/auth/forgot-password`):
 ```bash
@@ -393,7 +360,7 @@ done
 - [x] Account lockout after 10 failed login attempts within 15 minutes
 - [x] In-memory JTI denylisting on logout
 - [x] 6-digit numeric OTP code dispatch and verification with attempt limits
-- [x] Session listing and individual device revocation
-- [x] All 14 OpenAPI Swagger annotations fully documented and synchronized
+- [x] Environment variable `DB_RUN` controls schema migrations with vibrant purple database logs
+- [x] OpenAPI Swagger documentation synchronized and up to date
 - [x] 100% automated test suite passing with race detection (`go test -race ./...`)
 - [x] Zero linter errors with `golangci-lint`

@@ -527,80 +527,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/v1/auth/sessions": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Returns all active devices and sessions for the caller.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "List active sessions",
-                "responses": {
-                    "200": {
-                        "description": "Active sessions",
-                        "schema": {
-                            "allOf": [
-                                {
-                                    "$ref": "#/definitions/domain.Response"
-                                },
-                                {
-                                    "type": "object",
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/definitions/domain.SessionResponse"
-                                            }
-                                        }
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/auth/sessions/{sessionID}": {
-            "delete": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Terminates an active session identified by ID.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Auth"
-                ],
-                "summary": "Revoke specific session",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Session ID to revoke",
-                        "name": "sessionID",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Session revoked",
-                        "schema": {
-                            "$ref": "#/definitions/domain.Response"
-                        }
-                    }
-                }
-            }
-        },
         "/v1/auth/signup": {
             "post": {
                 "description": "Creates a new user, sends email verification OTP, and issues session tokens.",
@@ -835,26 +761,6 @@ const docTemplate = `{
                 },
                 "success": {
                     "type": "boolean"
-                }
-            }
-        },
-        "domain.SessionResponse": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "current": {
-                    "type": "boolean"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "ip": {
-                    "type": "string"
-                },
-                "user_agent": {
-                    "type": "string"
                 }
             }
         },

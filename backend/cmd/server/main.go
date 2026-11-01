@@ -72,14 +72,19 @@ func main() {
 			}
 		}()
 
-		// Auto-migrate core schema models
-		if err := db.AutoMigrate(
-			&domain.User{},
-			&domain.RefreshToken{},
-			&domain.OTPCode{},
-			&domain.OAuthAccount{},
-		); err != nil {
-			appLogger.Error("Auto-migration failed", slog.Any("error", err))
+		// Schema synchronization controlled by DB_RUN
+		if cfg.DBRun {
+			fmt.Printf("\033[38;2;168;85;247m[DATABASE]\033[0m \033[38;2;192;132;252m⚡ DB_RUN=true: Synchronizing database schema and running auto-migrations...\033[0m\n")
+			if err := db.AutoMigrate(
+				&domain.User{},
+				&domain.RefreshToken{},
+				&domain.OTPCode{},
+				&domain.OAuthAccount{},
+			); err != nil {
+				fmt.Printf("\033[38;2;239;68;68m[DATABASE]\033[0m \033[31m✗ Auto-migration failed: %v\033[0m\n", err)
+			} else {
+				fmt.Printf("\033[38;2;168;85;247m[DATABASE]\033[0m \033[38;2;192;132;252m✓ Schema migration complete: tables synchronized successfully\033[0m\n")
+			}
 		}
 	}
 
@@ -123,6 +128,8 @@ func main() {
 	if db == nil {
 		serverStatus = "DEGRADED"
 		statusDetails = "Database unreachable"
+	} else if cfg.DBRun {
+		statusDetails = "Database connected (sync enabled)"
 	}
 
 	startup.PrintServerBanner(startup.Config{

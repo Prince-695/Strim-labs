@@ -29,6 +29,7 @@ func TestConfigLoadDefaults(t *testing.T) {
 	assert.Equal(t, 30*time.Second, cfg.RequestTimeout)
 	assert.NotEmpty(t, cfg.AllowedOrigins)
 	assert.Greater(t, cfg.DatabaseMaxOpenConns, 0)
+	assert.False(t, cfg.DBRun)
 }
 
 func TestConfigValidationFailure(t *testing.T) {

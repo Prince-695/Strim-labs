@@ -85,8 +85,6 @@ func NewRouter(
 	auth.Post("/change-password", requireAuth, csrfGuard, handlers.Auth.ChangePassword)
 	auth.Post("/otp/send", requireAuth, authRateLimit, handlers.Auth.SendOTP)
 	auth.Post("/otp/verify", requireAuth, handlers.Auth.VerifyOTP)
-	auth.Get("/sessions", requireAuth, handlers.Auth.Sessions)
-	auth.Delete("/sessions/:sessionID", requireAuth, csrfGuard, handlers.Auth.RevokeSession)
 
 	// Catch-all 404 handler returning standard Response envelope
 	app.Use(func(c *fiber.Ctx) error {

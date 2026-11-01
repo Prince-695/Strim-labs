@@ -344,46 +344,6 @@ func (h *AuthHandler) VerifyOTP(c *fiber.Ctx) error {
 	return domain.SendOKMsg(c, user, "Email verified successfully")
 }
 
-// Sessions godoc
-// @Summary List active sessions
-// @Description Returns all active devices and sessions for the caller.
-// @Tags Auth
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} domain.Response{data=[]domain.SessionResponse} "Active sessions"
-// @Router /v1/auth/sessions [get]
-func (h *AuthHandler) Sessions(c *fiber.Ctx) error {
-	userID := middleware.GetUserID(c)
-	sessionID := middleware.GetSessionID(c)
-
-	sessions, err := h.authSvc.ListSessions(c.Context(), userID, sessionID)
-	if err != nil {
-		return err
-	}
-
-	return domain.SendOK(c, sessions, nil)
-}
-
-// RevokeSession godoc
-// @Summary Revoke specific session
-// @Description Terminates an active session identified by ID.
-// @Tags Auth
-// @Produce json
-// @Security BearerAuth
-// @Param sessionID path string true "Session ID to revoke"
-// @Success 200 {object} domain.Response "Session revoked"
-// @Router /v1/auth/sessions/{sessionID} [delete]
-func (h *AuthHandler) RevokeSession(c *fiber.Ctx) error {
-	userID := middleware.GetUserID(c)
-	sessionID := c.Params("sessionID")
-
-	if err := h.authSvc.RevokeSession(c.Context(), userID, sessionID); err != nil {
-		return err
-	}
-
-	return domain.SendMsg(c, "Session revoked successfully")
-}
-
 // GoogleLogin godoc
 // @Summary Get Google OAuth URL
 // @Description Returns the Google OAuth2 authorization URL with PKCE.
