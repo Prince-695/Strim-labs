@@ -1,5 +1,22 @@
 basePath: /
 definitions:
+  domain.AddMemberRequest:
+    properties:
+      email:
+        example: engineer@acme.com
+        type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/domain.OrgRole'
+        enum:
+        - admin
+        - member
+        - viewer
+        example: member
+    required:
+    - email
+    - role
+    type: object
   domain.AuthMeResponseData:
     properties:
       expires_at:
@@ -33,6 +50,43 @@ definitions:
     - new_password
     - old_password
     type: object
+  domain.CheckUsernameResponse:
+    properties:
+      available:
+        example: true
+        type: boolean
+      username:
+        example: asha
+        type: string
+    type: object
+  domain.CreateOrgRequest:
+    properties:
+      description:
+        example: Cloud telemetry platform
+        maxLength: 500
+        type: string
+      name:
+        example: Strim Labs
+        maxLength: 100
+        minLength: 2
+        type: string
+      slug:
+        example: strim-labs
+        maxLength: 50
+        minLength: 2
+        type: string
+    required:
+    - name
+    - slug
+    type: object
+  domain.DeleteOrgRequest:
+    properties:
+      confirm_slug:
+        example: strim-labs
+        type: string
+    required:
+    - confirm_slug
+    type: object
   domain.ForgotPasswordRequest:
     properties:
       email:
@@ -59,6 +113,71 @@ definitions:
         example: https://accounts.google.com/o/oauth2/auth?...
         type: string
     type: object
+  domain.OrgMemberDetailResponse:
+    properties:
+      email:
+        example: dev@acme.com
+        type: string
+      first_name:
+        example: Ada
+        type: string
+      joined_at:
+        example: "2026-11-01T10:00:00Z"
+        type: string
+      last_name:
+        example: Byron
+        type: string
+      role:
+        allOf:
+        - $ref: '#/definitions/domain.OrgRole'
+        example: member
+      user_id:
+        example: 018f3a5b-7c91-7b00-8000-000000000001
+        type: string
+      username:
+        example: ada
+        type: string
+    type: object
+  domain.OrgResponse:
+    properties:
+      created_at:
+        example: "2026-11-01T10:00:00Z"
+        type: string
+      description:
+        example: Cloud telemetry platform
+        type: string
+      id:
+        example: 018f3a5b-7c91-7b00-8000-000000000002
+        type: string
+      member_count:
+        example: 3
+        type: integer
+      name:
+        example: Strim Labs
+        type: string
+      project_count:
+        example: 0
+        type: integer
+      role:
+        allOf:
+        - $ref: '#/definitions/domain.OrgRole'
+        example: owner
+      slug:
+        example: strim-labs
+        type: string
+    type: object
+  domain.OrgRole:
+    enum:
+    - owner
+    - admin
+    - member
+    - viewer
+    type: string
+    x-enum-varnames:
+    - RoleOwner
+    - RoleAdmin
+    - RoleMember
+    - RoleViewer
   domain.PageMeta:
     properties:
       has_more:
@@ -119,6 +238,16 @@ definitions:
       success:
         type: boolean
     type: object
+  domain.SetUsernameRequest:
+    properties:
+      username:
+        example: asha
+        maxLength: 20
+        minLength: 3
+        type: string
+    required:
+    - username
+    type: object
   domain.SignupRequest:
     properties:
       email:
@@ -144,6 +273,49 @@ definitions:
     - first_name
     - last_name
     - password
+    type: object
+  domain.UpdateMemberRoleRequest:
+    properties:
+      role:
+        allOf:
+        - $ref: '#/definitions/domain.OrgRole'
+        enum:
+        - admin
+        - member
+        - viewer
+        example: admin
+    required:
+    - role
+    type: object
+  domain.UpdateOrgRequest:
+    properties:
+      description:
+        example: Updated platform description
+        maxLength: 500
+        type: string
+      name:
+        example: Strim Labs Global
+        maxLength: 100
+        minLength: 2
+        type: string
+    required:
+    - name
+    type: object
+  domain.UpdateUserRequest:
+    properties:
+      first_name:
+        example: Ada
+        maxLength: 100
+        minLength: 1
+        type: string
+      last_name:
+        example: Byron
+        maxLength: 100
+        minLength: 1
+        type: string
+    required:
+    - first_name
+    - last_name
     type: object
   domain.UserResponse:
     properties:
@@ -541,6 +713,518 @@ paths:
       summary: Register a new user account
       tags:
       - Auth
+  /v1/organizations:
+    get:
+      description: Lists organizations the authenticated user belongs to (up to 3)
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.OrgResponse'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: List user organizations
+      tags:
+      - Organizations
+    post:
+      consumes:
+      - application/json
+      description: Creates an organization workspace with caller as owner (max 3 orgs
+        per user)
+      parameters:
+      - description: Organization Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateOrgRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.OrgResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Create organization
+      tags:
+      - Organizations
+  /v1/organizations/{orgID}:
+    delete:
+      consumes:
+      - application/json
+      description: Soft-deletes organization requiring slug confirmation (owner only)
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Confirmation Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.DeleteOrgRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Delete organization
+      tags:
+      - Organizations
+    get:
+      description: Retrieves organization details for members (404 for non-members)
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.OrgResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Get organization details
+      tags:
+      - Organizations
+    put:
+      consumes:
+      - application/json
+      description: Updates organization name and description (slug is immutable)
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Update Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateOrgRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.OrgResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Update organization details
+      tags:
+      - Organizations
+  /v1/organizations/{orgID}/members:
+    get:
+      description: Lists members belonging to the organization with optional filtering
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Role filter
+        in: query
+        name: role
+        type: string
+      - description: Search query
+        in: query
+        name: q
+        type: string
+      - description: Pagination limit
+        in: query
+        name: limit
+        type: integer
+      - description: Pagination cursor
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.OrgMemberDetailResponse'
+                  type: array
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: List organization members
+      tags:
+      - Members
+    post:
+      consumes:
+      - application/json
+      description: Adds a user by email with role (viewer, member, admin). Owner cannot
+        be assigned.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Member Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.AddMemberRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.OrgMemberDetailResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Add organization member
+      tags:
+      - Members
+  /v1/organizations/{orgID}/members/{userID}:
+    delete:
+      description: Removes a member from the organization
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Member User ID
+        in: path
+        name: userID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Remove organization member
+      tags:
+      - Members
+  /v1/organizations/{orgID}/members/{userID}/role:
+    put:
+      consumes:
+      - application/json
+      description: Updates the role of an organization member
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Member User ID
+        in: path
+        name: userID
+        required: true
+        type: string
+      - description: Role Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateMemberRoleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.OrgMemberDetailResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Update member role
+      tags:
+      - Members
+  /v1/organizations/{orgID}/members/leave:
+    post:
+      description: Allows the caller to voluntarily leave the organization (sole owner
+        cannot leave)
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Leave organization
+      tags:
+      - Members
+  /v1/users/me:
+    get:
+      description: Retrieves the authenticated caller's profile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.UserResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Get current user profile
+      tags:
+      - Users
+  /v1/users/update:
+    put:
+      consumes:
+      - application/json
+      description: Updates the user's first name and last name
+      parameters:
+      - description: Profile Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.UserResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Update user profile
+      tags:
+      - Users
+  /v1/users/username:
+    get:
+      description: Checks if a requested username is available and valid
+      parameters:
+      - description: Username to check
+        in: query
+        name: u
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.CheckUsernameResponse'
+              type: object
+      summary: Check username availability
+      tags:
+      - Users
+    post:
+      consumes:
+      - application/json
+      description: Claims a unique username for the authenticated user
+      parameters:
+      - description: Username Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.SetUsernameRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.UserResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Set one-time username
+      tags:
+      - Users
 schemes:
 - http
 - https
