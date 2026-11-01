@@ -26,7 +26,9 @@ const (
 	ErrCodeEmailTaken            = "EMAIL_TAKEN"
 	ErrCodeUsernameTaken         = "USERNAME_TAKEN"
 	ErrCodeUsernameAlreadySet    = "USERNAME_ALREADY_SET"
+	ErrCodeReservedUsername      = "RESERVED_USERNAME"
 	ErrCodeSlugTaken             = "SLUG_TAKEN"
+	ErrCodeReservedSlug          = "RESERVED_SLUG"
 	ErrCodeAlreadyMember         = "ALREADY_MEMBER"
 	ErrCodeAlreadyVerified       = "ALREADY_VERIFIED"
 	ErrCodeOrgLimitReached       = "ORG_LIMIT_REACHED"
@@ -42,6 +44,7 @@ const (
 	ErrCodeInvalidPassword       = "INVALID_PASSWORD"
 	ErrCodeLastOwner             = "LAST_OWNER"
 	ErrCodeConfirmationMismatch  = "CONFIRMATION_MISMATCH"
+	ErrCodeCannotModifyOwnRole   = "CANNOT_MODIFY_OWN_ROLE"
 	ErrCodeNotRunning            = "NOT_RUNNING"
 	ErrCodeTargetNotVerified     = "TARGET_NOT_VERIFIED"
 	ErrCodeTargetBlocked         = "TARGET_BLOCKED"
@@ -166,6 +169,50 @@ func NewEmailNotVerifiedError() *AppError {
 
 func NewAlreadyVerifiedError() *AppError {
 	return NewAppError(fiber.StatusConflict, ErrCodeAlreadyVerified, "Account email is already verified", nil)
+}
+
+func NewOrgLimitReachedError() *AppError {
+	return NewAppError(fiber.StatusConflict, ErrCodeOrgLimitReached, "You have reached the maximum allowed limit of 3 organizations", nil)
+}
+
+func NewTargetOrgLimitReachedError() *AppError {
+	return NewAppError(fiber.StatusConflict, ErrCodeTargetOrgLimitReached, "User has already reached the maximum limit of 3 organizations", nil)
+}
+
+func NewSlugTakenError() *AppError {
+	return NewAppError(fiber.StatusConflict, ErrCodeSlugTaken, "Organization slug is already in use", nil)
+}
+
+func NewReservedSlugError() *AppError {
+	return NewAppError(fiber.StatusBadRequest, ErrCodeReservedSlug, "This organization slug is reserved and cannot be used", nil)
+}
+
+func NewUsernameTakenError() *AppError {
+	return NewAppError(fiber.StatusConflict, ErrCodeUsernameTaken, "Username is already taken", nil)
+}
+
+func NewUsernameAlreadySetError() *AppError {
+	return NewAppError(fiber.StatusConflict, ErrCodeUsernameAlreadySet, "Username has already been set and cannot be changed", nil)
+}
+
+func NewReservedUsernameError() *AppError {
+	return NewAppError(fiber.StatusBadRequest, ErrCodeReservedUsername, "This username is reserved and cannot be claimed", nil)
+}
+
+func NewAlreadyMemberError() *AppError {
+	return NewAppError(fiber.StatusConflict, ErrCodeAlreadyMember, "User is already a member of this organization", nil)
+}
+
+func NewLastOwnerError() *AppError {
+	return NewAppError(fiber.StatusUnprocessableEntity, ErrCodeLastOwner, "Cannot leave or demote role: the organization must retain at least one owner", nil)
+}
+
+func NewConfirmationMismatchError() *AppError {
+	return NewAppError(fiber.StatusUnprocessableEntity, ErrCodeConfirmationMismatch, "Confirmation slug does not match organization slug", nil)
+}
+
+func NewCannotModifyOwnRoleError() *AppError {
+	return NewAppError(fiber.StatusBadRequest, ErrCodeCannotModifyOwnRole, "You cannot modify your own role", nil)
 }
 
 func NewInternalError(err error) *AppError {
