@@ -326,3 +326,4 @@ curl -i -X GET "${API_URL}/v1/organizations/${ORG_ID}" \
   -H "Authorization: Bearer ${OWNER_TOKEN}"
 ```
 **Expected HTTP Status**: `404 Not Found`
+

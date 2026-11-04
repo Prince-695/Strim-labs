@@ -88,7 +88,7 @@ func Load() (*Config, error) {
 		primaryWebOrigin = frontendOrigins[0]
 	}
 
-	rawAllowedOrigins := getEnvFirst([]string{"ALLOWED_ORIGINS", "FRONTEND_URL"}, "http://localhost:5173,https://seasyn.vercel.app,http://localhost:3000")
+	rawAllowedOrigins := getEnvFirst([]string{"ALLOWED_ORIGINS", "FRONTEND_URL"}, "http://localhost:5173,https://strim-labs.vercel.app,http://localhost:3000")
 	allowedList := parseCommaSeparated(rawAllowedOrigins)
 	// Ensure primary frontend origins are included in allowed CORS list
 	for _, fOrigin := range frontendOrigins {
@@ -114,14 +114,14 @@ func Load() (*Config, error) {
 		RequestTimeout: time.Duration(getEnvInt("REQUEST_TIMEOUT_SECONDS", 30)) * time.Second,
 		BodyLimitBytes: getEnvInt("BODY_LIMIT_BYTES", 2*1024*1024), // 2MB default
 
-		DatabaseURL:          getEnv("DATABASE_URL", "postgresql://user:password@localhost:5432/seasyn_internal?sslmode=disable"),
+		DatabaseURL:          getEnv("DATABASE_URL", "postgresql://user:password@localhost:5432/strim_internal?sslmode=disable"),
 		DatabaseMaxOpenConns: getEnvInt("DATABASE_MAX_OPEN_CONNS", 25),
 		DatabaseMaxIdleConns: getEnvInt("DATABASE_MAX_IDLE_CONNS", 10),
 		DatabaseConnMaxLife:  time.Duration(getEnvInt("DATABASE_CONN_MAX_LIFETIME_MINUTES", 15)) * time.Minute,
 		DBRun:                getEnvBool("DB_RUN", false),
 
 		SwaggerUser:     getEnv("SWAGGER_USER", "admin"),
-		SwaggerPassword: getEnvFirst([]string{"SWAGGER_PASS", "SWAGGER_PASSWORD"}, "seasyn_docs_2026"),
+		SwaggerPassword: getEnvFirst([]string{"SWAGGER_PASS", "SWAGGER_PASSWORD"}, "strim_docs_2026"),
 
 		JWTSecret:          getEnv("JWT_SECRET", "your_super_secret_jwt_key_at_least_32_characters"),
 		AccessTokenExpiry:  getEnvDuration("ACCESS_TOKEN_EXPIRY", time.Duration(getEnvInt("ACCESS_TOKEN_TTL_MINUTES", 30))*time.Minute),

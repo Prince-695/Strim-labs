@@ -46,9 +46,9 @@ func TestConfigValidationFailure(t *testing.T) {
 func TestConfigMinimizedEnvAliases(t *testing.T) {
 	os.Setenv("PORT", "8080")
 	os.Setenv("ENV", "development")
-	os.Setenv("ALLOWED_ORIGINS", "http://localhost:5173,https://seasyn.vercel.app,http://localhost:3000")
-	os.Setenv("FRONTEND_URL", "http://localhost:5173,https://seasyn.vercel.app")
-	os.Setenv("DATABASE_URL", "postgresql://user:password@localhost:5432/seasyn_internal?sslmode=disable")
+	os.Setenv("ALLOWED_ORIGINS", "http://localhost:5173,https://strim-labs.vercel.app,http://localhost:3000")
+	os.Setenv("FRONTEND_URL", "http://localhost:5173,https://strim-labs.vercel.app")
+	os.Setenv("DATABASE_URL", "postgresql://user:password@localhost:5432/strim_internal?sslmode=disable")
 	os.Setenv("DB_RUN", "true")
 	os.Setenv("JWT_SECRET", "your_super_secret_jwt_key_at_least_32_characters")
 	os.Setenv("ACCESS_TOKEN_EXPIRY", "30m")
@@ -65,7 +65,7 @@ func TestConfigMinimizedEnvAliases(t *testing.T) {
 	os.Setenv("GITHUB_CLIENT_SECRET", "your_github_client_secret")
 	os.Setenv("GITHUB_CALLBACK_URL", "http://localhost:8080/v1/auth/github/callback")
 	os.Setenv("SWAGGER_USER", "admin")
-	os.Setenv("SWAGGER_PASS", "seasyn_docs_2026")
+	os.Setenv("SWAGGER_PASS", "strim_docs_2026")
 
 	defer func() {
 		os.Unsetenv("PORT")
@@ -98,7 +98,7 @@ func TestConfigMinimizedEnvAliases(t *testing.T) {
 	assert.Equal(t, "8080", cfg.ServerPort)
 	assert.Equal(t, "http://localhost:5173", cfg.WebOrigin)
 	assert.Contains(t, cfg.AllowedOrigins, "http://localhost:5173")
-	assert.Contains(t, cfg.AllowedOrigins, "https://seasyn.vercel.app")
+	assert.Contains(t, cfg.AllowedOrigins, "https://strim-labs.vercel.app")
 	assert.True(t, cfg.DBRun)
 	assert.Equal(t, "smtp.gmail.com", cfg.SMTPHost)
 	assert.Equal(t, 465, cfg.SMTPPort)
@@ -108,5 +108,5 @@ func TestConfigMinimizedEnvAliases(t *testing.T) {
 	assert.Equal(t, "http://localhost:8080/v1/auth/google/callback", cfg.GoogleRedirectURI)
 	assert.Equal(t, "your_github_client_id", cfg.GitHubClientID)
 	assert.Equal(t, "http://localhost:8080/v1/auth/github/callback", cfg.GitHubRedirectURI)
-	assert.Equal(t, "seasyn_docs_2026", cfg.SwaggerPassword)
+	assert.Equal(t, "strim_docs_2026", cfg.SwaggerPassword)
 }
