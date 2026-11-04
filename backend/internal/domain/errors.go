@@ -23,6 +23,7 @@ const (
 	ErrCodeKeyScopeMissing       = "KEY_SCOPE_MISSING"
 	ErrCodeNotFound              = "NOT_FOUND"
 	ErrCodeUserNotFound          = "USER_NOT_FOUND"
+	ErrCodeProjectNotFound       = "PROJECT_NOT_FOUND"
 	ErrCodeEmailTaken            = "EMAIL_TAKEN"
 	ErrCodeUsernameTaken         = "USERNAME_TAKEN"
 	ErrCodeUsernameAlreadySet    = "USERNAME_ALREADY_SET"
@@ -177,6 +178,34 @@ func NewOrgLimitReachedError() *AppError {
 
 func NewTargetOrgLimitReachedError() *AppError {
 	return NewAppError(fiber.StatusConflict, ErrCodeTargetOrgLimitReached, "User has already reached the maximum limit of 3 organizations", nil)
+}
+
+func NewProjectLimitReachedError() *AppError {
+	return NewAppError(fiber.StatusConflict, ErrCodeProjectLimitReached, "Organization has reached the maximum allowed limit of 5 projects", nil)
+}
+
+func NewProjectNotFoundError() *AppError {
+	return NewAppError(fiber.StatusNotFound, ErrCodeProjectNotFound, "Project not found", nil)
+}
+
+func NewTargetBlockedError(reason string) *AppError {
+	msg := "Target host resolves to a private, loopback, or blocked address"
+	if reason != "" {
+		msg = fmt.Sprintf("Target host is blocked: %s", reason)
+	}
+	return &AppError{
+		HTTPStatus: fiber.StatusUnprocessableEntity,
+		ErrorCode:  ErrCodeTargetBlocked,
+		Message:    msg,
+	}
+}
+
+func NewTargetNotVerifiedError() *AppError {
+	return &AppError{
+		HTTPStatus: fiber.StatusForbidden,
+		ErrorCode:  ErrCodeTargetNotVerified,
+		Message:    "Target domain ownership has not been verified",
+	}
 }
 
 func NewSlugTakenError() *AppError {
