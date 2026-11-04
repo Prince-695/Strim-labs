@@ -122,6 +122,19 @@ func NewRouter(
 	members.Delete("/:userID", requireAdmin, csrfGuard, handlers.Member.RemoveMember)
 	members.Post("/leave", requireMember, csrfGuard, handlers.Member.LeaveOrg)
 
+	// Projects Sub-Routes: /v1/organizations/:orgID/projects
+	projects := tenant.Group("/projects")
+	projects.Post("/", requireAdmin, csrfGuard, handlers.Project.CreateProject)
+	projects.Get("/", requireViewer, handlers.Project.ListProjects)
+	projects.Get("/:projectID", requireViewer, handlers.Project.GetProject)
+	projects.Put("/:projectID", requireAdmin, csrfGuard, handlers.Project.UpdateProject)
+	projects.Delete("/:projectID", requireAdmin, csrfGuard, handlers.Project.DeleteProject)
+
+	// Verification Sub-Routes: /v1/organizations/:orgID/projects/:projectID/verification
+	projects.Post("/:projectID/verification", requireAdmin, csrfGuard, handlers.Project.InitiateVerification)
+	projects.Post("/:projectID/verification/check", requireAdmin, csrfGuard, handlers.Project.CheckVerification)
+	projects.Get("/:projectID/verification", requireViewer, handlers.Project.GetVerificationStatus)
+
 	// Catch-all 404 handler returning standard Response envelope
 	app.Use(func(c *fiber.Ctx) error {
 		return domain.SendError(

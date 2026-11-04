@@ -2,11 +2,12 @@ package handlers
 
 // Container holds all HTTP handler instances for dependency injection.
 type Container struct {
-	System *SystemHandler
-	Auth   *AuthHandler
-	User   *UserHandler
-	Org    *OrgHandler
-	Member *MemberHandler
+	System  *SystemHandler
+	Auth    *AuthHandler
+	User    *UserHandler
+	Org     *OrgHandler
+	Member  *MemberHandler
+	Project *ProjectHandler
 }
 
 // NewContainer initializes a new Container with all handlers.
@@ -16,12 +17,14 @@ func NewContainer(
 	user *UserHandler,
 	org *OrgHandler,
 	member *MemberHandler,
+	project *ProjectHandler,
 ) *Container {
 	return &Container{
-		System: system,
-		Auth:   auth,
-		User:   user,
-		Org:    org,
-		Member: member,
+		System:  system,
+		Auth:    auth,
+		User:    user,
+		Org:     org,
+		Member:  member,
+		Project: project,
 	}
 }

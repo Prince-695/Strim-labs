@@ -19,6 +19,7 @@ import (
 	"github.com/Prince-695/strim/backend/internal/platform/ids"
 	"github.com/Prince-695/strim/backend/internal/platform/logger"
 	"github.com/Prince-695/strim/backend/internal/platform/mailer"
+	"github.com/Prince-695/strim/backend/internal/platform/netguard"
 	"github.com/Prince-695/strim/backend/internal/repository"
 	"github.com/Prince-695/strim/backend/internal/service"
 	"github.com/Prince-695/strim/backend/pkg/startup"
@@ -85,10 +86,12 @@ func main() {
 				&domain.OTP{},
 				&domain.Organization{},
 				&domain.OrgMember{},
+				&domain.Project{},
+				&domain.ProjectVerification{},
 			); err != nil {
 				fmt.Printf("\033[38;2;239;68;68m[DATABASE]\033[0m \033[31m✗ Auto-migration failed: %v\033[0m\n", err)
 			} else {
-				fmt.Printf("\033[38;2;168;85;247m[DATABASE]\033[0m \033[38;2;192;132;252m✓ Schema migration complete: tables synchronized successfully (users, otp, organizations, org_members)\033[0m\n")
+				fmt.Printf("\033[38;2;168;85;247m[DATABASE]\033[0m \033[38;2;192;132;252m✓ Schema migration complete: tables synchronized successfully (users, otp, organizations, org_members, projects, project_verifications)\033[0m\n")
 			}
 		}
 	}
@@ -99,10 +102,17 @@ func main() {
 	otpRepo := repository.NewOTPRepository(db)
 	orgRepo := repository.NewOrgRepository(db)
 	memberRepo := repository.NewMemberRepository(db)
+	projectRepo := repository.NewProjectRepository(db)
+	verificationRepo := repository.NewVerificationRepository(db)
 
 	tokenCache := cache.NewMemoryCache()
 	tenantCache := cache.NewTenantCache(tokenCache)
+	projectCache := cache.NewProjectCache(tokenCache)
 	clk := clock.NewRealClock()
+
+	ssrfGuard := netguard.NewSSRFGuard(nil)
+	httpFetcher := service.NewSSRFSafeHTTPFetcher(ssrfGuard)
+	verifEngine := service.NewVerificationEngine(nil, httpFetcher)
 
 	var mailerClient mailer.Mailer
 	if cfg.SMTPHost != "" && cfg.SMTPUser != "" {
@@ -131,6 +141,7 @@ func main() {
 	)
 	userSvc := service.NewUserService(userRepo)
 	orgSvc := service.NewOrgService(orgRepo, memberRepo, userRepo, tenantCache)
+	projectSvc := service.NewProjectService(projectRepo, verificationRepo, projectCache, ssrfGuard, verifEngine)
 
 	// 7. Dependency Injection: HTTP Handlers
 	systemHandler := handlers.NewSystemHandler(systemSvc)
@@ -138,6 +149,7 @@ func main() {
 	userHandler := handlers.NewUserHandler(userSvc)
 	orgHandler := handlers.NewOrgHandler(orgSvc)
 	memberHandler := handlers.NewMemberHandler(orgSvc)
+	projectHandler := handlers.NewProjectHandler(projectSvc)
 
 	handlerContainer := handlers.NewContainer(
 		systemHandler,
@@ -145,6 +157,7 @@ func main() {
 		userHandler,
 		orgHandler,
 		memberHandler,
+		projectHandler,
 	)
 
 	// 8. Build Router & Middlewares
