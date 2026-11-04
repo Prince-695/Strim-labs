@@ -39,16 +39,29 @@ type Config struct {
 	AccessTokenExpiry  time.Duration `validate:"required"`
 	RefreshTokenExpiry time.Duration `validate:"required"`
 
+	// SMTP Email Configuration
+	SMTPHost string
+	SMTPPort int
+	SMTPUser string
+	SMTPPass string
+	MailFrom string
+
+	// OAuth (Google & GitHub)
+	GoogleClientID     string
+	GoogleClientSecret string
+	GoogleRedirectURI  string
+
+	GitHubClientID     string
+	GitHubClientSecret string
+	GitHubRedirectURI  string
+
 	// Limits
 	IngestMaxRPS   int `validate:"required,min=10"`
 	LoadTestMaxRPS int `validate:"required,min=10"`
 
 	// Optional / External
-	StrimAPIKey        string
-	GoogleClientID     string
-	GoogleClientSecret string
-	GoogleRedirectURI  string
-	RedisURL           string
+	StrimAPIKey string
+	RedisURL    string
 }
 
 // Load reads configuration from environment variables and optionally loads a .env file.
@@ -58,37 +71,81 @@ func Load() (*Config, error) {
 
 	serverPort := getEnvFirst([]string{"PORT", "SERVER_PORT"}, "8080")
 
+	// Resolve environment name with alias support
+	rawEnv := strings.ToLower(getEnvFirst([]string{"ENV", "APP_ENV"}, "development"))
+	switch rawEnv {
+	case "dev":
+		rawEnv = "development"
+	case "prod":
+		rawEnv = "production"
+	}
+
+	// Resolve frontend URL & allowed origins
+	rawFrontendURL := getEnvFirst([]string{"FRONTEND_URL", "WEB_ORIGIN"}, "http://localhost:5173")
+	frontendOrigins := parseCommaSeparated(rawFrontendURL)
+	primaryWebOrigin := "http://localhost:5173"
+	if len(frontendOrigins) > 0 {
+		primaryWebOrigin = frontendOrigins[0]
+	}
+
+	rawAllowedOrigins := getEnvFirst([]string{"ALLOWED_ORIGINS", "FRONTEND_URL"}, "http://localhost:5173,https://seasyn.vercel.app,http://localhost:3000")
+	allowedList := parseCommaSeparated(rawAllowedOrigins)
+	// Ensure primary frontend origins are included in allowed CORS list
+	for _, fOrigin := range frontendOrigins {
+		found := false
+		for _, aOrigin := range allowedList {
+			if strings.EqualFold(aOrigin, fOrigin) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			allowedList = append(allowedList, fOrigin)
+		}
+	}
+
 	cfg := &Config{
-		AppEnv:         getEnv("APP_ENV", "development"),
+		AppEnv:         rawEnv,
 		ServerPort:     serverPort,
 		APIBaseURL:     getEnvFirst([]string{"API_BASE_URL", "RENDER_EXTERNAL_URL"}, fmt.Sprintf("http://localhost:%s", serverPort)),
-		WebOrigin:      getEnv("WEB_ORIGIN", "http://localhost:3000"),
-		AllowedOrigins: parseCommaSeparated(getEnv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8080")),
+		WebOrigin:      primaryWebOrigin,
+		AllowedOrigins: allowedList,
 		LogLevel:       getEnv("LOG_LEVEL", "info"),
 		RequestTimeout: time.Duration(getEnvInt("REQUEST_TIMEOUT_SECONDS", 30)) * time.Second,
 		BodyLimitBytes: getEnvInt("BODY_LIMIT_BYTES", 2*1024*1024), // 2MB default
 
-		DatabaseURL:          getEnv("DATABASE_URL", "postgresql://strim:strim@localhost:5432/strim"),
+		DatabaseURL:          getEnv("DATABASE_URL", "postgresql://user:password@localhost:5432/seasyn_internal?sslmode=disable"),
 		DatabaseMaxOpenConns: getEnvInt("DATABASE_MAX_OPEN_CONNS", 25),
 		DatabaseMaxIdleConns: getEnvInt("DATABASE_MAX_IDLE_CONNS", 10),
 		DatabaseConnMaxLife:  time.Duration(getEnvInt("DATABASE_CONN_MAX_LIFETIME_MINUTES", 15)) * time.Minute,
 		DBRun:                getEnvBool("DB_RUN", false),
 
 		SwaggerUser:     getEnv("SWAGGER_USER", "admin"),
-		SwaggerPassword: getEnv("SWAGGER_PASSWORD", "admin"),
+		SwaggerPassword: getEnvFirst([]string{"SWAGGER_PASS", "SWAGGER_PASSWORD"}, "seasyn_docs_2026"),
 
-		JWTSecret:          getEnv("JWT_SECRET", "strim-labs-development-super-secret-jwt-key-32chars"),
+		JWTSecret:          getEnv("JWT_SECRET", "your_super_secret_jwt_key_at_least_32_characters"),
 		AccessTokenExpiry:  getEnvDuration("ACCESS_TOKEN_EXPIRY", time.Duration(getEnvInt("ACCESS_TOKEN_TTL_MINUTES", 30))*time.Minute),
 		RefreshTokenExpiry: getEnvDuration("REFRESH_TOKEN_EXPIRY", time.Duration(getEnvInt("REFRESH_TOKEN_TTL_DAYS", 7))*24*time.Hour),
+
+		SMTPHost: getEnv("SMTP_HOST", ""),
+		SMTPPort: getEnvInt("SMTP_PORT", 465),
+		SMTPUser: getEnv("SMTP_USER", ""),
+		SMTPPass: getEnvFirst([]string{"SMTP_PASS", "SMTP_PASSWORD"}, ""),
+		MailFrom: getEnvFirst([]string{"MAIL_FROM", "SMTP_USER"}, ""),
+
+		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
+		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
+		GoogleRedirectURI:  getEnvFirst([]string{"GOOGLE_CALLBACK_URL", "GOOGLE_REDIRECT_URI"}, ""),
+
+		GitHubClientID:     getEnv("GITHUB_CLIENT_ID", ""),
+		GitHubClientSecret: getEnv("GITHUB_CLIENT_SECRET", ""),
+		GitHubRedirectURI:  getEnvFirst([]string{"GITHUB_CALLBACK_URL", "GITHUB_REDIRECT_URI"}, ""),
 
 		IngestMaxRPS:   getEnvInt("INGEST_MAX_RPS", 2000),
 		LoadTestMaxRPS: getEnvInt("LOADTEST_MAX_RPS", 5000),
 
-		StrimAPIKey:        getEnv("STRIM_API_KEY", ""),
-		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
-		GoogleClientSecret: getEnv("GOOGLE_CLIENT_SECRET", ""),
-		GoogleRedirectURI:  getEnv("GOOGLE_REDIRECT_URI", ""),
-		RedisURL:           getEnv("REDIS_URL", ""),
+		StrimAPIKey: getEnv("STRIM_API_KEY", ""),
+		RedisURL:    getEnv("REDIS_URL", ""),
 	}
 
 	validate := validator.New()

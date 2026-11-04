@@ -103,7 +103,19 @@ func main() {
 	tokenCache := cache.NewMemoryCache()
 	tenantCache := cache.NewTenantCache(tokenCache)
 	clk := clock.NewRealClock()
-	mailerClient := mailer.NewConsoleMailer(appLogger)
+
+	var mailerClient mailer.Mailer
+	if cfg.SMTPHost != "" && cfg.SMTPUser != "" {
+		mailerClient = mailer.NewSMTPMailer(mailer.SMTPConfig{
+			Host:     cfg.SMTPHost,
+			Port:     cfg.SMTPPort,
+			User:     cfg.SMTPUser,
+			Password: cfg.SMTPPass,
+			From:     cfg.MailFrom,
+		}, appLogger)
+	} else {
+		mailerClient = mailer.NewConsoleMailer(appLogger)
+	}
 
 	// 6. Dependency Injection: Services
 	systemSvc := service.NewSystemService(systemRepo, appLogger)
