@@ -1230,6 +1230,579 @@
                 }
             }
         },
+        "/v1/organizations/{orgID}/projects": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all active projects for the organization (up to 5)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "List organization projects",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/domain.ProjectResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a new project in the organization (hard limit of 5 projects per org)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Create project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Project Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CreateProjectRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.ProjectResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns project settings, verification status, and rolling 1-hour statistics",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Get project details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.ProjectDetailResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates project name, description, environment, or base_url (changing host resets verification)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Update project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Project Update Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.UpdateProjectRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.ProjectResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft-deletes a project (7-day purge grace)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Delete project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/verification": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns active domain verification status and setup instructions",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Get domain verification status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.VerificationResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Starts a domain verification challenge and returns DNS TXT / HTTP file instructions",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Initiate domain verification",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Verification Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.InitiateVerificationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.VerificationResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/verification/check": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Executes domain verification check immediately and reports status",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Check domain verification",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.CheckVerificationResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/users/me": {
             "get": {
                 "security": [
@@ -1521,6 +2094,26 @@
                 }
             }
         },
+        "domain.CheckVerificationResponse": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string",
+                    "example": "TXT record not found"
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.VerificationStatus"
+                        }
+                    ],
+                    "example": "verified"
+                },
+                "verified_at": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.CreateOrgRequest": {
             "type": "object",
             "required": [
@@ -1547,6 +2140,67 @@
                 }
             }
         },
+        "domain.CreateProjectRequest": {
+            "type": "object",
+            "required": [
+                "base_url",
+                "name",
+                "slug"
+            ],
+            "properties": {
+                "base_url": {
+                    "type": "string",
+                    "example": "https://api.acme.com"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Orders and payments"
+                },
+                "environment": {
+                    "enum": [
+                        "development",
+                        "staging",
+                        "production"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.ProjectEnvironment"
+                        }
+                    ],
+                    "example": "production"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2,
+                    "example": "Checkout API"
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 2,
+                    "example": "checkout-api"
+                }
+            }
+        },
+        "domain.DNSInstructions": {
+            "type": "object",
+            "properties": {
+                "host": {
+                    "type": "string",
+                    "example": "_strim.api.acme.com"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "TXT"
+                },
+                "value": {
+                    "type": "string",
+                    "example": "strim-verify=8f3a9c..."
+                }
+            }
+        },
         "domain.DeleteOrgRequest": {
             "type": "object",
             "required": [
@@ -1559,6 +2213,19 @@
                 }
             }
         },
+        "domain.FileInstructions": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "example": "8f3a9c..."
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://api.acme.com/.well-known/strim-verify.txt"
+                }
+            }
+        },
         "domain.ForgotPasswordRequest": {
             "type": "object",
             "required": [
@@ -1568,6 +2235,26 @@
                 "email": {
                     "type": "string",
                     "example": "dev@acme.com"
+                }
+            }
+        },
+        "domain.InitiateVerificationRequest": {
+            "type": "object",
+            "required": [
+                "method"
+            ],
+            "properties": {
+                "method": {
+                    "enum": [
+                        "dns",
+                        "file"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.VerificationMethod"
+                        }
+                    ],
+                    "example": "dns"
                 }
             }
         },
@@ -1708,6 +2395,209 @@
                 "total": {
                     "type": "integer",
                     "example": 120
+                }
+            }
+        },
+        "domain.ProjectDetailResponse": {
+            "type": "object",
+            "properties": {
+                "base_url": {
+                    "type": "string",
+                    "example": "https://api.acme.com"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-11-04T10:00:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Orders and payments"
+                },
+                "endpoint_count": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "environment": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.ProjectEnvironment"
+                        }
+                    ],
+                    "example": "production"
+                },
+                "health": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.ProjectHealth"
+                        }
+                    ],
+                    "example": "no_data"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000010"
+                },
+                "last_event_at": {
+                    "type": "string"
+                },
+                "last_test": {
+                    "$ref": "#/definitions/domain.ProjectLastTest"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Checkout API"
+                },
+                "org_id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000002"
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "checkout-api"
+                },
+                "stats_1h": {
+                    "$ref": "#/definitions/domain.ProjectStats1h"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2026-11-04T10:00:00Z"
+                },
+                "verification_status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.VerificationStatus"
+                        }
+                    ],
+                    "example": "unverified"
+                },
+                "verified_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.ProjectEnvironment": {
+            "type": "string",
+            "enum": [
+                "development",
+                "staging",
+                "production"
+            ],
+            "x-enum-varnames": [
+                "EnvDevelopment",
+                "EnvStaging",
+                "EnvProduction"
+            ]
+        },
+        "domain.ProjectHealth": {
+            "type": "string",
+            "enum": [
+                "healthy",
+                "degraded",
+                "failing",
+                "no_data"
+            ],
+            "x-enum-varnames": [
+                "HealthHealthy",
+                "HealthDegraded",
+                "HealthFailing",
+                "HealthNoData"
+            ]
+        },
+        "domain.ProjectLastTest": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000020"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "completed"
+                }
+            }
+        },
+        "domain.ProjectResponse": {
+            "type": "object",
+            "properties": {
+                "base_url": {
+                    "type": "string",
+                    "example": "https://api.acme.com"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-11-04T10:00:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Orders and payments"
+                },
+                "endpoint_count": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "environment": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.ProjectEnvironment"
+                        }
+                    ],
+                    "example": "production"
+                },
+                "health": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.ProjectHealth"
+                        }
+                    ],
+                    "example": "no_data"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000010"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Checkout API"
+                },
+                "org_id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000002"
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "checkout-api"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2026-11-04T10:00:00Z"
+                },
+                "verification_status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.VerificationStatus"
+                        }
+                    ],
+                    "example": "unverified"
+                },
+                "verified_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.ProjectStats1h": {
+            "type": "object",
+            "properties": {
+                "error_rate": {
+                    "type": "number",
+                    "example": 0
+                },
+                "p95_ms": {
+                    "type": "number",
+                    "example": 0
+                },
+                "requests": {
+                    "type": "integer",
+                    "example": 0
                 }
             }
         },
@@ -1862,6 +2752,39 @@
                 }
             }
         },
+        "domain.UpdateProjectRequest": {
+            "type": "object",
+            "properties": {
+                "base_url": {
+                    "type": "string",
+                    "example": "https://api-v2.acme.com"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Updated description"
+                },
+                "environment": {
+                    "enum": [
+                        "development",
+                        "staging",
+                        "production"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.ProjectEnvironment"
+                        }
+                    ],
+                    "example": "staging"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2,
+                    "example": "Checkout API v2"
+                }
+            }
+        },
         "domain.UpdateUserRequest": {
             "type": "object",
             "required": [
@@ -1915,6 +2838,75 @@
                     "example": "asha"
                 }
             }
+        },
+        "domain.VerificationInstructions": {
+            "type": "object",
+            "properties": {
+                "dns": {
+                    "$ref": "#/definitions/domain.DNSInstructions"
+                },
+                "file": {
+                    "$ref": "#/definitions/domain.FileInstructions"
+                }
+            }
+        },
+        "domain.VerificationMethod": {
+            "type": "string",
+            "enum": [
+                "dns",
+                "file"
+            ],
+            "x-enum-varnames": [
+                "MethodDNS",
+                "MethodFile"
+            ]
+        },
+        "domain.VerificationResponse": {
+            "type": "object",
+            "properties": {
+                "expires_at": {
+                    "type": "string",
+                    "example": "2026-11-05T10:00:00Z"
+                },
+                "instructions": {
+                    "$ref": "#/definitions/domain.VerificationInstructions"
+                },
+                "method": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.VerificationMethod"
+                        }
+                    ],
+                    "example": "dns"
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.VerificationStatus"
+                        }
+                    ],
+                    "example": "pending"
+                },
+                "token": {
+                    "type": "string",
+                    "example": "strim-verify=8f3a9c..."
+                }
+            }
+        },
+        "domain.VerificationStatus": {
+            "type": "string",
+            "enum": [
+                "unverified",
+                "pending",
+                "verified",
+                "failed"
+            ],
+            "x-enum-varnames": [
+                "StatusUnverified",
+                "StatusPending",
+                "StatusVerified",
+                "StatusFailed"
+            ]
         },
         "domain.VerifyOTPRequest": {
             "type": "object",

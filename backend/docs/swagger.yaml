@@ -59,6 +59,18 @@ definitions:
         example: asha
         type: string
     type: object
+  domain.CheckVerificationResponse:
+    properties:
+      reason:
+        example: TXT record not found
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/domain.VerificationStatus'
+        example: verified
+      verified_at:
+        type: string
+    type: object
   domain.CreateOrgRequest:
     properties:
       description:
@@ -79,6 +91,50 @@ definitions:
     - name
     - slug
     type: object
+  domain.CreateProjectRequest:
+    properties:
+      base_url:
+        example: https://api.acme.com
+        type: string
+      description:
+        example: Orders and payments
+        maxLength: 500
+        type: string
+      environment:
+        allOf:
+        - $ref: '#/definitions/domain.ProjectEnvironment'
+        enum:
+        - development
+        - staging
+        - production
+        example: production
+      name:
+        example: Checkout API
+        maxLength: 100
+        minLength: 2
+        type: string
+      slug:
+        example: checkout-api
+        maxLength: 50
+        minLength: 2
+        type: string
+    required:
+    - base_url
+    - name
+    - slug
+    type: object
+  domain.DNSInstructions:
+    properties:
+      host:
+        example: _strim.api.acme.com
+        type: string
+      type:
+        example: TXT
+        type: string
+      value:
+        example: strim-verify=8f3a9c...
+        type: string
+    type: object
   domain.DeleteOrgRequest:
     properties:
       confirm_slug:
@@ -87,6 +143,15 @@ definitions:
     required:
     - confirm_slug
     type: object
+  domain.FileInstructions:
+    properties:
+      content:
+        example: 8f3a9c...
+        type: string
+      url:
+        example: https://api.acme.com/.well-known/strim-verify.txt
+        type: string
+    type: object
   domain.ForgotPasswordRequest:
     properties:
       email:
@@ -94,6 +159,18 @@ definitions:
         type: string
     required:
     - email
+    type: object
+  domain.InitiateVerificationRequest:
+    properties:
+      method:
+        allOf:
+        - $ref: '#/definitions/domain.VerificationMethod'
+        enum:
+        - dns
+        - file
+        example: dns
+    required:
+    - method
     type: object
   domain.LoginRequest:
     properties:
@@ -191,6 +268,143 @@ definitions:
         type: string
       total:
         example: 120
+        type: integer
+    type: object
+  domain.ProjectDetailResponse:
+    properties:
+      base_url:
+        example: https://api.acme.com
+        type: string
+      created_at:
+        example: "2026-11-04T10:00:00Z"
+        type: string
+      description:
+        example: Orders and payments
+        type: string
+      endpoint_count:
+        example: 0
+        type: integer
+      environment:
+        allOf:
+        - $ref: '#/definitions/domain.ProjectEnvironment'
+        example: production
+      health:
+        allOf:
+        - $ref: '#/definitions/domain.ProjectHealth'
+        example: no_data
+      id:
+        example: 018f3a5b-7c91-7b00-8000-000000000010
+        type: string
+      last_event_at:
+        type: string
+      last_test:
+        $ref: '#/definitions/domain.ProjectLastTest'
+      name:
+        example: Checkout API
+        type: string
+      org_id:
+        example: 018f3a5b-7c91-7b00-8000-000000000002
+        type: string
+      slug:
+        example: checkout-api
+        type: string
+      stats_1h:
+        $ref: '#/definitions/domain.ProjectStats1h'
+      updated_at:
+        example: "2026-11-04T10:00:00Z"
+        type: string
+      verification_status:
+        allOf:
+        - $ref: '#/definitions/domain.VerificationStatus'
+        example: unverified
+      verified_at:
+        type: string
+    type: object
+  domain.ProjectEnvironment:
+    enum:
+    - development
+    - staging
+    - production
+    type: string
+    x-enum-varnames:
+    - EnvDevelopment
+    - EnvStaging
+    - EnvProduction
+  domain.ProjectHealth:
+    enum:
+    - healthy
+    - degraded
+    - failing
+    - no_data
+    type: string
+    x-enum-varnames:
+    - HealthHealthy
+    - HealthDegraded
+    - HealthFailing
+    - HealthNoData
+  domain.ProjectLastTest:
+    properties:
+      id:
+        example: 018f3a5b-7c91-7b00-8000-000000000020
+        type: string
+      status:
+        example: completed
+        type: string
+    type: object
+  domain.ProjectResponse:
+    properties:
+      base_url:
+        example: https://api.acme.com
+        type: string
+      created_at:
+        example: "2026-11-04T10:00:00Z"
+        type: string
+      description:
+        example: Orders and payments
+        type: string
+      endpoint_count:
+        example: 0
+        type: integer
+      environment:
+        allOf:
+        - $ref: '#/definitions/domain.ProjectEnvironment'
+        example: production
+      health:
+        allOf:
+        - $ref: '#/definitions/domain.ProjectHealth'
+        example: no_data
+      id:
+        example: 018f3a5b-7c91-7b00-8000-000000000010
+        type: string
+      name:
+        example: Checkout API
+        type: string
+      org_id:
+        example: 018f3a5b-7c91-7b00-8000-000000000002
+        type: string
+      slug:
+        example: checkout-api
+        type: string
+      updated_at:
+        example: "2026-11-04T10:00:00Z"
+        type: string
+      verification_status:
+        allOf:
+        - $ref: '#/definitions/domain.VerificationStatus'
+        example: unverified
+      verified_at:
+        type: string
+    type: object
+  domain.ProjectStats1h:
+    properties:
+      error_rate:
+        example: 0
+        type: number
+      p95_ms:
+        example: 0
+        type: number
+      requests:
+        example: 0
         type: integer
     type: object
   domain.RefreshRequest:
@@ -301,6 +515,29 @@ definitions:
     required:
     - name
     type: object
+  domain.UpdateProjectRequest:
+    properties:
+      base_url:
+        example: https://api-v2.acme.com
+        type: string
+      description:
+        example: Updated description
+        maxLength: 500
+        type: string
+      environment:
+        allOf:
+        - $ref: '#/definitions/domain.ProjectEnvironment'
+        enum:
+        - development
+        - staging
+        - production
+        example: staging
+      name:
+        example: Checkout API v2
+        maxLength: 100
+        minLength: 2
+        type: string
+    type: object
   domain.UpdateUserRequest:
     properties:
       first_name:
@@ -341,6 +578,52 @@ definitions:
         example: asha
         type: string
     type: object
+  domain.VerificationInstructions:
+    properties:
+      dns:
+        $ref: '#/definitions/domain.DNSInstructions'
+      file:
+        $ref: '#/definitions/domain.FileInstructions'
+    type: object
+  domain.VerificationMethod:
+    enum:
+    - dns
+    - file
+    type: string
+    x-enum-varnames:
+    - MethodDNS
+    - MethodFile
+  domain.VerificationResponse:
+    properties:
+      expires_at:
+        example: "2026-11-05T10:00:00Z"
+        type: string
+      instructions:
+        $ref: '#/definitions/domain.VerificationInstructions'
+      method:
+        allOf:
+        - $ref: '#/definitions/domain.VerificationMethod'
+        example: dns
+      status:
+        allOf:
+        - $ref: '#/definitions/domain.VerificationStatus'
+        example: pending
+      token:
+        example: strim-verify=8f3a9c...
+        type: string
+    type: object
+  domain.VerificationStatus:
+    enum:
+    - unverified
+    - pending
+    - verified
+    - failed
+    type: string
+    x-enum-varnames:
+    - StatusUnverified
+    - StatusPending
+    - StatusVerified
+    - StatusFailed
   domain.VerifyOTPRequest:
     properties:
       otp:
@@ -1108,6 +1391,361 @@ paths:
       summary: Leave organization
       tags:
       - Members
+  /v1/organizations/{orgID}/projects:
+    get:
+      description: Returns all active projects for the organization (up to 5)
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.ProjectResponse'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: List organization projects
+      tags:
+      - Projects
+    post:
+      consumes:
+      - application/json
+      description: Creates a new project in the organization (hard limit of 5 projects
+        per org)
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.ProjectResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Create project
+      tags:
+      - Projects
+  /v1/organizations/{orgID}/projects/{projectID}:
+    delete:
+      description: Soft-deletes a project (7-day purge grace)
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Delete project
+      tags:
+      - Projects
+    get:
+      description: Returns project settings, verification status, and rolling 1-hour
+        statistics
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.ProjectDetailResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Get project details
+      tags:
+      - Projects
+    put:
+      consumes:
+      - application/json
+      description: Updates project name, description, environment, or base_url (changing
+        host resets verification)
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Project Update Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateProjectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.ProjectResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Update project
+      tags:
+      - Projects
+  /v1/organizations/{orgID}/projects/{projectID}/verification:
+    get:
+      description: Returns active domain verification status and setup instructions
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.VerificationResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Get domain verification status
+      tags:
+      - Projects
+    post:
+      consumes:
+      - application/json
+      description: Starts a domain verification challenge and returns DNS TXT / HTTP
+        file instructions
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Verification Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.InitiateVerificationRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.VerificationResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Initiate domain verification
+      tags:
+      - Projects
+  /v1/organizations/{orgID}/projects/{projectID}/verification/check:
+    post:
+      description: Executes domain verification check immediately and reports status
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.CheckVerificationResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Check domain verification
+      tags:
+      - Projects
   /v1/users/me:
     get:
       description: Retrieves the authenticated caller's profile
