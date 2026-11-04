@@ -559,3 +559,219 @@ func (r *InMemoryMemberRepository) GetUserMemberships(userID string) []*domain.O
 	}
 	return list
 }
+
+// InMemoryProjectRepository provides an in-memory thread-safe ProjectRepository implementation.
+type InMemoryProjectRepository struct {
+	mu       sync.RWMutex
+	projects map[string]*domain.Project
+}
+
+func NewInMemoryProjectRepository() *InMemoryProjectRepository {
+	return &InMemoryProjectRepository{
+		projects: make(map[string]*domain.Project),
+	}
+}
+
+func (r *InMemoryProjectRepository) CreateWithLimitCheck(ctx context.Context, project *domain.Project) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	count := 0
+	for _, p := range r.projects {
+		if p.OrgID == project.OrgID && !p.DeletedAt.Valid {
+			count++
+		}
+	}
+	if count >= 5 {
+		return domain.NewProjectLimitReachedError()
+	}
+
+	normSlug := strings.ToLower(strings.TrimSpace(project.Slug))
+	for _, p := range r.projects {
+		if p.OrgID == project.OrgID && !p.DeletedAt.Valid && strings.EqualFold(p.Slug, normSlug) {
+			return domain.NewConflictError(domain.ErrCodeSlugTaken, "A project with this slug already exists in this organization")
+		}
+	}
+
+	if project.ID == "" {
+		project.ID = "proj-" + time.Now().UTC().Format("20060102150405.000000000")
+	}
+	project.Slug = normSlug
+	if project.CreatedAt.IsZero() {
+		project.CreatedAt = time.Now().UTC()
+	}
+	project.UpdatedAt = project.CreatedAt
+	if project.VerificationStatus == "" {
+		project.VerificationStatus = domain.StatusUnverified
+	}
+	if project.Environment == "" {
+		project.Environment = domain.EnvProduction
+	}
+
+	copyP := *project
+	r.projects[project.ID] = &copyP
+	return nil
+}
+
+func (r *InMemoryProjectRepository) FindByID(ctx context.Context, orgID, projectID string) (*domain.Project, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	p, ok := r.projects[projectID]
+	if !ok || p.OrgID != orgID || p.DeletedAt.Valid {
+		return nil, domain.NewProjectNotFoundError()
+	}
+	copyP := *p
+	return &copyP, nil
+}
+
+func (r *InMemoryProjectRepository) FindBySlug(ctx context.Context, orgID, slug string) (*domain.Project, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	normSlug := strings.ToLower(strings.TrimSpace(slug))
+	for _, p := range r.projects {
+		if p.OrgID == orgID && !p.DeletedAt.Valid && strings.EqualFold(p.Slug, normSlug) {
+			copyP := *p
+			return &copyP, nil
+		}
+	}
+	return nil, domain.NewProjectNotFoundError()
+}
+
+func (r *InMemoryProjectRepository) ListByOrg(ctx context.Context, orgID string) ([]*domain.Project, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var result []*domain.Project
+	for _, p := range r.projects {
+		if p.OrgID == orgID && !p.DeletedAt.Valid {
+			copyP := *p
+			result = append(result, &copyP)
+		}
+	}
+	return result, nil
+}
+
+func (r *InMemoryProjectRepository) Update(ctx context.Context, project *domain.Project) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	p, ok := r.projects[project.ID]
+	if !ok || p.OrgID != project.OrgID || p.DeletedAt.Valid {
+		return domain.NewProjectNotFoundError()
+	}
+
+	p.Name = project.Name
+	p.Description = project.Description
+	p.BaseURL = project.BaseURL
+	p.Environment = project.Environment
+	p.VerificationStatus = project.VerificationStatus
+	p.VerifiedAt = project.VerifiedAt
+	p.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+func (r *InMemoryProjectRepository) Delete(ctx context.Context, orgID, projectID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	p, ok := r.projects[projectID]
+	if !ok || p.OrgID != orgID || p.DeletedAt.Valid {
+		return domain.NewProjectNotFoundError()
+	}
+
+	p.DeletedAt = gorm.DeletedAt{Time: time.Now().UTC(), Valid: true}
+	return nil
+}
+
+func (r *InMemoryProjectRepository) CountByOrg(ctx context.Context, orgID string) (int64, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var count int64
+	for _, p := range r.projects {
+		if p.OrgID == orgID && !p.DeletedAt.Valid {
+			count++
+		}
+	}
+	return count, nil
+}
+
+// InMemoryVerificationRepository provides in-memory VerificationRepository implementation.
+type InMemoryVerificationRepository struct {
+	mu            sync.RWMutex
+	verifications map[string]*domain.ProjectVerification
+	projectRepo   *InMemoryProjectRepository
+}
+
+func NewInMemoryVerificationRepository(projectRepo *InMemoryProjectRepository) *InMemoryVerificationRepository {
+	return &InMemoryVerificationRepository{
+		verifications: make(map[string]*domain.ProjectVerification),
+		projectRepo:   projectRepo,
+	}
+}
+
+func (r *InMemoryVerificationRepository) Create(ctx context.Context, verification *domain.ProjectVerification) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if verification.ID == "" {
+		verification.ID = "verif-" + time.Now().UTC().Format("20060102150405.000000000")
+	}
+	if verification.CreatedAt.IsZero() {
+		verification.CreatedAt = time.Now().UTC()
+	}
+	copyV := *verification
+	r.verifications[verification.ID] = &copyV
+	return nil
+}
+
+func (r *InMemoryVerificationRepository) FindActiveByProject(ctx context.Context, projectID string) (*domain.ProjectVerification, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var latest *domain.ProjectVerification
+	for _, v := range r.verifications {
+		if v.ProjectID == projectID {
+			if latest == nil || v.CreatedAt.After(latest.CreatedAt) {
+				latest = v
+			}
+		}
+	}
+	if latest == nil {
+		return nil, nil
+	}
+	copyV := *latest
+	return &copyV, nil
+}
+
+func (r *InMemoryVerificationRepository) Update(ctx context.Context, verification *domain.ProjectVerification) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	v, ok := r.verifications[verification.ID]
+	if !ok {
+		return errors.New("verification not found")
+	}
+	v.Status = verification.Status
+	v.CheckedAt = verification.CheckedAt
+	return nil
+}
+
+func (r *InMemoryVerificationRepository) UpdateProjectVerificationStatus(ctx context.Context, projectID string, status domain.VerificationStatus, verifiedAt *time.Time) error {
+	if r.projectRepo == nil {
+		return nil
+	}
+	r.projectRepo.mu.Lock()
+	defer r.projectRepo.mu.Unlock()
+
+	p, ok := r.projectRepo.projects[projectID]
+	if !ok || p.DeletedAt.Valid {
+		return domain.NewProjectNotFoundError()
+	}
+	p.VerificationStatus = status
+	p.VerifiedAt = verifiedAt
+	p.UpdatedAt = time.Now().UTC()
+	return nil
+}
