@@ -20,6 +20,7 @@ import (
 	"github.com/Prince-695/strim/backend/internal/platform/clock"
 	"github.com/Prince-695/strim/backend/internal/platform/ids"
 	"github.com/Prince-695/strim/backend/internal/platform/mailer"
+	"github.com/Prince-695/strim/backend/internal/platform/netguard"
 	"github.com/Prince-695/strim/backend/internal/repository"
 	"github.com/Prince-695/strim/backend/internal/service"
 	"github.com/gofiber/fiber/v2"
@@ -86,7 +87,15 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 	orgHandler := handlers.NewOrgHandler(orgSvc)
 	memberHandler := handlers.NewMemberHandler(orgSvc)
 
-	container := handlers.NewContainer(sysHandler, authHandler, userHandler, orgHandler, memberHandler)
+	projectRepo := repository.NewInMemoryProjectRepository()
+	verificationRepo := repository.NewInMemoryVerificationRepository(projectRepo)
+	projectCache := cache.NewProjectCache(tokenCache)
+	ssrfGuard := netguard.NewSSRFGuard(nil)
+	verifEngine := service.NewVerificationEngine(nil, nil)
+	projectSvc := service.NewProjectService(projectRepo, verificationRepo, projectCache, ssrfGuard, verifEngine)
+	projectHandler := handlers.NewProjectHandler(projectSvc)
+
+	container := handlers.NewContainer(sysHandler, authHandler, userHandler, orgHandler, memberHandler, projectHandler)
 
 	app := apphttp.NewRouter(cfg, container, logger, idGen)
 

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io"
 	"log/slog"
+	"net"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -19,6 +20,7 @@ import (
 	"github.com/Prince-695/strim/backend/internal/platform/crypto"
 	"github.com/Prince-695/strim/backend/internal/platform/ids"
 	"github.com/Prince-695/strim/backend/internal/platform/mailer"
+	"github.com/Prince-695/strim/backend/internal/platform/netguard"
 	"github.com/Prince-695/strim/backend/internal/repository"
 	"github.com/Prince-695/strim/backend/internal/service"
 	"github.com/gofiber/fiber/v2"
@@ -26,15 +28,29 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+type mockIPResolver struct {
+	ips map[string][]net.IP
+}
+
+func (m *mockIPResolver) LookupIP(ctx context.Context, network, host string) ([]net.IP, error) {
+	if ips, ok := m.ips[host]; ok {
+		return ips, nil
+	}
+	return nil, &net.DNSError{Err: "no such host", Name: host}
+}
+
 type testRig struct {
-	app        *fiber.App
-	cfg        *config.Config
-	userRepo   repository.UserRepository
-	orgRepo    repository.OrgRepository
-	memberRepo repository.MemberRepository
-	orgSvc     service.OrgService
-	userSvc    service.UserService
-	authSvc    service.AuthService
+	app         *fiber.App
+	cfg         *config.Config
+	userRepo    repository.UserRepository
+	orgRepo     repository.OrgRepository
+	memberRepo  repository.MemberRepository
+	projectRepo repository.ProjectRepository
+	verifRepo   repository.VerificationRepository
+	orgSvc      service.OrgService
+	userSvc     service.UserService
+	authSvc     service.AuthService
+	projectSvc  service.ProjectService
 }
 
 func newTestRig(t *testing.T) *testRig {
@@ -78,18 +94,36 @@ func newTestRig(t *testing.T) *testRig {
 	orgHandler := handlers.NewOrgHandler(orgSvc)
 	memberHandler := handlers.NewMemberHandler(orgSvc)
 
-	container := handlers.NewContainer(sysHandler, authHandler, userHandler, orgHandler, memberHandler)
+	projectRepo := repository.NewInMemoryProjectRepository()
+	verificationRepo := repository.NewInMemoryVerificationRepository(projectRepo)
+	projectCache := cache.NewProjectCache(memCache)
+	mockRes := &mockIPResolver{
+		ips: map[string][]net.IP{
+			"api.acme.com":      {net.ParseIP("93.184.216.34")},
+			"api-v2.acme.com":   {net.ParseIP("93.184.216.35")},
+			"internal.acme.com": {net.ParseIP("10.0.0.1")},
+		},
+	}
+	ssrfGuard := netguard.NewSSRFGuard(mockRes)
+	verifEngine := service.NewVerificationEngine(nil, nil)
+	projectSvc := service.NewProjectService(projectRepo, verificationRepo, projectCache, ssrfGuard, verifEngine)
+	projectHandler := handlers.NewProjectHandler(projectSvc)
+
+	container := handlers.NewContainer(sysHandler, authHandler, userHandler, orgHandler, memberHandler, projectHandler)
 	app := apphttp.NewRouter(cfg, container, logger, idGen)
 
 	return &testRig{
-		app:        app,
-		cfg:        cfg,
-		userRepo:   userRepo,
-		orgRepo:    orgRepo,
-		memberRepo: memberRepo,
-		orgSvc:     orgSvc,
-		userSvc:    userSvc,
-		authSvc:    authSvc,
+		app:         app,
+		cfg:         cfg,
+		userRepo:    userRepo,
+		orgRepo:     orgRepo,
+		memberRepo:  memberRepo,
+		projectRepo: projectRepo,
+		verifRepo:   verificationRepo,
+		orgSvc:      orgSvc,
+		userSvc:     userSvc,
+		authSvc:     authSvc,
+		projectSvc:  projectSvc,
 	}
 }
 
