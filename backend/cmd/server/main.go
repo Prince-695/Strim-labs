@@ -11,6 +11,7 @@ import (
 
 	"github.com/Prince-695/strim/backend/internal/cache"
 	"github.com/Prince-695/strim/backend/internal/config"
+	"github.com/Prince-695/strim/backend/internal/discovery"
 	"github.com/Prince-695/strim/backend/internal/domain"
 	"github.com/Prince-695/strim/backend/internal/http"
 	"github.com/Prince-695/strim/backend/internal/http/handlers"
@@ -88,10 +89,13 @@ func main() {
 				&domain.OrgMember{},
 				&domain.Project{},
 				&domain.ProjectVerification{},
+				&domain.APIEndpoint{},
+				&domain.EndpointSource{},
+				&domain.DiscoveryRun{},
 			); err != nil {
 				fmt.Printf("\033[38;2;239;68;68m[DATABASE]\033[0m \033[31m✗ Auto-migration failed: %v\033[0m\n", err)
 			} else {
-				fmt.Printf("\033[38;2;168;85;247m[DATABASE]\033[0m \033[38;2;192;132;252m✓ Schema migration complete: tables synchronized successfully (users, otp, organizations, org_members, projects, project_verifications)\033[0m\n")
+				fmt.Printf("\033[38;2;168;85;247m[DATABASE]\033[0m \033[38;2;192;132;252m✓ Schema migration complete: tables synchronized successfully (users, otp, organizations, org_members, projects, project_verifications, api_endpoints, endpoint_sources, discovery_runs)\033[0m\n")
 			}
 		}
 	}
@@ -104,6 +108,7 @@ func main() {
 	memberRepo := repository.NewMemberRepository(db)
 	projectRepo := repository.NewProjectRepository(db)
 	verificationRepo := repository.NewVerificationRepository(db)
+	endpointRepo := repository.NewEndpointRepository(db)
 
 	tokenCache := cache.NewMemoryCache()
 	tenantCache := cache.NewTenantCache(tokenCache)
@@ -113,6 +118,7 @@ func main() {
 	ssrfGuard := netguard.NewSSRFGuard(nil)
 	httpFetcher := service.NewSSRFSafeHTTPFetcher(ssrfGuard)
 	verifEngine := service.NewVerificationEngine(nil, httpFetcher)
+	openapiParser := discovery.NewOpenAPIParser(ssrfGuard)
 
 	var mailerClient mailer.Mailer
 	if cfg.SMTPHost != "" && cfg.SMTPUser != "" {
@@ -142,6 +148,8 @@ func main() {
 	userSvc := service.NewUserService(userRepo)
 	orgSvc := service.NewOrgService(orgRepo, memberRepo, userRepo, tenantCache)
 	projectSvc := service.NewProjectService(projectRepo, verificationRepo, projectCache, ssrfGuard, verifEngine)
+	endpointSvc := service.NewEndpointService(endpointRepo, projectRepo)
+	discoverySvc := service.NewDiscoveryService(endpointRepo, projectRepo, openapiParser)
 
 	// 7. Dependency Injection: HTTP Handlers
 	systemHandler := handlers.NewSystemHandler(systemSvc)
@@ -150,6 +158,8 @@ func main() {
 	orgHandler := handlers.NewOrgHandler(orgSvc)
 	memberHandler := handlers.NewMemberHandler(orgSvc)
 	projectHandler := handlers.NewProjectHandler(projectSvc)
+	endpointHandler := handlers.NewEndpointHandler(endpointSvc)
+	discoveryHandler := handlers.NewDiscoveryHandler(discoverySvc)
 
 	handlerContainer := handlers.NewContainer(
 		systemHandler,
@@ -158,6 +168,8 @@ func main() {
 		orgHandler,
 		memberHandler,
 		projectHandler,
+		endpointHandler,
+		discoveryHandler,
 	)
 
 	// 8. Build Router & Middlewares

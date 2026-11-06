@@ -135,6 +135,20 @@ func NewRouter(
 	projects.Post("/:projectID/verification/check", requireAdmin, csrfGuard, handlers.Project.CheckVerification)
 	projects.Get("/:projectID/verification", requireViewer, handlers.Project.GetVerificationStatus)
 
+	// Registry Endpoints Sub-Routes: /v1/organizations/:orgID/projects/:projectID/endpoints
+	projects.Get("/:projectID/endpoints", requireViewer, handlers.Endpoint.ListEndpoints)
+	projects.Get("/:projectID/endpoints/:endpointID", requireViewer, handlers.Endpoint.GetEndpoint)
+	projects.Patch("/:projectID/endpoints/:endpointID", requireMember, csrfGuard, handlers.Endpoint.PatchEndpoint)
+
+	// Discovery Sub-Routes: /v1/organizations/:orgID/projects/:projectID/discovery
+	projects.Post("/:projectID/discovery/openapi", requireAdmin, csrfGuard, handlers.Discovery.ImportOpenAPI)
+	projects.Post("/:projectID/discovery/manifest", requireAdmin, csrfGuard, handlers.Discovery.ImportManifest)
+	projects.Get("/:projectID/discovery/runs", requireViewer, handlers.Discovery.ListDiscoveryRuns)
+
+	// Ingestion Subgroup: /v1/ingest (CI scanner & traffic ingest)
+	ingest := v1.Group("/ingest")
+	ingest.Post("/discovery", handlers.Discovery.IngestDiscovery)
+
 	// Catch-all 404 handler returning standard Response envelope
 	app.Use(func(c *fiber.Ctx) error {
 		return domain.SendError(
