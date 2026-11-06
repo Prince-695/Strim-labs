@@ -2,11 +2,14 @@ package repository
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/Prince-695/strim/backend/internal/discovery"
 	"github.com/Prince-695/strim/backend/internal/domain"
 	"gorm.io/gorm"
 )
@@ -774,4 +777,323 @@ func (r *InMemoryVerificationRepository) UpdateProjectVerificationStatus(ctx con
 	p.VerifiedAt = verifiedAt
 	p.UpdatedAt = time.Now().UTC()
 	return nil
+}
+
+// InMemoryEndpointRepository provides an in-memory thread-safe EndpointRepository implementation.
+type InMemoryEndpointRepository struct {
+	mu        sync.RWMutex
+	endpoints map[string]*domain.APIEndpoint
+	sources   map[string]*domain.EndpointSource // key: endpointID + ":" + string(source)
+	runs      map[string]*domain.DiscoveryRun
+}
+
+func NewInMemoryEndpointRepository() *InMemoryEndpointRepository {
+	return &InMemoryEndpointRepository{
+		endpoints: make(map[string]*domain.APIEndpoint),
+		sources:   make(map[string]*domain.EndpointSource),
+		runs:      make(map[string]*domain.DiscoveryRun),
+	}
+}
+
+func (r *InMemoryEndpointRepository) UpsertRoute(
+	ctx context.Context,
+	projectID string,
+	route discovery.DiscoveredRoute,
+	source domain.DiscoverySource,
+	metadata domain.JSONMap,
+) (*domain.APIEndpoint, bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	now := time.Now().UTC()
+	method := discovery.NormalizeMethod(route.Method)
+	pathTemplate := discovery.NormalizePath(route.PathTemplate)
+
+	var existing *domain.APIEndpoint
+	for _, ep := range r.endpoints {
+		if ep.ProjectID == projectID && ep.Method == method && ep.PathTemplate == pathTemplate {
+			existing = ep
+			break
+		}
+	}
+
+	var created bool
+	if existing == nil {
+		created = true
+		epID := "ep-" + time.Now().UTC().Format("20060102150405.000000000")
+		existing = &domain.APIEndpoint{
+			ID:           epID,
+			ProjectID:    projectID,
+			Method:       method,
+			PathTemplate: pathTemplate,
+			Service:      route.Service,
+			Tags:         domain.StringSlice(route.Tags),
+			Status:       domain.EndpointStatusActive,
+			FirstSeen:    now,
+			LastSeen:     now,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}
+		r.endpoints[epID] = existing
+	} else {
+		// Merge tags
+		tagSet := make(map[string]struct{})
+		var mergedTags []string
+		for _, t := range existing.Tags {
+			tagSet[t] = struct{}{}
+			mergedTags = append(mergedTags, t)
+		}
+		for _, t := range route.Tags {
+			if _, exists := tagSet[t]; !exists {
+				tagSet[t] = struct{}{}
+				mergedTags = append(mergedTags, t)
+			}
+		}
+		existing.Tags = domain.StringSlice(mergedTags)
+		if existing.Service == "" && route.Service != "" {
+			existing.Service = route.Service
+		}
+		existing.LastSeen = now
+		existing.UpdatedAt = now
+	}
+
+	// Upsert source
+	srcKey := existing.ID + ":" + string(source)
+	if src, ok := r.sources[srcKey]; ok {
+		src.LastSeen = now
+		src.Metadata = metadata
+	} else {
+		srcID := "src-" + time.Now().UTC().Format("20060102150405.000000000")
+		r.sources[srcKey] = &domain.EndpointSource{
+			ID:         srcID,
+			EndpointID: existing.ID,
+			Source:     source,
+			FirstSeen:  now,
+			LastSeen:   now,
+			Metadata:   metadata,
+		}
+	}
+
+	copyEP := *existing
+	return &copyEP, created, nil
+}
+
+func (r *InMemoryEndpointRepository) FindByID(ctx context.Context, projectID, endpointID string) (*domain.APIEndpoint, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	ep, ok := r.endpoints[endpointID]
+	if !ok || ep.ProjectID != projectID {
+		return nil, domain.NewEndpointNotFoundError()
+	}
+
+	copyEP := *ep
+	copyEP.Sources = nil
+	copyEP.SourcesList = nil
+	for _, s := range r.sources {
+		if s.EndpointID == ep.ID {
+			copyS := *s
+			copyEP.Sources = append(copyEP.Sources, copyS)
+			copyEP.SourcesList = append(copyEP.SourcesList, string(s.Source))
+		}
+	}
+
+	return &copyEP, nil
+}
+
+func (r *InMemoryEndpointRepository) Update(ctx context.Context, projectID string, endpoint *domain.APIEndpoint) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	ep, ok := r.endpoints[endpoint.ID]
+	if !ok || ep.ProjectID != projectID {
+		return domain.NewEndpointNotFoundError()
+	}
+
+	if endpoint.Tags != nil {
+		ep.Tags = endpoint.Tags
+	}
+	if endpoint.Status != "" {
+		ep.Status = endpoint.Status
+	}
+	ep.Note = endpoint.Note
+	ep.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+func (r *InMemoryEndpointRepository) List(ctx context.Context, projectID string, query domain.ListEndpointsQuery) ([]*domain.APIEndpoint, string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	limit := query.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	var matched []*domain.APIEndpoint
+	for _, ep := range r.endpoints {
+		if ep.ProjectID != projectID {
+			continue
+		}
+
+		// Filter q
+		if q := strings.TrimSpace(query.Q); q != "" {
+			lowerQ := strings.ToLower(q)
+			if !strings.Contains(strings.ToLower(ep.PathTemplate), lowerQ) &&
+				!strings.Contains(strings.ToLower(ep.Service), lowerQ) {
+				continue
+			}
+		}
+
+		// Filter method
+		if query.Method != "" && !strings.EqualFold(ep.Method, query.Method) {
+			continue
+		}
+
+		// Filter status
+		if query.Status != "" && string(ep.Status) != query.Status {
+			continue
+		}
+
+		// Filter service
+		if query.Service != "" && !strings.EqualFold(ep.Service, query.Service) {
+			continue
+		}
+
+		// Filter tag
+		if query.Tag != "" {
+			hasTag := false
+			for _, t := range ep.Tags {
+				if strings.EqualFold(t, query.Tag) {
+					hasTag = true
+					break
+				}
+			}
+			if !hasTag {
+				continue
+			}
+		}
+
+		// Filter source
+		if query.Source != "" {
+			srcKey := ep.ID + ":" + query.Source
+			if _, ok := r.sources[srcKey]; !ok {
+				continue
+			}
+		}
+
+		copyEP := *ep
+		for _, s := range r.sources {
+			if s.EndpointID == ep.ID {
+				copyEP.SourcesList = append(copyEP.SourcesList, string(s.Source))
+			}
+		}
+		matched = append(matched, &copyEP)
+	}
+
+	// Apply pagination
+	offset := 0
+	if query.Cursor != "" {
+		if decoded, err := base64.StdEncoding.DecodeString(query.Cursor); err == nil {
+			if pOffset, err := strconv.Atoi(string(decoded)); err == nil && pOffset >= 0 {
+				offset = pOffset
+			}
+		}
+	}
+
+	if offset >= len(matched) {
+		return []*domain.APIEndpoint{}, "", nil
+	}
+
+	end := offset + limit
+	var nextCursor string
+	if end < len(matched) {
+		nextCursor = base64.StdEncoding.EncodeToString([]byte(strconv.Itoa(end)))
+	} else {
+		end = len(matched)
+	}
+
+	return matched[offset:end], nextCursor, nil
+}
+
+func (r *InMemoryEndpointRepository) MarkStaleEndpoints(ctx context.Context, cutoff time.Time) (int64, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	var count int64
+	for _, ep := range r.endpoints {
+		if ep.Status == domain.EndpointStatusActive && ep.LastSeen.Before(cutoff) {
+			ep.Status = domain.EndpointStatusStale
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (r *InMemoryEndpointRepository) CreateDiscoveryRun(ctx context.Context, run *domain.DiscoveryRun) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if run.ID == "" {
+		run.ID = "run-" + time.Now().UTC().Format("20060102150405.000000000")
+	}
+	if run.StartedAt.IsZero() {
+		run.StartedAt = time.Now().UTC()
+	}
+	copyRun := *run
+	r.runs[run.ID] = &copyRun
+	return nil
+}
+
+func (r *InMemoryEndpointRepository) UpdateDiscoveryRun(ctx context.Context, run *domain.DiscoveryRun) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	target, ok := r.runs[run.ID]
+	if !ok {
+		return errors.New("discovery run not found")
+	}
+	target.Status = run.Status
+	target.Found = run.Found
+	target.Created = run.Created
+	target.Updated = run.Updated
+	target.Error = run.Error
+	target.Metadata = run.Metadata
+	target.FinishedAt = run.FinishedAt
+	return nil
+}
+
+func (r *InMemoryEndpointRepository) FindDiscoveryRunByID(ctx context.Context, projectID, runID string) (*domain.DiscoveryRun, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	run, ok := r.runs[runID]
+	if !ok || run.ProjectID != projectID {
+		return nil, domain.NewNotFoundError("Discovery run not found")
+	}
+	copyRun := *run
+	return &copyRun, nil
+}
+
+func (r *InMemoryEndpointRepository) ListDiscoveryRuns(ctx context.Context, projectID string, limit int) ([]*domain.DiscoveryRun, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	if limit <= 0 {
+		limit = 20
+	}
+	var list []*domain.DiscoveryRun
+	for _, run := range r.runs {
+		if run.ProjectID == projectID {
+			copyRun := *run
+			list = append(list, &copyRun)
+		}
+	}
+	if len(list) > limit {
+		list = list[:limit]
+	}
+	return list, nil
 }
