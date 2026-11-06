@@ -24,6 +24,9 @@ const (
 	ErrCodeNotFound              = "NOT_FOUND"
 	ErrCodeUserNotFound          = "USER_NOT_FOUND"
 	ErrCodeProjectNotFound       = "PROJECT_NOT_FOUND"
+	ErrCodeEndpointNotFound      = "ENDPOINT_NOT_FOUND"
+	ErrCodeInvalidOpenAPISpec    = "INVALID_OPENAPI_SPEC"
+	ErrCodeInvalidManifest       = "INVALID_MANIFEST"
 	ErrCodeEmailTaken            = "EMAIL_TAKEN"
 	ErrCodeUsernameTaken         = "USERNAME_TAKEN"
 	ErrCodeUsernameAlreadySet    = "USERNAME_ALREADY_SET"
@@ -186,6 +189,26 @@ func NewProjectLimitReachedError() *AppError {
 
 func NewProjectNotFoundError() *AppError {
 	return NewAppError(fiber.StatusNotFound, ErrCodeProjectNotFound, "Project not found", nil)
+}
+
+func NewEndpointNotFoundError() *AppError {
+	return NewAppError(fiber.StatusNotFound, ErrCodeEndpointNotFound, "Endpoint not found", nil)
+}
+
+func NewInvalidOpenAPISpecError(reason string) *AppError {
+	msg := "Invalid OpenAPI specification"
+	if reason != "" {
+		msg = fmt.Sprintf("Invalid OpenAPI specification: %s", reason)
+	}
+	return NewAppError(fiber.StatusBadRequest, ErrCodeInvalidOpenAPISpec, msg, nil)
+}
+
+func NewInvalidManifestError(reason string) *AppError {
+	msg := "Invalid route manifest"
+	if reason != "" {
+		msg = fmt.Sprintf("Invalid route manifest: %s", reason)
+	}
+	return NewAppError(fiber.StatusBadRequest, ErrCodeInvalidManifest, msg, nil)
 }
 
 func NewTargetBlockedError(reason string) *AppError {
