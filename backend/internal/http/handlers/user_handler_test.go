@@ -13,6 +13,7 @@ import (
 
 	"github.com/Prince-695/strim/backend/internal/cache"
 	"github.com/Prince-695/strim/backend/internal/config"
+	"github.com/Prince-695/strim/backend/internal/discovery"
 	"github.com/Prince-695/strim/backend/internal/domain"
 	apphttp "github.com/Prince-695/strim/backend/internal/http"
 	"github.com/Prince-695/strim/backend/internal/http/handlers"
@@ -40,17 +41,20 @@ func (m *mockIPResolver) LookupIP(ctx context.Context, network, host string) ([]
 }
 
 type testRig struct {
-	app         *fiber.App
-	cfg         *config.Config
-	userRepo    repository.UserRepository
-	orgRepo     repository.OrgRepository
-	memberRepo  repository.MemberRepository
-	projectRepo repository.ProjectRepository
-	verifRepo   repository.VerificationRepository
-	orgSvc      service.OrgService
-	userSvc     service.UserService
-	authSvc     service.AuthService
-	projectSvc  service.ProjectService
+	app          *fiber.App
+	cfg          *config.Config
+	userRepo     repository.UserRepository
+	orgRepo      repository.OrgRepository
+	memberRepo   repository.MemberRepository
+	projectRepo  repository.ProjectRepository
+	verifRepo    repository.VerificationRepository
+	endpointRepo repository.EndpointRepository
+	orgSvc       service.OrgService
+	userSvc      service.UserService
+	authSvc      service.AuthService
+	projectSvc   service.ProjectService
+	endpointSvc  service.EndpointService
+	discoverySvc service.DiscoveryService
 }
 
 func newTestRig(t *testing.T) *testRig {
@@ -109,21 +113,40 @@ func newTestRig(t *testing.T) *testRig {
 	projectSvc := service.NewProjectService(projectRepo, verificationRepo, projectCache, ssrfGuard, verifEngine)
 	projectHandler := handlers.NewProjectHandler(projectSvc)
 
-	container := handlers.NewContainer(sysHandler, authHandler, userHandler, orgHandler, memberHandler, projectHandler)
+	endpointRepo := repository.NewInMemoryEndpointRepository()
+	endpointSvc := service.NewEndpointService(endpointRepo, projectRepo)
+	openapiParser := discovery.NewOpenAPIParser(ssrfGuard)
+	discoverySvc := service.NewDiscoveryService(endpointRepo, projectRepo, openapiParser)
+	endpointHandler := handlers.NewEndpointHandler(endpointSvc)
+	discoveryHandler := handlers.NewDiscoveryHandler(discoverySvc)
+
+	container := handlers.NewContainer(
+		sysHandler,
+		authHandler,
+		userHandler,
+		orgHandler,
+		memberHandler,
+		projectHandler,
+		endpointHandler,
+		discoveryHandler,
+	)
 	app := apphttp.NewRouter(cfg, container, logger, idGen)
 
 	return &testRig{
-		app:         app,
-		cfg:         cfg,
-		userRepo:    userRepo,
-		orgRepo:     orgRepo,
-		memberRepo:  memberRepo,
-		projectRepo: projectRepo,
-		verifRepo:   verificationRepo,
-		orgSvc:      orgSvc,
-		userSvc:     userSvc,
-		authSvc:     authSvc,
-		projectSvc:  projectSvc,
+		app:          app,
+		cfg:          cfg,
+		userRepo:     userRepo,
+		orgRepo:      orgRepo,
+		memberRepo:   memberRepo,
+		projectRepo:  projectRepo,
+		verifRepo:    verificationRepo,
+		endpointRepo: endpointRepo,
+		orgSvc:       orgSvc,
+		userSvc:      userSvc,
+		authSvc:      authSvc,
+		projectSvc:   projectSvc,
+		endpointSvc:  endpointSvc,
+		discoverySvc: discoverySvc,
 	}
 }
 

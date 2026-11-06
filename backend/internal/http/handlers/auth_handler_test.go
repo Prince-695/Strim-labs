@@ -13,6 +13,7 @@ import (
 
 	"github.com/Prince-695/strim/backend/internal/cache"
 	"github.com/Prince-695/strim/backend/internal/config"
+	"github.com/Prince-695/strim/backend/internal/discovery"
 	"github.com/Prince-695/strim/backend/internal/domain"
 	apphttp "github.com/Prince-695/strim/backend/internal/http"
 	"github.com/Prince-695/strim/backend/internal/http/handlers"
@@ -95,7 +96,23 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 	projectSvc := service.NewProjectService(projectRepo, verificationRepo, projectCache, ssrfGuard, verifEngine)
 	projectHandler := handlers.NewProjectHandler(projectSvc)
 
-	container := handlers.NewContainer(sysHandler, authHandler, userHandler, orgHandler, memberHandler, projectHandler)
+	endpointRepo := repository.NewInMemoryEndpointRepository()
+	endpointSvc := service.NewEndpointService(endpointRepo, projectRepo)
+	openapiParser := discovery.NewOpenAPIParser(ssrfGuard)
+	discoverySvc := service.NewDiscoveryService(endpointRepo, projectRepo, openapiParser)
+	endpointHandler := handlers.NewEndpointHandler(endpointSvc)
+	discoveryHandler := handlers.NewDiscoveryHandler(discoverySvc)
+
+	container := handlers.NewContainer(
+		sysHandler,
+		authHandler,
+		userHandler,
+		orgHandler,
+		memberHandler,
+		projectHandler,
+		endpointHandler,
+		discoveryHandler,
+	)
 
 	app := apphttp.NewRouter(cfg, container, logger, idGen)
 
