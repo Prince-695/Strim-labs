@@ -591,6 +591,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/ingest/discovery": {
+            "post": {
+                "description": "Ingests routes discovered during CI pipeline runs",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Discovery"
+                ],
+                "summary": "Ingest discovery from CI scanner",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "X-Project-ID",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "query"
+                    },
+                    {
+                        "description": "CI Route Manifest",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.DiscoveryManifest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.DiscoveryRunResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/organizations": {
             "get": {
                 "security": [
@@ -1589,6 +1653,543 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/organizations/{orgID}/projects/{projectID}/discovery/manifest": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Ingests routes declared in a route manifest v1 JSON payload",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Discovery"
+                ],
+                "summary": "Import route manifest",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Route Manifest Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.DiscoveryManifest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.DiscoveryRunResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/discovery/openapi": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Ingests endpoints from an OpenAPI 2.0 (Swagger) or OpenAPI 3.x spec file (\u003c= 5MB) or remote URL",
+                "consumes": [
+                    "multipart/form-data",
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Discovery"
+                ],
+                "summary": "Import OpenAPI specification",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "OpenAPI Spec File",
+                        "name": "file",
+                        "in": "formData"
+                    },
+                    {
+                        "description": "OpenAPI Spec URL Payload",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ImportOpenAPIRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.DiscoveryRunResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/discovery/runs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns recent discovery runs and ingestion audit history",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Discovery"
+                ],
+                "summary": "List discovery runs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit (default 20, max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/domain.DiscoveryRunResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/endpoints": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns endpoints for a project with method, tag, status, and search filters",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Registry"
+                ],
+                "summary": "List registry endpoints",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search query (path or service)",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by HTTP method",
+                        "name": "method",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by tag",
+                        "name": "tag",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by discovery source (openapi, ci, manifest, runtime)",
+                        "name": "source",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (active, stale, ignored)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by service name",
+                        "name": "service",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort order (path_template, -last_seen)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Results limit (default 50, max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pagination cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/domain.EndpointResponse"
+                                            }
+                                        },
+                                        "meta": {
+                                            "$ref": "#/definitions/domain.PageMeta"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/endpoints/{endpointID}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns endpoint details, discovery sources, and rolling statistics",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Registry"
+                ],
+                "summary": "Get endpoint details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Endpoint ID",
+                        "name": "endpointID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.EndpointDetailResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates tags, note, or status (active \u003c-\u003e ignored)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Registry"
+                ],
+                "summary": "Update endpoint",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Endpoint ID",
+                        "name": "endpointID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Endpoint Patch Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.PatchEndpointRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.EndpointResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/organizations/{orgID}/projects/{projectID}/verification": {
             "get": {
                 "security": [
@@ -2216,6 +2817,327 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.DiscoveryManifest": {
+            "type": "object",
+            "required": [
+                "routes",
+                "service",
+                "source",
+                "version"
+            ],
+            "properties": {
+                "branch": {
+                    "type": "string",
+                    "example": "main"
+                },
+                "commit": {
+                    "type": "string",
+                    "example": "a1b2c3d"
+                },
+                "repo": {
+                    "type": "string",
+                    "example": "acme/orders"
+                },
+                "routes": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/domain.DiscoveryManifestRoute"
+                    }
+                },
+                "service": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "example": "orders"
+                },
+                "source": {
+                    "enum": [
+                        "manifest",
+                        "ci"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.DiscoverySource"
+                        }
+                    ],
+                    "example": "manifest"
+                },
+                "version": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "domain.DiscoveryManifestRoute": {
+            "type": "object",
+            "required": [
+                "method",
+                "path"
+            ],
+            "properties": {
+                "method": {
+                    "type": "string",
+                    "example": "GET"
+                },
+                "path": {
+                    "type": "string",
+                    "example": "/orders/{id}"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"orders\"]"
+                    ]
+                }
+            }
+        },
+        "domain.DiscoveryRunResponse": {
+            "type": "object",
+            "properties": {
+                "created": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "error": {
+                    "type": "string",
+                    "example": ""
+                },
+                "finished_at": {
+                    "type": "string",
+                    "example": "2026-11-06T10:00:02Z"
+                },
+                "found": {
+                    "type": "integer",
+                    "example": 15
+                },
+                "id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000030"
+                },
+                "metadata": {
+                    "$ref": "#/definitions/domain.JSONMap"
+                },
+                "project_id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000010"
+                },
+                "source": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.DiscoverySource"
+                        }
+                    ],
+                    "example": "openapi"
+                },
+                "started_at": {
+                    "type": "string",
+                    "example": "2026-11-06T10:00:00Z"
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.RunStatus"
+                        }
+                    ],
+                    "example": "completed"
+                },
+                "updated": {
+                    "type": "integer",
+                    "example": 5
+                }
+            }
+        },
+        "domain.DiscoverySource": {
+            "type": "string",
+            "enum": [
+                "openapi",
+                "ci",
+                "manifest",
+                "runtime"
+            ],
+            "x-enum-varnames": [
+                "SourceOpenAPI",
+                "SourceCI",
+                "SourceManifest",
+                "SourceRuntime"
+            ]
+        },
+        "domain.EndpointDetailResponse": {
+            "type": "object",
+            "properties": {
+                "first_seen": {
+                    "type": "string",
+                    "example": "2026-11-06T10:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000021"
+                },
+                "last_seen": {
+                    "type": "string",
+                    "example": "2026-11-06T12:00:00Z"
+                },
+                "method": {
+                    "type": "string",
+                    "example": "POST"
+                },
+                "note": {
+                    "type": "string",
+                    "example": "internal only"
+                },
+                "path_template": {
+                    "type": "string",
+                    "example": "/orders/{id}/items"
+                },
+                "service": {
+                    "type": "string",
+                    "example": "orders"
+                },
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"openapi\"",
+                        "\"runtime\"]"
+                    ]
+                },
+                "sources_detail": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.EndpointSourceDetail"
+                    }
+                },
+                "stats_1h": {
+                    "$ref": "#/definitions/domain.StatsSummary"
+                },
+                "stats_24h": {
+                    "$ref": "#/definitions/domain.StatsSummary"
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.EndpointStatus"
+                        }
+                    ],
+                    "example": "active"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"checkout\"]"
+                    ]
+                }
+            }
+        },
+        "domain.EndpointResponse": {
+            "type": "object",
+            "properties": {
+                "first_seen": {
+                    "type": "string",
+                    "example": "2026-11-06T10:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000021"
+                },
+                "last_seen": {
+                    "type": "string",
+                    "example": "2026-11-06T12:00:00Z"
+                },
+                "method": {
+                    "type": "string",
+                    "example": "POST"
+                },
+                "note": {
+                    "type": "string",
+                    "example": "internal only"
+                },
+                "path_template": {
+                    "type": "string",
+                    "example": "/orders/{id}/items"
+                },
+                "service": {
+                    "type": "string",
+                    "example": "orders"
+                },
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"openapi\"",
+                        "\"runtime\"]"
+                    ]
+                },
+                "stats_1h": {
+                    "$ref": "#/definitions/domain.StatsSummary"
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.EndpointStatus"
+                        }
+                    ],
+                    "example": "active"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"checkout\"]"
+                    ]
+                }
+            }
+        },
+        "domain.EndpointSourceDetail": {
+            "type": "object",
+            "properties": {
+                "first_seen": {
+                    "type": "string",
+                    "example": "2026-11-06T10:00:00Z"
+                },
+                "last_seen": {
+                    "type": "string",
+                    "example": "2026-11-06T12:00:00Z"
+                },
+                "metadata": {
+                    "$ref": "#/definitions/domain.JSONMap"
+                },
+                "source": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.DiscoverySource"
+                        }
+                    ],
+                    "example": "openapi"
+                }
+            }
+        },
+        "domain.EndpointStatus": {
+            "type": "string",
+            "enum": [
+                "active",
+                "stale",
+                "ignored"
+            ],
+            "x-enum-varnames": [
+                "EndpointStatusActive",
+                "EndpointStatusStale",
+                "EndpointStatusIgnored"
+            ]
+        },
         "domain.FileInstructions": {
             "type": "object",
             "properties": {
@@ -2241,6 +3163,15 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.ImportOpenAPIRequest": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "example": "https://api.acme.com/openapi.json"
+                }
+            }
+        },
         "domain.InitiateVerificationRequest": {
             "type": "object",
             "required": [
@@ -2260,6 +3191,10 @@ const docTemplate = `{
                     "example": "dns"
                 }
             }
+        },
+        "domain.JSONMap": {
+            "type": "object",
+            "additionalProperties": true
         },
         "domain.LoginRequest": {
             "type": "object",
@@ -2398,6 +3333,38 @@ const docTemplate = `{
                 "total": {
                     "type": "integer",
                     "example": 120
+                }
+            }
+        },
+        "domain.PatchEndpointRequest": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Deprecated endpoint"
+                },
+                "status": {
+                    "enum": [
+                        "active",
+                        "ignored"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.EndpointStatus"
+                        }
+                    ],
+                    "example": "ignored"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"checkout\"",
+                        "\"v1\"]"
+                    ]
                 }
             }
         },
@@ -2668,6 +3635,19 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.RunStatus": {
+            "type": "string",
+            "enum": [
+                "running",
+                "completed",
+                "failed"
+            ],
+            "x-enum-varnames": [
+                "RunStatusRunning",
+                "RunStatusCompleted",
+                "RunStatusFailed"
+            ]
+        },
         "domain.SetUsernameRequest": {
             "type": "object",
             "required": [
@@ -2712,6 +3692,27 @@ const docTemplate = `{
                     "maxLength": 72,
                     "minLength": 8,
                     "example": "S3cure!pass"
+                }
+            }
+        },
+        "domain.StatsSummary": {
+            "type": "object",
+            "properties": {
+                "error_rate": {
+                    "type": "number",
+                    "example": 0.004
+                },
+                "p95_ms": {
+                    "type": "number",
+                    "example": 182
+                },
+                "requests": {
+                    "type": "integer",
+                    "example": 12044
+                },
+                "rps": {
+                    "type": "number",
+                    "example": 3.3
                 }
             }
         },

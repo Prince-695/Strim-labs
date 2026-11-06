@@ -143,6 +143,227 @@ definitions:
     required:
     - confirm_slug
     type: object
+  domain.DiscoveryManifest:
+    properties:
+      branch:
+        example: main
+        type: string
+      commit:
+        example: a1b2c3d
+        type: string
+      repo:
+        example: acme/orders
+        type: string
+      routes:
+        items:
+          $ref: '#/definitions/domain.DiscoveryManifestRoute'
+        minItems: 1
+        type: array
+      service:
+        example: orders
+        maxLength: 100
+        minLength: 1
+        type: string
+      source:
+        allOf:
+        - $ref: '#/definitions/domain.DiscoverySource'
+        enum:
+        - manifest
+        - ci
+        example: manifest
+      version:
+        example: 1
+        type: integer
+    required:
+    - routes
+    - service
+    - source
+    - version
+    type: object
+  domain.DiscoveryManifestRoute:
+    properties:
+      method:
+        example: GET
+        type: string
+      path:
+        example: /orders/{id}
+        type: string
+      tags:
+        example:
+        - '["orders"]'
+        items:
+          type: string
+        type: array
+    required:
+    - method
+    - path
+    type: object
+  domain.DiscoveryRunResponse:
+    properties:
+      created:
+        example: 10
+        type: integer
+      error:
+        example: ""
+        type: string
+      finished_at:
+        example: "2026-11-06T10:00:02Z"
+        type: string
+      found:
+        example: 15
+        type: integer
+      id:
+        example: 018f3a5b-7c91-7b00-8000-000000000030
+        type: string
+      metadata:
+        $ref: '#/definitions/domain.JSONMap'
+      project_id:
+        example: 018f3a5b-7c91-7b00-8000-000000000010
+        type: string
+      source:
+        allOf:
+        - $ref: '#/definitions/domain.DiscoverySource'
+        example: openapi
+      started_at:
+        example: "2026-11-06T10:00:00Z"
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/domain.RunStatus'
+        example: completed
+      updated:
+        example: 5
+        type: integer
+    type: object
+  domain.DiscoverySource:
+    enum:
+    - openapi
+    - ci
+    - manifest
+    - runtime
+    type: string
+    x-enum-varnames:
+    - SourceOpenAPI
+    - SourceCI
+    - SourceManifest
+    - SourceRuntime
+  domain.EndpointDetailResponse:
+    properties:
+      first_seen:
+        example: "2026-11-06T10:00:00Z"
+        type: string
+      id:
+        example: 018f3a5b-7c91-7b00-8000-000000000021
+        type: string
+      last_seen:
+        example: "2026-11-06T12:00:00Z"
+        type: string
+      method:
+        example: POST
+        type: string
+      note:
+        example: internal only
+        type: string
+      path_template:
+        example: /orders/{id}/items
+        type: string
+      service:
+        example: orders
+        type: string
+      sources:
+        example:
+        - '["openapi"'
+        - '"runtime"]'
+        items:
+          type: string
+        type: array
+      sources_detail:
+        items:
+          $ref: '#/definitions/domain.EndpointSourceDetail'
+        type: array
+      stats_1h:
+        $ref: '#/definitions/domain.StatsSummary'
+      stats_24h:
+        $ref: '#/definitions/domain.StatsSummary'
+      status:
+        allOf:
+        - $ref: '#/definitions/domain.EndpointStatus'
+        example: active
+      tags:
+        example:
+        - '["checkout"]'
+        items:
+          type: string
+        type: array
+    type: object
+  domain.EndpointResponse:
+    properties:
+      first_seen:
+        example: "2026-11-06T10:00:00Z"
+        type: string
+      id:
+        example: 018f3a5b-7c91-7b00-8000-000000000021
+        type: string
+      last_seen:
+        example: "2026-11-06T12:00:00Z"
+        type: string
+      method:
+        example: POST
+        type: string
+      note:
+        example: internal only
+        type: string
+      path_template:
+        example: /orders/{id}/items
+        type: string
+      service:
+        example: orders
+        type: string
+      sources:
+        example:
+        - '["openapi"'
+        - '"runtime"]'
+        items:
+          type: string
+        type: array
+      stats_1h:
+        $ref: '#/definitions/domain.StatsSummary'
+      status:
+        allOf:
+        - $ref: '#/definitions/domain.EndpointStatus'
+        example: active
+      tags:
+        example:
+        - '["checkout"]'
+        items:
+          type: string
+        type: array
+    type: object
+  domain.EndpointSourceDetail:
+    properties:
+      first_seen:
+        example: "2026-11-06T10:00:00Z"
+        type: string
+      last_seen:
+        example: "2026-11-06T12:00:00Z"
+        type: string
+      metadata:
+        $ref: '#/definitions/domain.JSONMap'
+      source:
+        allOf:
+        - $ref: '#/definitions/domain.DiscoverySource'
+        example: openapi
+    type: object
+  domain.EndpointStatus:
+    enum:
+    - active
+    - stale
+    - ignored
+    type: string
+    x-enum-varnames:
+    - EndpointStatusActive
+    - EndpointStatusStale
+    - EndpointStatusIgnored
   domain.FileInstructions:
     properties:
       content:
@@ -160,6 +381,12 @@ definitions:
     required:
     - email
     type: object
+  domain.ImportOpenAPIRequest:
+    properties:
+      url:
+        example: https://api.acme.com/openapi.json
+        type: string
+    type: object
   domain.InitiateVerificationRequest:
     properties:
       method:
@@ -171,6 +398,9 @@ definitions:
         example: dns
     required:
     - method
+    type: object
+  domain.JSONMap:
+    additionalProperties: true
     type: object
   domain.LoginRequest:
     properties:
@@ -269,6 +499,27 @@ definitions:
       total:
         example: 120
         type: integer
+    type: object
+  domain.PatchEndpointRequest:
+    properties:
+      note:
+        example: Deprecated endpoint
+        maxLength: 500
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/domain.EndpointStatus'
+        enum:
+        - active
+        - ignored
+        example: ignored
+      tags:
+        example:
+        - '["checkout"'
+        - '"v1"]'
+        items:
+          type: string
+        type: array
     type: object
   domain.ProjectDetailResponse:
     properties:
@@ -452,6 +703,16 @@ definitions:
       success:
         type: boolean
     type: object
+  domain.RunStatus:
+    enum:
+    - running
+    - completed
+    - failed
+    type: string
+    x-enum-varnames:
+    - RunStatusRunning
+    - RunStatusCompleted
+    - RunStatusFailed
   domain.SetUsernameRequest:
     properties:
       username:
@@ -487,6 +748,21 @@ definitions:
     - first_name
     - last_name
     - password
+    type: object
+  domain.StatsSummary:
+    properties:
+      error_rate:
+        example: 0.004
+        type: number
+      p95_ms:
+        example: 182
+        type: number
+      requests:
+        example: 12044
+        type: integer
+      rps:
+        example: 3.3
+        type: number
     type: object
   domain.UpdateMemberRoleRequest:
     properties:
@@ -996,6 +1272,45 @@ paths:
       summary: Register a new user account
       tags:
       - Auth
+  /v1/ingest/discovery:
+    post:
+      consumes:
+      - application/json
+      description: Ingests routes discovered during CI pipeline runs
+      parameters:
+      - description: Project ID
+        in: header
+        name: X-Project-ID
+        type: string
+      - description: Project ID
+        in: query
+        name: project_id
+        type: string
+      - description: CI Route Manifest
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.DiscoveryManifest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.DiscoveryRunResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+      summary: Ingest discovery from CI scanner
+      tags:
+      - Discovery
   /v1/organizations:
     get:
       description: Lists organizations the authenticated user belongs to (up to 3)
@@ -1613,6 +1928,341 @@ paths:
       summary: Update project
       tags:
       - Projects
+  /v1/organizations/{orgID}/projects/{projectID}/discovery/manifest:
+    post:
+      consumes:
+      - application/json
+      description: Ingests routes declared in a route manifest v1 JSON payload
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Route Manifest Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.DiscoveryManifest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.DiscoveryRunResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Import route manifest
+      tags:
+      - Discovery
+  /v1/organizations/{orgID}/projects/{projectID}/discovery/openapi:
+    post:
+      consumes:
+      - multipart/form-data
+      - application/json
+      description: Ingests endpoints from an OpenAPI 2.0 (Swagger) or OpenAPI 3.x
+        spec file (<= 5MB) or remote URL
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: OpenAPI Spec File
+        in: formData
+        name: file
+        type: file
+      - description: OpenAPI Spec URL Payload
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/domain.ImportOpenAPIRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.DiscoveryRunResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Import OpenAPI specification
+      tags:
+      - Discovery
+  /v1/organizations/{orgID}/projects/{projectID}/discovery/runs:
+    get:
+      description: Returns recent discovery runs and ingestion audit history
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Limit (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.DiscoveryRunResponse'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: List discovery runs
+      tags:
+      - Discovery
+  /v1/organizations/{orgID}/projects/{projectID}/endpoints:
+    get:
+      description: Returns endpoints for a project with method, tag, status, and search
+        filters
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Search query (path or service)
+        in: query
+        name: q
+        type: string
+      - description: Filter by HTTP method
+        in: query
+        name: method
+        type: string
+      - description: Filter by tag
+        in: query
+        name: tag
+        type: string
+      - description: Filter by discovery source (openapi, ci, manifest, runtime)
+        in: query
+        name: source
+        type: string
+      - description: Filter by status (active, stale, ignored)
+        in: query
+        name: status
+        type: string
+      - description: Filter by service name
+        in: query
+        name: service
+        type: string
+      - description: Sort order (path_template, -last_seen)
+        in: query
+        name: sort
+        type: string
+      - description: Results limit (default 50, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Pagination cursor
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.EndpointResponse'
+                  type: array
+                meta:
+                  $ref: '#/definitions/domain.PageMeta'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: List registry endpoints
+      tags:
+      - Registry
+  /v1/organizations/{orgID}/projects/{projectID}/endpoints/{endpointID}:
+    get:
+      description: Returns endpoint details, discovery sources, and rolling statistics
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Endpoint ID
+        in: path
+        name: endpointID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.EndpointDetailResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Get endpoint details
+      tags:
+      - Registry
+    patch:
+      consumes:
+      - application/json
+      description: Updates tags, note, or status (active <-> ignored)
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Endpoint ID
+        in: path
+        name: endpointID
+        required: true
+        type: string
+      - description: Endpoint Patch Payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.PatchEndpointRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.EndpointResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Update endpoint
+      tags:
+      - Registry
   /v1/organizations/{orgID}/projects/{projectID}/verification:
     get:
       description: Returns active domain verification status and setup instructions
