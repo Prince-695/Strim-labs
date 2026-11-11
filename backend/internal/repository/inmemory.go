@@ -2,12 +2,16 @@ package repository
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/Prince-695/strim/backend/internal/discovery"
 	"github.com/Prince-695/strim/backend/internal/domain"
+	"gorm.io/gorm"
 )
 
 // InMemoryUserRepository provides an in-memory thread-safe UserRepository implementation for testing.
@@ -114,6 +118,27 @@ func (r *InMemoryUserRepository) SetVerified(ctx context.Context, userID string)
 	return nil
 }
 
+func (r *InMemoryUserRepository) SetUsername(ctx context.Context, userID, username string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	u, ok := r.users[userID]
+	if !ok {
+		return ErrUserNotFound
+	}
+	if u.Username != nil {
+		return domain.NewUsernameAlreadySetError()
+	}
+	cleanUsername := strings.ToLower(strings.TrimSpace(username))
+	for _, other := range r.users {
+		if other.Username != nil && strings.EqualFold(*other.Username, cleanUsername) {
+			return domain.NewUsernameTakenError()
+		}
+	}
+	u.Username = &cleanUsername
+	u.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
 func (r *InMemoryUserRepository) FindByOAuth(ctx context.Context, provider, providerUserID string) (*domain.User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -206,4 +231,869 @@ func (r *InMemoryOTPRepository) MarkUsed(ctx context.Context, otpID string) erro
 	now := time.Now().UTC()
 	o.UsedAt = &now
 	return nil
+}
+
+// InMemoryOrgRepository provides an in-memory thread-safe OrgRepository implementation.
+type InMemoryOrgRepository struct {
+	mu         sync.RWMutex
+	orgs       map[string]*domain.Organization
+	memberRepo *InMemoryMemberRepository
+}
+
+func NewInMemoryOrgRepository(memberRepo *InMemoryMemberRepository) *InMemoryOrgRepository {
+	return &InMemoryOrgRepository{
+		orgs:       make(map[string]*domain.Organization),
+		memberRepo: memberRepo,
+	}
+}
+
+func (r *InMemoryOrgRepository) CreateWithLimitCheck(ctx context.Context, org *domain.Organization, ownerUserID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Check user limit < 3
+	count, err := r.memberRepo.CountUserOrgs(ctx, ownerUserID)
+	if err != nil {
+		return err
+	}
+	if count >= 3 {
+		return domain.NewOrgLimitReachedError()
+	}
+
+	normSlug := strings.ToLower(strings.TrimSpace(org.Slug))
+	for _, o := range r.orgs {
+		if o.DeletedAt.Valid {
+			continue
+		}
+		if strings.EqualFold(o.Slug, normSlug) {
+			return domain.NewSlugTakenError()
+		}
+	}
+
+	if org.ID == "" {
+		org.ID = "org-" + normSlug
+	}
+	org.Slug = normSlug
+	org.CreatedBy = ownerUserID
+	if org.CreatedAt.IsZero() {
+		org.CreatedAt = time.Now().UTC()
+	}
+	org.UpdatedAt = org.CreatedAt
+
+	copyOrg := *org
+	r.orgs[org.ID] = &copyOrg
+
+	// Add owner
+	_ = r.memberRepo.AddMemberDirect(&domain.OrgMember{
+		OrgID:    org.ID,
+		UserID:   ownerUserID,
+		Role:     domain.RoleOwner,
+		JoinedAt: time.Now().UTC(),
+	})
+
+	org.Role = domain.RoleOwner
+	org.MemberCount = 1
+	org.ProjectCount = 0
+
+	return nil
+}
+
+func (r *InMemoryOrgRepository) FindByID(ctx context.Context, id string) (*domain.Organization, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	o, ok := r.orgs[id]
+	if !ok || o.DeletedAt.Valid {
+		return nil, ErrOrgNotFound
+	}
+
+	copyOrg := *o
+	if r.memberRepo != nil {
+		copyOrg.MemberCount = r.memberRepo.CountOrgMembers(id)
+	}
+	return &copyOrg, nil
+}
+
+func (r *InMemoryOrgRepository) FindBySlug(ctx context.Context, slug string) (*domain.Organization, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	norm := strings.ToLower(strings.TrimSpace(slug))
+	for _, o := range r.orgs {
+		if !o.DeletedAt.Valid && strings.EqualFold(o.Slug, norm) {
+			copyOrg := *o
+			if r.memberRepo != nil {
+				copyOrg.MemberCount = r.memberRepo.CountOrgMembers(o.ID)
+			}
+			return &copyOrg, nil
+		}
+	}
+	return nil, ErrOrgNotFound
+}
+
+func (r *InMemoryOrgRepository) ListByUser(ctx context.Context, userID string) ([]*domain.Organization, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var list []*domain.Organization
+	memberships := r.memberRepo.GetUserMemberships(userID)
+	for _, m := range memberships {
+		o, ok := r.orgs[m.OrgID]
+		if ok && !o.DeletedAt.Valid {
+			copyOrg := *o
+			copyOrg.Role = m.Role
+			copyOrg.MemberCount = r.memberRepo.CountOrgMembers(o.ID)
+			copyOrg.ProjectCount = 0
+			list = append(list, &copyOrg)
+		}
+	}
+	return list, nil
+}
+
+func (r *InMemoryOrgRepository) Update(ctx context.Context, org *domain.Organization) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	o, ok := r.orgs[org.ID]
+	if !ok || o.DeletedAt.Valid {
+		return ErrOrgNotFound
+	}
+	o.Name = org.Name
+	o.Description = org.Description
+	o.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+func (r *InMemoryOrgRepository) SoftDelete(ctx context.Context, id string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	o, ok := r.orgs[id]
+	if !ok || o.DeletedAt.Valid {
+		return ErrOrgNotFound
+	}
+	o.DeletedAt.Time = time.Now().UTC()
+	o.DeletedAt.Valid = true
+	return nil
+}
+
+func (r *InMemoryOrgRepository) WithTenantContext(ctx context.Context, orgID string, fn func(tx *gorm.DB) error) error {
+	return fn(nil)
+}
+
+// InMemoryMemberRepository provides an in-memory thread-safe MemberRepository implementation.
+type InMemoryMemberRepository struct {
+	mu       sync.RWMutex
+	members  map[string]*domain.OrgMember // key: orgID:userID
+	userRepo *InMemoryUserRepository
+}
+
+func NewInMemoryMemberRepository(userRepo *InMemoryUserRepository) *InMemoryMemberRepository {
+	return &InMemoryMemberRepository{
+		members:  make(map[string]*domain.OrgMember),
+		userRepo: userRepo,
+	}
+}
+
+func (r *InMemoryMemberRepository) memberKey(orgID, userID string) string {
+	return orgID + ":" + userID
+}
+
+func (r *InMemoryMemberRepository) AddMemberDirect(member *domain.OrgMember) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	copyMember := *member
+	r.members[r.memberKey(member.OrgID, member.UserID)] = &copyMember
+	return nil
+}
+
+func (r *InMemoryMemberRepository) AddMemberWithLimitCheck(ctx context.Context, member *domain.OrgMember) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	// Check target user org limit
+	count := 0
+	for _, m := range r.members {
+		if m.UserID == member.UserID {
+			count++
+		}
+	}
+	if count >= 3 {
+		return domain.NewTargetOrgLimitReachedError()
+	}
+
+	key := r.memberKey(member.OrgID, member.UserID)
+	if _, exists := r.members[key]; exists {
+		return domain.NewAlreadyMemberError()
+	}
+
+	copyMember := *member
+	if copyMember.JoinedAt.IsZero() {
+		copyMember.JoinedAt = time.Now().UTC()
+	}
+	r.members[key] = &copyMember
+	return nil
+}
+
+func (r *InMemoryMemberRepository) FindMember(ctx context.Context, orgID, userID string) (*domain.OrgMember, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	m, ok := r.members[r.memberKey(orgID, userID)]
+	if !ok {
+		return nil, ErrMemberNotFound
+	}
+	copyMember := *m
+	return &copyMember, nil
+}
+
+func (r *InMemoryMemberRepository) ListMembers(ctx context.Context, orgID string, query domain.ListMembersQuery) ([]*domain.OrgMemberDetailResponse, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var details []*domain.OrgMemberDetailResponse
+	for _, m := range r.members {
+		if m.OrgID == orgID {
+			if query.Role != "" && string(m.Role) != query.Role {
+				continue
+			}
+
+			u, err := r.userRepo.FindByID(ctx, m.UserID)
+			if err != nil {
+				continue
+			}
+
+			if query.Q != "" {
+				term := strings.ToLower(strings.TrimSpace(query.Q))
+				match := strings.Contains(strings.ToLower(u.FirstName), term) ||
+					strings.Contains(strings.ToLower(u.LastName), term) ||
+					strings.Contains(strings.ToLower(u.Email), term) ||
+					(u.Username != nil && strings.Contains(strings.ToLower(*u.Username), term))
+				if !match {
+					continue
+				}
+			}
+
+			details = append(details, &domain.OrgMemberDetailResponse{
+				UserID:    u.ID,
+				Email:     u.Email,
+				FirstName: u.FirstName,
+				LastName:  u.LastName,
+				Username:  u.Username,
+				Role:      m.Role,
+				JoinedAt:  m.JoinedAt,
+			})
+		}
+	}
+	return details, nil
+}
+
+func (r *InMemoryMemberRepository) UpdateRole(ctx context.Context, orgID, userID string, newRole domain.OrgRole) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	m, ok := r.members[r.memberKey(orgID, userID)]
+	if !ok {
+		return ErrMemberNotFound
+	}
+	m.Role = newRole
+	return nil
+}
+
+func (r *InMemoryMemberRepository) RemoveMember(ctx context.Context, orgID, userID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	key := r.memberKey(orgID, userID)
+	if _, ok := r.members[key]; !ok {
+		return ErrMemberNotFound
+	}
+	delete(r.members, key)
+	return nil
+}
+
+func (r *InMemoryMemberRepository) CountOwners(ctx context.Context, orgID string) (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	count := 0
+	for _, m := range r.members {
+		if m.OrgID == orgID && m.Role == domain.RoleOwner {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (r *InMemoryMemberRepository) CountUserOrgs(ctx context.Context, userID string) (int, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	count := 0
+	for _, m := range r.members {
+		if m.UserID == userID {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (r *InMemoryMemberRepository) CountOrgMembers(orgID string) int {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	count := 0
+	for _, m := range r.members {
+		if m.OrgID == orgID {
+			count++
+		}
+	}
+	return count
+}
+
+func (r *InMemoryMemberRepository) GetUserMemberships(userID string) []*domain.OrgMember {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	var list []*domain.OrgMember
+	for _, m := range r.members {
+		if m.UserID == userID {
+			copyM := *m
+			list = append(list, &copyM)
+		}
+	}
+	return list
+}
+
+// InMemoryProjectRepository provides an in-memory thread-safe ProjectRepository implementation.
+type InMemoryProjectRepository struct {
+	mu       sync.RWMutex
+	projects map[string]*domain.Project
+}
+
+func NewInMemoryProjectRepository() *InMemoryProjectRepository {
+	return &InMemoryProjectRepository{
+		projects: make(map[string]*domain.Project),
+	}
+}
+
+func (r *InMemoryProjectRepository) CreateWithLimitCheck(ctx context.Context, project *domain.Project) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	count := 0
+	for _, p := range r.projects {
+		if p.OrgID == project.OrgID && !p.DeletedAt.Valid {
+			count++
+		}
+	}
+	if count >= 5 {
+		return domain.NewProjectLimitReachedError()
+	}
+
+	normSlug := strings.ToLower(strings.TrimSpace(project.Slug))
+	for _, p := range r.projects {
+		if p.OrgID == project.OrgID && !p.DeletedAt.Valid && strings.EqualFold(p.Slug, normSlug) {
+			return domain.NewConflictError(domain.ErrCodeSlugTaken, "A project with this slug already exists in this organization")
+		}
+	}
+
+	if project.ID == "" {
+		project.ID = "proj-" + time.Now().UTC().Format("20060102150405.000000000")
+	}
+	project.Slug = normSlug
+	if project.CreatedAt.IsZero() {
+		project.CreatedAt = time.Now().UTC()
+	}
+	project.UpdatedAt = project.CreatedAt
+	if project.VerificationStatus == "" {
+		project.VerificationStatus = domain.StatusUnverified
+	}
+	if project.Environment == "" {
+		project.Environment = domain.EnvProduction
+	}
+
+	copyP := *project
+	r.projects[project.ID] = &copyP
+	return nil
+}
+
+func (r *InMemoryProjectRepository) FindByID(ctx context.Context, orgID, projectID string) (*domain.Project, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	p, ok := r.projects[projectID]
+	if !ok || p.OrgID != orgID || p.DeletedAt.Valid {
+		return nil, domain.NewProjectNotFoundError()
+	}
+	copyP := *p
+	return &copyP, nil
+}
+
+func (r *InMemoryProjectRepository) FindBySlug(ctx context.Context, orgID, slug string) (*domain.Project, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	normSlug := strings.ToLower(strings.TrimSpace(slug))
+	for _, p := range r.projects {
+		if p.OrgID == orgID && !p.DeletedAt.Valid && strings.EqualFold(p.Slug, normSlug) {
+			copyP := *p
+			return &copyP, nil
+		}
+	}
+	return nil, domain.NewProjectNotFoundError()
+}
+
+func (r *InMemoryProjectRepository) ListByOrg(ctx context.Context, orgID string) ([]*domain.Project, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var result []*domain.Project
+	for _, p := range r.projects {
+		if p.OrgID == orgID && !p.DeletedAt.Valid {
+			copyP := *p
+			result = append(result, &copyP)
+		}
+	}
+	return result, nil
+}
+
+func (r *InMemoryProjectRepository) Update(ctx context.Context, project *domain.Project) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	p, ok := r.projects[project.ID]
+	if !ok || p.OrgID != project.OrgID || p.DeletedAt.Valid {
+		return domain.NewProjectNotFoundError()
+	}
+
+	p.Name = project.Name
+	p.Description = project.Description
+	p.BaseURL = project.BaseURL
+	p.Environment = project.Environment
+	p.VerificationStatus = project.VerificationStatus
+	p.VerifiedAt = project.VerifiedAt
+	p.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+func (r *InMemoryProjectRepository) Delete(ctx context.Context, orgID, projectID string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	p, ok := r.projects[projectID]
+	if !ok || p.OrgID != orgID || p.DeletedAt.Valid {
+		return domain.NewProjectNotFoundError()
+	}
+
+	p.DeletedAt = gorm.DeletedAt{Time: time.Now().UTC(), Valid: true}
+	return nil
+}
+
+func (r *InMemoryProjectRepository) CountByOrg(ctx context.Context, orgID string) (int64, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var count int64
+	for _, p := range r.projects {
+		if p.OrgID == orgID && !p.DeletedAt.Valid {
+			count++
+		}
+	}
+	return count, nil
+}
+
+// InMemoryVerificationRepository provides in-memory VerificationRepository implementation.
+type InMemoryVerificationRepository struct {
+	mu            sync.RWMutex
+	verifications map[string]*domain.ProjectVerification
+	projectRepo   *InMemoryProjectRepository
+}
+
+func NewInMemoryVerificationRepository(projectRepo *InMemoryProjectRepository) *InMemoryVerificationRepository {
+	return &InMemoryVerificationRepository{
+		verifications: make(map[string]*domain.ProjectVerification),
+		projectRepo:   projectRepo,
+	}
+}
+
+func (r *InMemoryVerificationRepository) Create(ctx context.Context, verification *domain.ProjectVerification) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if verification.ID == "" {
+		verification.ID = "verif-" + time.Now().UTC().Format("20060102150405.000000000")
+	}
+	if verification.CreatedAt.IsZero() {
+		verification.CreatedAt = time.Now().UTC()
+	}
+	copyV := *verification
+	r.verifications[verification.ID] = &copyV
+	return nil
+}
+
+func (r *InMemoryVerificationRepository) FindActiveByProject(ctx context.Context, projectID string) (*domain.ProjectVerification, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var latest *domain.ProjectVerification
+	for _, v := range r.verifications {
+		if v.ProjectID == projectID {
+			if latest == nil || v.CreatedAt.After(latest.CreatedAt) {
+				latest = v
+			}
+		}
+	}
+	if latest == nil {
+		return nil, nil
+	}
+	copyV := *latest
+	return &copyV, nil
+}
+
+func (r *InMemoryVerificationRepository) Update(ctx context.Context, verification *domain.ProjectVerification) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	v, ok := r.verifications[verification.ID]
+	if !ok {
+		return errors.New("verification not found")
+	}
+	v.Status = verification.Status
+	v.CheckedAt = verification.CheckedAt
+	return nil
+}
+
+func (r *InMemoryVerificationRepository) UpdateProjectVerificationStatus(ctx context.Context, projectID string, status domain.VerificationStatus, verifiedAt *time.Time) error {
+	if r.projectRepo == nil {
+		return nil
+	}
+	r.projectRepo.mu.Lock()
+	defer r.projectRepo.mu.Unlock()
+
+	p, ok := r.projectRepo.projects[projectID]
+	if !ok || p.DeletedAt.Valid {
+		return domain.NewProjectNotFoundError()
+	}
+	p.VerificationStatus = status
+	p.VerifiedAt = verifiedAt
+	p.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+// InMemoryEndpointRepository provides an in-memory thread-safe EndpointRepository implementation.
+type InMemoryEndpointRepository struct {
+	mu        sync.RWMutex
+	endpoints map[string]*domain.APIEndpoint
+	sources   map[string]*domain.EndpointSource // key: endpointID + ":" + string(source)
+	runs      map[string]*domain.DiscoveryRun
+}
+
+func NewInMemoryEndpointRepository() *InMemoryEndpointRepository {
+	return &InMemoryEndpointRepository{
+		endpoints: make(map[string]*domain.APIEndpoint),
+		sources:   make(map[string]*domain.EndpointSource),
+		runs:      make(map[string]*domain.DiscoveryRun),
+	}
+}
+
+func (r *InMemoryEndpointRepository) UpsertRoute(
+	ctx context.Context,
+	projectID string,
+	route discovery.DiscoveredRoute,
+	source domain.DiscoverySource,
+	metadata domain.JSONMap,
+) (*domain.APIEndpoint, bool, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	now := time.Now().UTC()
+	method := discovery.NormalizeMethod(route.Method)
+	pathTemplate := discovery.NormalizePath(route.PathTemplate)
+
+	var existing *domain.APIEndpoint
+	for _, ep := range r.endpoints {
+		if ep.ProjectID == projectID && ep.Method == method && ep.PathTemplate == pathTemplate {
+			existing = ep
+			break
+		}
+	}
+
+	var created bool
+	if existing == nil {
+		created = true
+		epID := "ep-" + time.Now().UTC().Format("20060102150405.000000000")
+		existing = &domain.APIEndpoint{
+			ID:           epID,
+			ProjectID:    projectID,
+			Method:       method,
+			PathTemplate: pathTemplate,
+			Service:      route.Service,
+			Tags:         domain.StringSlice(route.Tags),
+			Status:       domain.EndpointStatusActive,
+			FirstSeen:    now,
+			LastSeen:     now,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		}
+		r.endpoints[epID] = existing
+	} else {
+		// Merge tags
+		tagSet := make(map[string]struct{})
+		var mergedTags []string
+		for _, t := range existing.Tags {
+			tagSet[t] = struct{}{}
+			mergedTags = append(mergedTags, t)
+		}
+		for _, t := range route.Tags {
+			if _, exists := tagSet[t]; !exists {
+				tagSet[t] = struct{}{}
+				mergedTags = append(mergedTags, t)
+			}
+		}
+		existing.Tags = domain.StringSlice(mergedTags)
+		if existing.Service == "" && route.Service != "" {
+			existing.Service = route.Service
+		}
+		existing.LastSeen = now
+		existing.UpdatedAt = now
+	}
+
+	// Upsert source
+	srcKey := existing.ID + ":" + string(source)
+	if src, ok := r.sources[srcKey]; ok {
+		src.LastSeen = now
+		src.Metadata = metadata
+	} else {
+		srcID := "src-" + time.Now().UTC().Format("20060102150405.000000000")
+		r.sources[srcKey] = &domain.EndpointSource{
+			ID:         srcID,
+			EndpointID: existing.ID,
+			Source:     source,
+			FirstSeen:  now,
+			LastSeen:   now,
+			Metadata:   metadata,
+		}
+	}
+
+	copyEP := *existing
+	return &copyEP, created, nil
+}
+
+func (r *InMemoryEndpointRepository) FindByID(ctx context.Context, projectID, endpointID string) (*domain.APIEndpoint, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	ep, ok := r.endpoints[endpointID]
+	if !ok || ep.ProjectID != projectID {
+		return nil, domain.NewEndpointNotFoundError()
+	}
+
+	copyEP := *ep
+	copyEP.Sources = nil
+	copyEP.SourcesList = nil
+	for _, s := range r.sources {
+		if s.EndpointID == ep.ID {
+			copyS := *s
+			copyEP.Sources = append(copyEP.Sources, copyS)
+			copyEP.SourcesList = append(copyEP.SourcesList, string(s.Source))
+		}
+	}
+
+	return &copyEP, nil
+}
+
+func (r *InMemoryEndpointRepository) Update(ctx context.Context, projectID string, endpoint *domain.APIEndpoint) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	ep, ok := r.endpoints[endpoint.ID]
+	if !ok || ep.ProjectID != projectID {
+		return domain.NewEndpointNotFoundError()
+	}
+
+	if endpoint.Tags != nil {
+		ep.Tags = endpoint.Tags
+	}
+	if endpoint.Status != "" {
+		ep.Status = endpoint.Status
+	}
+	ep.Note = endpoint.Note
+	ep.UpdatedAt = time.Now().UTC()
+	return nil
+}
+
+func (r *InMemoryEndpointRepository) List(ctx context.Context, projectID string, query domain.ListEndpointsQuery) ([]*domain.APIEndpoint, string, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	limit := query.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 100 {
+		limit = 100
+	}
+
+	var matched []*domain.APIEndpoint
+	for _, ep := range r.endpoints {
+		if ep.ProjectID != projectID {
+			continue
+		}
+
+		// Filter q
+		if q := strings.TrimSpace(query.Q); q != "" {
+			lowerQ := strings.ToLower(q)
+			if !strings.Contains(strings.ToLower(ep.PathTemplate), lowerQ) &&
+				!strings.Contains(strings.ToLower(ep.Service), lowerQ) {
+				continue
+			}
+		}
+
+		// Filter method
+		if query.Method != "" && !strings.EqualFold(ep.Method, query.Method) {
+			continue
+		}
+
+		// Filter status
+		if query.Status != "" && string(ep.Status) != query.Status {
+			continue
+		}
+
+		// Filter service
+		if query.Service != "" && !strings.EqualFold(ep.Service, query.Service) {
+			continue
+		}
+
+		// Filter tag
+		if query.Tag != "" {
+			hasTag := false
+			for _, t := range ep.Tags {
+				if strings.EqualFold(t, query.Tag) {
+					hasTag = true
+					break
+				}
+			}
+			if !hasTag {
+				continue
+			}
+		}
+
+		// Filter source
+		if query.Source != "" {
+			srcKey := ep.ID + ":" + query.Source
+			if _, ok := r.sources[srcKey]; !ok {
+				continue
+			}
+		}
+
+		copyEP := *ep
+		for _, s := range r.sources {
+			if s.EndpointID == ep.ID {
+				copyEP.SourcesList = append(copyEP.SourcesList, string(s.Source))
+			}
+		}
+		matched = append(matched, &copyEP)
+	}
+
+	// Apply pagination
+	offset := 0
+	if query.Cursor != "" {
+		if decoded, err := base64.StdEncoding.DecodeString(query.Cursor); err == nil {
+			if pOffset, err := strconv.Atoi(string(decoded)); err == nil && pOffset >= 0 {
+				offset = pOffset
+			}
+		}
+	}
+
+	if offset >= len(matched) {
+		return []*domain.APIEndpoint{}, "", nil
+	}
+
+	end := offset + limit
+	var nextCursor string
+	if end < len(matched) {
+		nextCursor = base64.StdEncoding.EncodeToString([]byte(strconv.Itoa(end)))
+	} else {
+		end = len(matched)
+	}
+
+	return matched[offset:end], nextCursor, nil
+}
+
+func (r *InMemoryEndpointRepository) MarkStaleEndpoints(ctx context.Context, cutoff time.Time) (int64, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	var count int64
+	for _, ep := range r.endpoints {
+		if ep.Status == domain.EndpointStatusActive && ep.LastSeen.Before(cutoff) {
+			ep.Status = domain.EndpointStatusStale
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (r *InMemoryEndpointRepository) CreateDiscoveryRun(ctx context.Context, run *domain.DiscoveryRun) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if run.ID == "" {
+		run.ID = "run-" + time.Now().UTC().Format("20060102150405.000000000")
+	}
+	if run.StartedAt.IsZero() {
+		run.StartedAt = time.Now().UTC()
+	}
+	copyRun := *run
+	r.runs[run.ID] = &copyRun
+	return nil
+}
+
+func (r *InMemoryEndpointRepository) UpdateDiscoveryRun(ctx context.Context, run *domain.DiscoveryRun) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	target, ok := r.runs[run.ID]
+	if !ok {
+		return errors.New("discovery run not found")
+	}
+	target.Status = run.Status
+	target.Found = run.Found
+	target.Created = run.Created
+	target.Updated = run.Updated
+	target.Error = run.Error
+	target.Metadata = run.Metadata
+	target.FinishedAt = run.FinishedAt
+	return nil
+}
+
+func (r *InMemoryEndpointRepository) FindDiscoveryRunByID(ctx context.Context, projectID, runID string) (*domain.DiscoveryRun, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	run, ok := r.runs[runID]
+	if !ok || run.ProjectID != projectID {
+		return nil, domain.NewNotFoundError("Discovery run not found")
+	}
+	copyRun := *run
+	return &copyRun, nil
+}
+
+func (r *InMemoryEndpointRepository) ListDiscoveryRuns(ctx context.Context, projectID string, limit int) ([]*domain.DiscoveryRun, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	if limit <= 0 {
+		limit = 20
+	}
+	var list []*domain.DiscoveryRun
+	for _, run := range r.runs {
+		if run.ProjectID == projectID {
+			copyRun := *run
+			list = append(list, &copyRun)
+		}
+	}
+	if len(list) > limit {
+		list = list[:limit]
+	}
+	return list, nil
 }

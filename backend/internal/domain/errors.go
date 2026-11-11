@@ -23,10 +23,16 @@ const (
 	ErrCodeKeyScopeMissing       = "KEY_SCOPE_MISSING"
 	ErrCodeNotFound              = "NOT_FOUND"
 	ErrCodeUserNotFound          = "USER_NOT_FOUND"
+	ErrCodeProjectNotFound       = "PROJECT_NOT_FOUND"
+	ErrCodeEndpointNotFound      = "ENDPOINT_NOT_FOUND"
+	ErrCodeInvalidOpenAPISpec    = "INVALID_OPENAPI_SPEC"
+	ErrCodeInvalidManifest       = "INVALID_MANIFEST"
 	ErrCodeEmailTaken            = "EMAIL_TAKEN"
 	ErrCodeUsernameTaken         = "USERNAME_TAKEN"
 	ErrCodeUsernameAlreadySet    = "USERNAME_ALREADY_SET"
+	ErrCodeReservedUsername      = "RESERVED_USERNAME"
 	ErrCodeSlugTaken             = "SLUG_TAKEN"
+	ErrCodeReservedSlug          = "RESERVED_SLUG"
 	ErrCodeAlreadyMember         = "ALREADY_MEMBER"
 	ErrCodeAlreadyVerified       = "ALREADY_VERIFIED"
 	ErrCodeOrgLimitReached       = "ORG_LIMIT_REACHED"
@@ -42,6 +48,7 @@ const (
 	ErrCodeInvalidPassword       = "INVALID_PASSWORD"
 	ErrCodeLastOwner             = "LAST_OWNER"
 	ErrCodeConfirmationMismatch  = "CONFIRMATION_MISMATCH"
+	ErrCodeCannotModifyOwnRole   = "CANNOT_MODIFY_OWN_ROLE"
 	ErrCodeNotRunning            = "NOT_RUNNING"
 	ErrCodeTargetNotVerified     = "TARGET_NOT_VERIFIED"
 	ErrCodeTargetBlocked         = "TARGET_BLOCKED"
@@ -166,6 +173,98 @@ func NewEmailNotVerifiedError() *AppError {
 
 func NewAlreadyVerifiedError() *AppError {
 	return NewAppError(fiber.StatusConflict, ErrCodeAlreadyVerified, "Account email is already verified", nil)
+}
+
+func NewOrgLimitReachedError() *AppError {
+	return NewAppError(fiber.StatusConflict, ErrCodeOrgLimitReached, "You have reached the maximum allowed limit of 3 organizations", nil)
+}
+
+func NewTargetOrgLimitReachedError() *AppError {
+	return NewAppError(fiber.StatusConflict, ErrCodeTargetOrgLimitReached, "User has already reached the maximum limit of 3 organizations", nil)
+}
+
+func NewProjectLimitReachedError() *AppError {
+	return NewAppError(fiber.StatusConflict, ErrCodeProjectLimitReached, "Organization has reached the maximum allowed limit of 5 projects", nil)
+}
+
+func NewProjectNotFoundError() *AppError {
+	return NewAppError(fiber.StatusNotFound, ErrCodeProjectNotFound, "Project not found", nil)
+}
+
+func NewEndpointNotFoundError() *AppError {
+	return NewAppError(fiber.StatusNotFound, ErrCodeEndpointNotFound, "Endpoint not found", nil)
+}
+
+func NewInvalidOpenAPISpecError(reason string) *AppError {
+	msg := "Invalid OpenAPI specification"
+	if reason != "" {
+		msg = fmt.Sprintf("Invalid OpenAPI specification: %s", reason)
+	}
+	return NewAppError(fiber.StatusBadRequest, ErrCodeInvalidOpenAPISpec, msg, nil)
+}
+
+func NewInvalidManifestError(reason string) *AppError {
+	msg := "Invalid route manifest"
+	if reason != "" {
+		msg = fmt.Sprintf("Invalid route manifest: %s", reason)
+	}
+	return NewAppError(fiber.StatusBadRequest, ErrCodeInvalidManifest, msg, nil)
+}
+
+func NewTargetBlockedError(reason string) *AppError {
+	msg := "Target host resolves to a private, loopback, or blocked address"
+	if reason != "" {
+		msg = fmt.Sprintf("Target host is blocked: %s", reason)
+	}
+	return &AppError{
+		HTTPStatus: fiber.StatusUnprocessableEntity,
+		ErrorCode:  ErrCodeTargetBlocked,
+		Message:    msg,
+	}
+}
+
+func NewTargetNotVerifiedError() *AppError {
+	return &AppError{
+		HTTPStatus: fiber.StatusForbidden,
+		ErrorCode:  ErrCodeTargetNotVerified,
+		Message:    "Target domain ownership has not been verified",
+	}
+}
+
+func NewSlugTakenError() *AppError {
+	return NewAppError(fiber.StatusConflict, ErrCodeSlugTaken, "Organization slug is already in use", nil)
+}
+
+func NewReservedSlugError() *AppError {
+	return NewAppError(fiber.StatusBadRequest, ErrCodeReservedSlug, "This organization slug is reserved and cannot be used", nil)
+}
+
+func NewUsernameTakenError() *AppError {
+	return NewAppError(fiber.StatusConflict, ErrCodeUsernameTaken, "Username is already taken", nil)
+}
+
+func NewUsernameAlreadySetError() *AppError {
+	return NewAppError(fiber.StatusConflict, ErrCodeUsernameAlreadySet, "Username has already been set and cannot be changed", nil)
+}
+
+func NewReservedUsernameError() *AppError {
+	return NewAppError(fiber.StatusBadRequest, ErrCodeReservedUsername, "This username is reserved and cannot be claimed", nil)
+}
+
+func NewAlreadyMemberError() *AppError {
+	return NewAppError(fiber.StatusConflict, ErrCodeAlreadyMember, "User is already a member of this organization", nil)
+}
+
+func NewLastOwnerError() *AppError {
+	return NewAppError(fiber.StatusUnprocessableEntity, ErrCodeLastOwner, "Cannot leave or demote role: the organization must retain at least one owner", nil)
+}
+
+func NewConfirmationMismatchError() *AppError {
+	return NewAppError(fiber.StatusUnprocessableEntity, ErrCodeConfirmationMismatch, "Confirmation slug does not match organization slug", nil)
+}
+
+func NewCannotModifyOwnRoleError() *AppError {
+	return NewAppError(fiber.StatusBadRequest, ErrCodeCannotModifyOwnRole, "You cannot modify your own role", nil)
 }
 
 func NewInternalError(err error) *AppError {

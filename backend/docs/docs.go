@@ -590,9 +590,2053 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/v1/ingest/discovery": {
+            "post": {
+                "description": "Ingests routes discovered during CI pipeline runs",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Discovery"
+                ],
+                "summary": "Ingest discovery from CI scanner",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "X-Project-ID",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "query"
+                    },
+                    {
+                        "description": "CI Route Manifest",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.DiscoveryManifest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.DiscoveryRunResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lists organizations the authenticated user belongs to (up to 3)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Organizations"
+                ],
+                "summary": "List user organizations",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/domain.OrgResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates an organization workspace with caller as owner (max 3 orgs per user)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Organizations"
+                ],
+                "summary": "Create organization",
+                "parameters": [
+                    {
+                        "description": "Organization Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CreateOrgRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.OrgResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves organization details for members (404 for non-members)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Organizations"
+                ],
+                "summary": "Get organization details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.OrgResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates organization name and description (slug is immutable)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Organizations"
+                ],
+                "summary": "Update organization details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.UpdateOrgRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.OrgResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft-deletes organization requiring slug confirmation (owner only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Organizations"
+                ],
+                "summary": "Delete organization",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Confirmation Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.DeleteOrgRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/members": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lists members belonging to the organization with optional filtering",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Members"
+                ],
+                "summary": "List organization members",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Role filter",
+                        "name": "role",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search query",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Pagination limit",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pagination cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/domain.OrgMemberDetailResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Adds a user by email with role (viewer, member, admin). Owner cannot be assigned.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Members"
+                ],
+                "summary": "Add organization member",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Member Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.AddMemberRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.OrgMemberDetailResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/members/leave": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Allows the caller to voluntarily leave the organization (sole owner cannot leave)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Members"
+                ],
+                "summary": "Leave organization",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/members/{userID}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Removes a member from the organization",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Members"
+                ],
+                "summary": "Remove organization member",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Member User ID",
+                        "name": "userID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/members/{userID}/role": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates the role of an organization member",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Members"
+                ],
+                "summary": "Update member role",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Member User ID",
+                        "name": "userID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Role Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.UpdateMemberRoleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.OrgMemberDetailResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns all active projects for the organization (up to 5)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "List organization projects",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/domain.ProjectResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a new project in the organization (hard limit of 5 projects per org)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Create project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Project Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CreateProjectRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.ProjectResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns project settings, verification status, and rolling 1-hour statistics",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Get project details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.ProjectDetailResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates project name, description, environment, or base_url (changing host resets verification)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Update project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Project Update Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.UpdateProjectRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.ProjectResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Soft-deletes a project (7-day purge grace)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Delete project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/discovery/manifest": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Ingests routes declared in a route manifest v1 JSON payload",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Discovery"
+                ],
+                "summary": "Import route manifest",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Route Manifest Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.DiscoveryManifest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.DiscoveryRunResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/discovery/openapi": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Ingests endpoints from an OpenAPI 2.0 (Swagger) or OpenAPI 3.x spec file (\u003c= 5MB) or remote URL",
+                "consumes": [
+                    "multipart/form-data",
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Discovery"
+                ],
+                "summary": "Import OpenAPI specification",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "OpenAPI Spec File",
+                        "name": "file",
+                        "in": "formData"
+                    },
+                    {
+                        "description": "OpenAPI Spec URL Payload",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/domain.ImportOpenAPIRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.DiscoveryRunResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/discovery/runs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns recent discovery runs and ingestion audit history",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Discovery"
+                ],
+                "summary": "List discovery runs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limit (default 20, max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/domain.DiscoveryRunResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/endpoints": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns endpoints for a project with method, tag, status, and search filters",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Registry"
+                ],
+                "summary": "List registry endpoints",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search query (path or service)",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by HTTP method",
+                        "name": "method",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by tag",
+                        "name": "tag",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by discovery source (openapi, ci, manifest, runtime)",
+                        "name": "source",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (active, stale, ignored)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by service name",
+                        "name": "service",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort order (path_template, -last_seen)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Results limit (default 50, max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Pagination cursor",
+                        "name": "cursor",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/domain.EndpointResponse"
+                                            }
+                                        },
+                                        "meta": {
+                                            "$ref": "#/definitions/domain.PageMeta"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/endpoints/{endpointID}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns endpoint details, discovery sources, and rolling statistics",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Registry"
+                ],
+                "summary": "Get endpoint details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Endpoint ID",
+                        "name": "endpointID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.EndpointDetailResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates tags, note, or status (active \u003c-\u003e ignored)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Registry"
+                ],
+                "summary": "Update endpoint",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Endpoint ID",
+                        "name": "endpointID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Endpoint Patch Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.PatchEndpointRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.EndpointResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/verification": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns active domain verification status and setup instructions",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Get domain verification status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.VerificationResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Starts a domain verification challenge and returns DNS TXT / HTTP file instructions",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Initiate domain verification",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Verification Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.InitiateVerificationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.VerificationResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/verification/check": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Executes domain verification check immediately and reports status",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Projects"
+                ],
+                "summary": "Check domain verification",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.CheckVerificationResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/users/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves the authenticated caller's profile",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get current user profile",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.UserResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/users/update": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates the user's first name and last name",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Update user profile",
+                "parameters": [
+                    {
+                        "description": "Profile Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.UpdateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.UserResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/users/username": {
+            "get": {
+                "description": "Checks if a requested username is available and valid",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Check username availability",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username to check",
+                        "name": "u",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.CheckUsernameResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Claims a unique username for the authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Set one-time username",
+                "parameters": [
+                    {
+                        "description": "Username Payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.SetUsernameRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.UserResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
+        "domain.AddMemberRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "role"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "engineer@acme.com"
+                },
+                "role": {
+                    "enum": [
+                        "admin",
+                        "member",
+                        "viewer"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.OrgRole"
+                        }
+                    ],
+                    "example": "member"
+                }
+            }
+        },
         "domain.AuthMeResponseData": {
             "type": "object",
             "properties": {
@@ -641,6 +2685,472 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.CheckUsernameResponse": {
+            "type": "object",
+            "properties": {
+                "available": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "username": {
+                    "type": "string",
+                    "example": "asha"
+                }
+            }
+        },
+        "domain.CheckVerificationResponse": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string",
+                    "example": "TXT record not found"
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.VerificationStatus"
+                        }
+                    ],
+                    "example": "verified"
+                },
+                "verified_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.CreateOrgRequest": {
+            "type": "object",
+            "required": [
+                "name",
+                "slug"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Cloud telemetry platform"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2,
+                    "example": "Strim Labs"
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 2,
+                    "example": "strim-labs"
+                }
+            }
+        },
+        "domain.CreateProjectRequest": {
+            "type": "object",
+            "required": [
+                "base_url",
+                "name",
+                "slug"
+            ],
+            "properties": {
+                "base_url": {
+                    "type": "string",
+                    "example": "https://api.acme.com"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Orders and payments"
+                },
+                "environment": {
+                    "enum": [
+                        "development",
+                        "staging",
+                        "production"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.ProjectEnvironment"
+                        }
+                    ],
+                    "example": "production"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2,
+                    "example": "Checkout API"
+                },
+                "slug": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 2,
+                    "example": "checkout-api"
+                }
+            }
+        },
+        "domain.DNSInstructions": {
+            "type": "object",
+            "properties": {
+                "host": {
+                    "type": "string",
+                    "example": "_strim.api.acme.com"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "TXT"
+                },
+                "value": {
+                    "type": "string",
+                    "example": "strim-verify=8f3a9c..."
+                }
+            }
+        },
+        "domain.DeleteOrgRequest": {
+            "type": "object",
+            "required": [
+                "confirm_slug"
+            ],
+            "properties": {
+                "confirm_slug": {
+                    "type": "string",
+                    "example": "strim-labs"
+                }
+            }
+        },
+        "domain.DiscoveryManifest": {
+            "type": "object",
+            "required": [
+                "routes",
+                "service",
+                "source",
+                "version"
+            ],
+            "properties": {
+                "branch": {
+                    "type": "string",
+                    "example": "main"
+                },
+                "commit": {
+                    "type": "string",
+                    "example": "a1b2c3d"
+                },
+                "repo": {
+                    "type": "string",
+                    "example": "acme/orders"
+                },
+                "routes": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/domain.DiscoveryManifestRoute"
+                    }
+                },
+                "service": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "example": "orders"
+                },
+                "source": {
+                    "enum": [
+                        "manifest",
+                        "ci"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.DiscoverySource"
+                        }
+                    ],
+                    "example": "manifest"
+                },
+                "version": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "domain.DiscoveryManifestRoute": {
+            "type": "object",
+            "required": [
+                "method",
+                "path"
+            ],
+            "properties": {
+                "method": {
+                    "type": "string",
+                    "example": "GET"
+                },
+                "path": {
+                    "type": "string",
+                    "example": "/orders/{id}"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"orders\"]"
+                    ]
+                }
+            }
+        },
+        "domain.DiscoveryRunResponse": {
+            "type": "object",
+            "properties": {
+                "created": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "error": {
+                    "type": "string",
+                    "example": ""
+                },
+                "finished_at": {
+                    "type": "string",
+                    "example": "2026-11-06T10:00:02Z"
+                },
+                "found": {
+                    "type": "integer",
+                    "example": 15
+                },
+                "id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000030"
+                },
+                "metadata": {
+                    "$ref": "#/definitions/domain.JSONMap"
+                },
+                "project_id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000010"
+                },
+                "source": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.DiscoverySource"
+                        }
+                    ],
+                    "example": "openapi"
+                },
+                "started_at": {
+                    "type": "string",
+                    "example": "2026-11-06T10:00:00Z"
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.RunStatus"
+                        }
+                    ],
+                    "example": "completed"
+                },
+                "updated": {
+                    "type": "integer",
+                    "example": 5
+                }
+            }
+        },
+        "domain.DiscoverySource": {
+            "type": "string",
+            "enum": [
+                "openapi",
+                "ci",
+                "manifest",
+                "runtime"
+            ],
+            "x-enum-varnames": [
+                "SourceOpenAPI",
+                "SourceCI",
+                "SourceManifest",
+                "SourceRuntime"
+            ]
+        },
+        "domain.EndpointDetailResponse": {
+            "type": "object",
+            "properties": {
+                "first_seen": {
+                    "type": "string",
+                    "example": "2026-11-06T10:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000021"
+                },
+                "last_seen": {
+                    "type": "string",
+                    "example": "2026-11-06T12:00:00Z"
+                },
+                "method": {
+                    "type": "string",
+                    "example": "POST"
+                },
+                "note": {
+                    "type": "string",
+                    "example": "internal only"
+                },
+                "path_template": {
+                    "type": "string",
+                    "example": "/orders/{id}/items"
+                },
+                "service": {
+                    "type": "string",
+                    "example": "orders"
+                },
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"openapi\"",
+                        "\"runtime\"]"
+                    ]
+                },
+                "sources_detail": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.EndpointSourceDetail"
+                    }
+                },
+                "stats_1h": {
+                    "$ref": "#/definitions/domain.StatsSummary"
+                },
+                "stats_24h": {
+                    "$ref": "#/definitions/domain.StatsSummary"
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.EndpointStatus"
+                        }
+                    ],
+                    "example": "active"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"checkout\"]"
+                    ]
+                }
+            }
+        },
+        "domain.EndpointResponse": {
+            "type": "object",
+            "properties": {
+                "first_seen": {
+                    "type": "string",
+                    "example": "2026-11-06T10:00:00Z"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000021"
+                },
+                "last_seen": {
+                    "type": "string",
+                    "example": "2026-11-06T12:00:00Z"
+                },
+                "method": {
+                    "type": "string",
+                    "example": "POST"
+                },
+                "note": {
+                    "type": "string",
+                    "example": "internal only"
+                },
+                "path_template": {
+                    "type": "string",
+                    "example": "/orders/{id}/items"
+                },
+                "service": {
+                    "type": "string",
+                    "example": "orders"
+                },
+                "sources": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"openapi\"",
+                        "\"runtime\"]"
+                    ]
+                },
+                "stats_1h": {
+                    "$ref": "#/definitions/domain.StatsSummary"
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.EndpointStatus"
+                        }
+                    ],
+                    "example": "active"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"checkout\"]"
+                    ]
+                }
+            }
+        },
+        "domain.EndpointSourceDetail": {
+            "type": "object",
+            "properties": {
+                "first_seen": {
+                    "type": "string",
+                    "example": "2026-11-06T10:00:00Z"
+                },
+                "last_seen": {
+                    "type": "string",
+                    "example": "2026-11-06T12:00:00Z"
+                },
+                "metadata": {
+                    "$ref": "#/definitions/domain.JSONMap"
+                },
+                "source": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.DiscoverySource"
+                        }
+                    ],
+                    "example": "openapi"
+                }
+            }
+        },
+        "domain.EndpointStatus": {
+            "type": "string",
+            "enum": [
+                "active",
+                "stale",
+                "ignored"
+            ],
+            "x-enum-varnames": [
+                "EndpointStatusActive",
+                "EndpointStatusStale",
+                "EndpointStatusIgnored"
+            ]
+        },
+        "domain.FileInstructions": {
+            "type": "object",
+            "properties": {
+                "content": {
+                    "type": "string",
+                    "example": "8f3a9c..."
+                },
+                "url": {
+                    "type": "string",
+                    "example": "https://api.acme.com/.well-known/strim-verify.txt"
+                }
+            }
+        },
         "domain.ForgotPasswordRequest": {
             "type": "object",
             "required": [
@@ -652,6 +3162,39 @@ const docTemplate = `{
                     "example": "dev@acme.com"
                 }
             }
+        },
+        "domain.ImportOpenAPIRequest": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "example": "https://api.acme.com/openapi.json"
+                }
+            }
+        },
+        "domain.InitiateVerificationRequest": {
+            "type": "object",
+            "required": [
+                "method"
+            ],
+            "properties": {
+                "method": {
+                    "enum": [
+                        "dns",
+                        "file"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.VerificationMethod"
+                        }
+                    ],
+                    "example": "dns"
+                }
+            }
+        },
+        "domain.JSONMap": {
+            "type": "object",
+            "additionalProperties": true
         },
         "domain.LoginRequest": {
             "type": "object",
@@ -679,6 +3222,99 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.OrgMemberDetailResponse": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "dev@acme.com"
+                },
+                "first_name": {
+                    "type": "string",
+                    "example": "Ada"
+                },
+                "joined_at": {
+                    "type": "string",
+                    "example": "2026-11-01T10:00:00Z"
+                },
+                "last_name": {
+                    "type": "string",
+                    "example": "Byron"
+                },
+                "role": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.OrgRole"
+                        }
+                    ],
+                    "example": "member"
+                },
+                "user_id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000001"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "ada"
+                }
+            }
+        },
+        "domain.OrgResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-11-01T10:00:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Cloud telemetry platform"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000002"
+                },
+                "member_count": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Strim Labs"
+                },
+                "project_count": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "role": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.OrgRole"
+                        }
+                    ],
+                    "example": "owner"
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "strim-labs"
+                }
+            }
+        },
+        "domain.OrgRole": {
+            "type": "string",
+            "enum": [
+                "owner",
+                "admin",
+                "member",
+                "viewer"
+            ],
+            "x-enum-varnames": [
+                "RoleOwner",
+                "RoleAdmin",
+                "RoleMember",
+                "RoleViewer"
+            ]
+        },
         "domain.PageMeta": {
             "type": "object",
             "properties": {
@@ -697,6 +3333,241 @@ const docTemplate = `{
                 "total": {
                     "type": "integer",
                     "example": 120
+                }
+            }
+        },
+        "domain.PatchEndpointRequest": {
+            "type": "object",
+            "properties": {
+                "note": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Deprecated endpoint"
+                },
+                "status": {
+                    "enum": [
+                        "active",
+                        "ignored"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.EndpointStatus"
+                        }
+                    ],
+                    "example": "ignored"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "[\"checkout\"",
+                        "\"v1\"]"
+                    ]
+                }
+            }
+        },
+        "domain.ProjectDetailResponse": {
+            "type": "object",
+            "properties": {
+                "base_url": {
+                    "type": "string",
+                    "example": "https://api.acme.com"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-11-04T10:00:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Orders and payments"
+                },
+                "endpoint_count": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "environment": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.ProjectEnvironment"
+                        }
+                    ],
+                    "example": "production"
+                },
+                "health": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.ProjectHealth"
+                        }
+                    ],
+                    "example": "no_data"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000010"
+                },
+                "last_event_at": {
+                    "type": "string"
+                },
+                "last_test": {
+                    "$ref": "#/definitions/domain.ProjectLastTest"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Checkout API"
+                },
+                "org_id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000002"
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "checkout-api"
+                },
+                "stats_1h": {
+                    "$ref": "#/definitions/domain.ProjectStats1h"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2026-11-04T10:00:00Z"
+                },
+                "verification_status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.VerificationStatus"
+                        }
+                    ],
+                    "example": "unverified"
+                },
+                "verified_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.ProjectEnvironment": {
+            "type": "string",
+            "enum": [
+                "development",
+                "staging",
+                "production"
+            ],
+            "x-enum-varnames": [
+                "EnvDevelopment",
+                "EnvStaging",
+                "EnvProduction"
+            ]
+        },
+        "domain.ProjectHealth": {
+            "type": "string",
+            "enum": [
+                "healthy",
+                "degraded",
+                "failing",
+                "no_data"
+            ],
+            "x-enum-varnames": [
+                "HealthHealthy",
+                "HealthDegraded",
+                "HealthFailing",
+                "HealthNoData"
+            ]
+        },
+        "domain.ProjectLastTest": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000020"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "completed"
+                }
+            }
+        },
+        "domain.ProjectResponse": {
+            "type": "object",
+            "properties": {
+                "base_url": {
+                    "type": "string",
+                    "example": "https://api.acme.com"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-11-04T10:00:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Orders and payments"
+                },
+                "endpoint_count": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "environment": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.ProjectEnvironment"
+                        }
+                    ],
+                    "example": "production"
+                },
+                "health": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.ProjectHealth"
+                        }
+                    ],
+                    "example": "no_data"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000010"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Checkout API"
+                },
+                "org_id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000002"
+                },
+                "slug": {
+                    "type": "string",
+                    "example": "checkout-api"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2026-11-04T10:00:00Z"
+                },
+                "verification_status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.VerificationStatus"
+                        }
+                    ],
+                    "example": "unverified"
+                },
+                "verified_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.ProjectStats1h": {
+            "type": "object",
+            "properties": {
+                "error_rate": {
+                    "type": "number",
+                    "example": 0
+                },
+                "p95_ms": {
+                    "type": "number",
+                    "example": 0
+                },
+                "requests": {
+                    "type": "integer",
+                    "example": 0
                 }
             }
         },
@@ -764,6 +3635,33 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.RunStatus": {
+            "type": "string",
+            "enum": [
+                "running",
+                "completed",
+                "failed"
+            ],
+            "x-enum-varnames": [
+                "RunStatusRunning",
+                "RunStatusCompleted",
+                "RunStatusFailed"
+            ]
+        },
+        "domain.SetUsernameRequest": {
+            "type": "object",
+            "required": [
+                "username"
+            ],
+            "properties": {
+                "username": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "minLength": 3,
+                    "example": "asha"
+                }
+            }
+        },
         "domain.SignupRequest": {
             "type": "object",
             "required": [
@@ -794,6 +3692,121 @@ const docTemplate = `{
                     "maxLength": 72,
                     "minLength": 8,
                     "example": "S3cure!pass"
+                }
+            }
+        },
+        "domain.StatsSummary": {
+            "type": "object",
+            "properties": {
+                "error_rate": {
+                    "type": "number",
+                    "example": 0.004
+                },
+                "p95_ms": {
+                    "type": "number",
+                    "example": 182
+                },
+                "requests": {
+                    "type": "integer",
+                    "example": 12044
+                },
+                "rps": {
+                    "type": "number",
+                    "example": 3.3
+                }
+            }
+        },
+        "domain.UpdateMemberRoleRequest": {
+            "type": "object",
+            "required": [
+                "role"
+            ],
+            "properties": {
+                "role": {
+                    "enum": [
+                        "admin",
+                        "member",
+                        "viewer"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.OrgRole"
+                        }
+                    ],
+                    "example": "admin"
+                }
+            }
+        },
+        "domain.UpdateOrgRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Updated platform description"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2,
+                    "example": "Strim Labs Global"
+                }
+            }
+        },
+        "domain.UpdateProjectRequest": {
+            "type": "object",
+            "properties": {
+                "base_url": {
+                    "type": "string",
+                    "example": "https://api-v2.acme.com"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "example": "Updated description"
+                },
+                "environment": {
+                    "enum": [
+                        "development",
+                        "staging",
+                        "production"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.ProjectEnvironment"
+                        }
+                    ],
+                    "example": "staging"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2,
+                    "example": "Checkout API v2"
+                }
+            }
+        },
+        "domain.UpdateUserRequest": {
+            "type": "object",
+            "required": [
+                "first_name",
+                "last_name"
+            ],
+            "properties": {
+                "first_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "example": "Ada"
+                },
+                "last_name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 1,
+                    "example": "Byron"
                 }
             }
         },
@@ -829,6 +3842,75 @@ const docTemplate = `{
                     "example": "asha"
                 }
             }
+        },
+        "domain.VerificationInstructions": {
+            "type": "object",
+            "properties": {
+                "dns": {
+                    "$ref": "#/definitions/domain.DNSInstructions"
+                },
+                "file": {
+                    "$ref": "#/definitions/domain.FileInstructions"
+                }
+            }
+        },
+        "domain.VerificationMethod": {
+            "type": "string",
+            "enum": [
+                "dns",
+                "file"
+            ],
+            "x-enum-varnames": [
+                "MethodDNS",
+                "MethodFile"
+            ]
+        },
+        "domain.VerificationResponse": {
+            "type": "object",
+            "properties": {
+                "expires_at": {
+                    "type": "string",
+                    "example": "2026-11-05T10:00:00Z"
+                },
+                "instructions": {
+                    "$ref": "#/definitions/domain.VerificationInstructions"
+                },
+                "method": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.VerificationMethod"
+                        }
+                    ],
+                    "example": "dns"
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.VerificationStatus"
+                        }
+                    ],
+                    "example": "pending"
+                },
+                "token": {
+                    "type": "string",
+                    "example": "strim-verify=8f3a9c..."
+                }
+            }
+        },
+        "domain.VerificationStatus": {
+            "type": "string",
+            "enum": [
+                "unverified",
+                "pending",
+                "verified",
+                "failed"
+            ],
+            "x-enum-varnames": [
+                "StatusUnverified",
+                "StatusPending",
+                "StatusVerified",
+                "StatusFailed"
+            ]
         },
         "domain.VerifyOTPRequest": {
             "type": "object",
