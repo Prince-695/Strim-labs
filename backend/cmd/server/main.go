@@ -10,10 +10,12 @@ import (
 	"time"
 
 	"github.com/Prince-695/strim/backend/internal/alerts"
+	"github.com/Prince-695/strim/backend/internal/audit"
 	"github.com/Prince-695/strim/backend/internal/cache"
 	"github.com/Prince-695/strim/backend/internal/config"
 	"github.com/Prince-695/strim/backend/internal/discovery"
 	"github.com/Prince-695/strim/backend/internal/domain"
+	"github.com/Prince-695/strim/backend/internal/events"
 	"github.com/Prince-695/strim/backend/internal/http"
 	"github.com/Prince-695/strim/backend/internal/http/handlers"
 	"github.com/Prince-695/strim/backend/internal/ingest"
@@ -110,6 +112,11 @@ func main() {
 				&domain.IncidentEvent{},
 				&domain.NotificationChannel{},
 				&domain.NotificationLog{},
+				&domain.APIKey{},
+				&domain.Webhook{},
+				&domain.WebhookDelivery{},
+				&domain.AuditLog{},
+				&domain.DailyUsageCounter{},
 			); err != nil {
 				fmt.Printf("\033[38;2;239;68;68m[DATABASE]\033[0m \033[31m✗ Auto-migration failed: %v\033[0m\n", err)
 			} else {
@@ -133,6 +140,11 @@ func main() {
 	alertRepo := repository.NewAlertRuleRepository(db)
 	incidentRepo := repository.NewIncidentRepository(db)
 	channelRepo := repository.NewNotificationChannelRepository(db)
+	apiKeyRepo := repository.NewAPIKeyRepository(db)
+	webhookRepo := repository.NewWebhookRepository(db)
+	deliveryRepo := repository.NewWebhookDeliveryRepository(db)
+	auditRepo := repository.NewAuditLogRepository(db)
+	usageRepo := repository.NewUsageRepository(db)
 
 	tokenCache := cache.NewMemoryCache()
 	tenantCache := cache.NewTenantCache(tokenCache)
@@ -143,6 +155,12 @@ func main() {
 	httpFetcher := service.NewSSRFSafeHTTPFetcher(ssrfGuard)
 	verifEngine := service.NewVerificationEngine(nil, httpFetcher)
 	openapiParser := discovery.NewOpenAPIParser(ssrfGuard)
+
+	eventBus := events.NewInProcessBus(1000, 4)
+	defer eventBus.Close()
+	webhookDispatcher := events.NewWebhookDispatcher(webhookRepo, deliveryRepo, ssrfGuard, nil)
+	webhookDispatcher.RegisterSubscriber(eventBus)
+	auditRec := audit.NewAsyncRecorder(auditRepo)
 
 	var mailerClient mailer.Mailer
 	if cfg.SMTPHost != "" && cfg.SMTPUser != "" {
@@ -251,6 +269,20 @@ func main() {
 	incidentHandler := handlers.NewIncidentHandler(incidentSvc, appLogger)
 	channelHandler := handlers.NewChannelHandler(channelSvc, appLogger)
 
+	// 13. API Keys, Webhooks, Audit Logs, and Usage Engine
+	apiKeySvc := service.NewAPIKeyService(apiKeyRepo, projectRepo, auditRec)
+	webhookSvc := service.NewWebhookService(webhookRepo, deliveryRepo, projectRepo, ssrfGuard, webhookDispatcher, auditRec)
+	auditSvc := service.NewAuditService(auditRepo, orgRepo)
+	usageSvc := service.NewUsageService(usageRepo, projectRepo, orgRepo)
+
+	ingestHandler.SetServices(apiKeySvc, usageSvc)
+	discoveryHandler.SetAPIKeyService(apiKeySvc)
+
+	apiKeyHandler := handlers.NewAPIKeyHandler(apiKeySvc, appLogger)
+	webhookHandler := handlers.NewWebhookHandler(webhookSvc, appLogger)
+	auditHandler := handlers.NewAuditHandler(auditSvc, appLogger)
+	usageHandler := handlers.NewUsageHandler(usageSvc, appLogger)
+
 	handlerContainer := handlers.NewContainer(
 		systemHandler,
 		authHandler,
@@ -268,6 +300,10 @@ func main() {
 		alertHandler,
 		incidentHandler,
 		channelHandler,
+		apiKeyHandler,
+		webhookHandler,
+		auditHandler,
+		usageHandler,
 	)
 
 	// 10. Build Router & Middlewares

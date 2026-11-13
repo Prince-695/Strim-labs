@@ -113,6 +113,8 @@ func NewRouter(
 	tenant.Get("/", requireViewer, handlers.Org.GetOrg)
 	tenant.Put("/", requireAdmin, csrfGuard, handlers.Org.UpdateOrg)
 	tenant.Delete("/", requireOwner, csrfGuard, handlers.Org.DeleteOrg)
+	tenant.Get("/audit-logs", requireAdmin, handlers.Audit.ListAuditLogs)
+	tenant.Get("/usage", requireAdmin, handlers.Usage.GetUsage)
 
 	// Members Sub-Routes: /v1/organizations/:orgID/members
 	members := tenant.Group("/members")
@@ -200,6 +202,22 @@ func NewRouter(
 	channels.Put("/:channelID", requireAdmin, csrfGuard, handlers.Channel.UpdateChannel)
 	channels.Delete("/:channelID", requireAdmin, csrfGuard, handlers.Channel.DeleteChannel)
 	channels.Post("/:channelID/test", requireAdmin, csrfGuard, handlers.Channel.TestChannel)
+
+	// API Keys Sub-Routes: /v1/organizations/:orgID/projects/:projectID/api-keys
+	apiKeys := projects.Group("/:projectID/api-keys")
+	apiKeys.Post("/", requireAdmin, csrfGuard, handlers.APIKey.CreateKey)
+	apiKeys.Get("/", requireAdmin, handlers.APIKey.ListKeys)
+	apiKeys.Post("/:keyID/rotate", requireAdmin, csrfGuard, handlers.APIKey.RotateKey)
+	apiKeys.Delete("/:keyID", requireAdmin, csrfGuard, handlers.APIKey.RevokeKey)
+
+	// Webhooks Sub-Routes: /v1/organizations/:orgID/projects/:projectID/webhooks
+	webhooks := projects.Group("/:projectID/webhooks")
+	webhooks.Post("/", requireAdmin, csrfGuard, handlers.Webhook.CreateWebhook)
+	webhooks.Get("/", requireAdmin, handlers.Webhook.ListWebhooks)
+	webhooks.Put("/:webhookID", requireAdmin, csrfGuard, handlers.Webhook.UpdateWebhook)
+	webhooks.Delete("/:webhookID", requireAdmin, csrfGuard, handlers.Webhook.DeleteWebhook)
+	webhooks.Get("/:webhookID/deliveries", requireAdmin, handlers.Webhook.ListDeliveries)
+	webhooks.Post("/:webhookID/deliveries/:deliveryID/redeliver", requireAdmin, csrfGuard, handlers.Webhook.Redeliver)
 
 	// Ingestion Subgroup: /v1/ingest (CI scanner & traffic ingest)
 	ingest := v1.Group("/ingest")

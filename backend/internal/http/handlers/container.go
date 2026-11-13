@@ -18,6 +18,10 @@ type Container struct {
 	Alert       *AlertHandler
 	Incident    *IncidentHandler
 	Channel     *ChannelHandler
+	APIKey      *APIKeyHandler
+	Webhook     *WebhookHandler
+	Audit       *AuditHandler
+	Usage       *UsageHandler
 }
 
 // NewContainer initializes a new Container with all handlers.
@@ -38,6 +42,10 @@ func NewContainer(
 	alert *AlertHandler,
 	incident *IncidentHandler,
 	channel *ChannelHandler,
+	apiKey *APIKeyHandler,
+	webhook *WebhookHandler,
+	audit *AuditHandler,
+	usage *UsageHandler,
 ) *Container {
 	return &Container{
 		System:      system,
@@ -56,5 +64,9 @@ func NewContainer(
 		Alert:       alert,
 		Incident:    incident,
 		Channel:     channel,
+		APIKey:      apiKey,
+		Webhook:     webhook,
+		Audit:       audit,
+		Usage:       usage,
 	}
 }

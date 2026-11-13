@@ -12,11 +12,17 @@ import (
 // DiscoveryHandler manages route discovery via OpenAPI imports, manifests, and CI scanner endpoints.
 type DiscoveryHandler struct {
 	discoverySvc service.DiscoveryService
+	apiKeySvc    *service.APIKeyService
 }
 
 // NewDiscoveryHandler instantiates a DiscoveryHandler.
 func NewDiscoveryHandler(discoverySvc service.DiscoveryService) *DiscoveryHandler {
 	return &DiscoveryHandler{discoverySvc: discoverySvc}
+}
+
+// SetAPIKeyService attaches an API key validation service.
+func (h *DiscoveryHandler) SetAPIKeyService(apiKeySvc *service.APIKeyService) {
+	h.apiKeySvc = apiKeySvc
 }
 
 // ImportOpenAPI imports an OpenAPI specification via multipart file upload or remote URL.
@@ -146,12 +152,33 @@ func (h *DiscoveryHandler) ListDiscoveryRuns(c *fiber.Ctx) error {
 // @Failure 400 {object} domain.Response
 // @Router /v1/ingest/discovery [post]
 func (h *DiscoveryHandler) IngestDiscovery(c *fiber.Ctx) error {
-	projectID := strings.TrimSpace(c.Get("X-Project-ID"))
-	if projectID == "" {
-		projectID = strings.TrimSpace(c.Query("project_id"))
+	apiKey := strings.TrimSpace(c.Get("X-API-Key"))
+	if apiKey == "" {
+		authHeader := strings.TrimSpace(c.Get("Authorization"))
+		if strings.HasPrefix(strings.ToLower(authHeader), "bearer ") {
+			apiKey = strings.TrimSpace(authHeader[7:])
+		}
 	}
+
+	var projectID string
+	if h.apiKeySvc != nil && strings.HasPrefix(apiKey, "strim_") {
+		key, err := h.apiKeySvc.ValidateKey(c.Context(), apiKey, domain.ScopeDiscovery)
+		if err != nil {
+			return err
+		}
+		projectID = key.ProjectID
+	} else {
+		projectID = strings.TrimSpace(c.Get("X-Project-ID"))
+		if projectID == "" {
+			projectID = strings.TrimSpace(c.Query("project_id"))
+		}
+		if projectID == "" {
+			projectID = apiKey
+		}
+	}
+
 	if projectID == "" {
-		return domain.NewBadRequestError("Project ID must be specified via X-Project-ID header or project_id query parameter", nil)
+		return domain.NewBadRequestError("Project ID or API Key must be specified via X-API-Key, X-Project-ID header or project_id query parameter", nil)
 	}
 
 	var manifest domain.DiscoveryManifest

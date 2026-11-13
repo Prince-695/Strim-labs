@@ -13,6 +13,7 @@ import (
 	"github.com/Prince-695/strim/backend/internal/ingest"
 	"github.com/Prince-695/strim/backend/internal/platform/clock"
 	"github.com/Prince-695/strim/backend/internal/repository"
+	"github.com/Prince-695/strim/backend/internal/service"
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -37,6 +38,8 @@ type IngestHandler struct {
 	batcher     *ingest.Batcher
 	projectRepo repository.ProjectRepository
 	clock       clock.Clock
+	apiKeySvc   *service.APIKeyService
+	usageSvc    *service.UsageService
 }
 
 // NewIngestHandler instantiates an IngestHandler.
@@ -49,6 +52,12 @@ func NewIngestHandler(batcher *ingest.Batcher, projectRepo repository.ProjectRep
 		projectRepo: projectRepo,
 		clock:       clk,
 	}
+}
+
+// SetServices attaches optional API key and usage quota services.
+func (h *IngestHandler) SetServices(apiKeySvc *service.APIKeyService, usageSvc *service.UsageService) {
+	h.apiKeySvc = apiKeySvc
+	h.usageSvc = usageSvc
 }
 
 // IngestEvents receives batched API request events.
@@ -71,14 +80,29 @@ func NewIngestHandler(batcher *ingest.Batcher, projectRepo repository.ProjectRep
 // @Router /v1/ingest/events [post]
 func (h *IngestHandler) IngestEvents(c *fiber.Ctx) error {
 	// 1. Authenticate Project / API Key
-	projectID := h.extractProjectID(c)
-	if projectID == "" {
-		return domain.NewUnauthorizedError("API key or Project ID is required via X-API-Key, X-Project-ID, or Authorization header")
-	}
+	rawKey := h.extractRawAPIKey(c)
+	var project *domain.Project
+	if h.apiKeySvc != nil && strings.HasPrefix(rawKey, "strim_") {
+		key, err := h.apiKeySvc.ValidateKey(c.Context(), rawKey, domain.ScopeIngest)
+		if err != nil {
+			return err
+		}
+		var projErr error
+		project, projErr = h.projectRepo.FindOnlyByID(c.Context(), key.ProjectID)
+		if projErr != nil {
+			return domain.NewProjectNotFoundError()
+		}
+	} else {
+		projectID := h.extractProjectID(c)
+		if projectID == "" {
+			return domain.NewUnauthorizedError("API key or Project ID is required via X-API-Key, X-Project-ID, or Authorization header")
+		}
 
-	project, err := h.projectRepo.FindOnlyByID(c.Context(), projectID)
-	if err != nil {
-		return domain.NewProjectNotFoundError()
+		var err error
+		project, err = h.projectRepo.FindOnlyByID(c.Context(), projectID)
+		if err != nil {
+			return domain.NewProjectNotFoundError()
+		}
 	}
 
 	// 2. Read body with gzip decompression and size checks
@@ -141,6 +165,13 @@ func (h *IngestHandler) IngestEvents(c *fiber.Ctx) error {
 	}
 	if len(req.Events) > MaxBatchEvents {
 		return domain.NewBadRequestError("Payload exceeds maximum batch limit of 1,000 events", nil)
+	}
+
+	// Check organization plan limit quota
+	if h.usageSvc != nil {
+		if err := h.usageSvc.CheckEventsQuota(c.Context(), project.OrgID, int64(len(req.Events))); err != nil {
+			return err
+		}
 	}
 
 	// 4. Validate and normalize individual events
@@ -248,6 +279,9 @@ func (h *IngestHandler) IngestEvents(c *fiber.Ctx) error {
 			c.Set("Retry-After", "2")
 			return err
 		}
+		if h.usageSvc != nil && accepted > 0 {
+			_ = h.usageSvc.RecordIngestedEvents(c.Context(), project.OrgID, int64(accepted))
+		}
 	}
 
 	resp := domain.IngestEventsResponse{
@@ -260,6 +294,18 @@ func (h *IngestHandler) IngestEvents(c *fiber.Ctx) error {
 		Success: true,
 		Data:    resp,
 	})
+}
+
+// extractRawAPIKey retrieves the unstripped raw API key or token.
+func (h *IngestHandler) extractRawAPIKey(c *fiber.Ctx) string {
+	apiKey := strings.TrimSpace(c.Get("X-API-Key"))
+	if apiKey == "" {
+		authHeader := strings.TrimSpace(c.Get("Authorization"))
+		if strings.HasPrefix(strings.ToLower(authHeader), "bearer ") {
+			apiKey = strings.TrimSpace(authHeader[7:])
+		}
+	}
+	return apiKey
 }
 
 // extractProjectID retrieves the project ID or API key from request headers or query.
