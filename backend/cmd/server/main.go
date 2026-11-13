@@ -208,6 +208,10 @@ func main() {
 	capacitySvc := service.NewCapacityService(capacityRepo, loadTestRepo)
 	capacityHandler := handlers.NewCapacityHandler(capacitySvc, appLogger)
 
+	// 11. Diagnostics Engine
+	diagnosticsSvc := service.NewDiagnosticsService(ingestStore, endpointRepo, loadTestRepo, projectRepo, clk)
+	diagnosticsHandler := handlers.NewDiagnosticsHandler(diagnosticsSvc, appLogger)
+
 	handlerContainer := handlers.NewContainer(
 		systemHandler,
 		authHandler,
@@ -221,6 +225,7 @@ func main() {
 		metricsHandler,
 		loadTestHandler,
 		capacityHandler,
+		diagnosticsHandler,
 	)
 
 	// 10. Build Router & Middlewares

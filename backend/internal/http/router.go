@@ -169,6 +169,12 @@ func NewRouter(
 	loadTests.Get("/:testID/capacity", requireViewer, handlers.Capacity.GetCapacityReport)
 	loadTests.Post("/:testID/capacity/recompute", requireMember, csrfGuard, handlers.Capacity.RecomputeCapacity)
 
+	// Diagnostics Sub-Routes: /v1/organizations/:orgID/projects/:projectID/diagnostics
+	diag := projects.Group("/:projectID/diagnostics")
+	diag.Get("/slow-endpoints", requireViewer, handlers.Diagnostics.GetSlowEndpoints)
+	diag.Get("/regressions", requireViewer, handlers.Diagnostics.GetRegressions)
+	diag.Get("/bottlenecks", requireViewer, handlers.Diagnostics.GetBottlenecks)
+
 	// Ingestion Subgroup: /v1/ingest (CI scanner & traffic ingest)
 	ingest := v1.Group("/ingest")
 	ingest.Post("/discovery", handlers.Discovery.IngestDiscovery)

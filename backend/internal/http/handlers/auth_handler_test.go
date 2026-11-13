@@ -119,6 +119,8 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 	loadTestHandler := handlers.NewLoadTestHandler(loadTestSvc, sseHub, logger)
 	capacitySvc := service.NewCapacityService(capRepo, loadTestRepo)
 	capacityHandler := handlers.NewCapacityHandler(capacitySvc, logger)
+	diagnosticsSvc := service.NewDiagnosticsService(ingestStore, endpointRepo, loadTestRepo, projectRepo, clk)
+	diagnosticsHandler := handlers.NewDiagnosticsHandler(diagnosticsSvc, logger)
 
 	container := handlers.NewContainer(
 		sysHandler,
@@ -133,6 +135,7 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 		metricsHandler,
 		loadTestHandler,
 		capacityHandler,
+		diagnosticsHandler,
 	)
 
 	app := apphttp.NewRouter(cfg, container, logger, idGen)
