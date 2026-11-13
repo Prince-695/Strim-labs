@@ -116,12 +116,15 @@ func TestWorker_ProcessJob_Success(t *testing.T) {
 	}
 	require.NoError(t, jobRepo.EnqueueJob(ctx, job))
 
+	capacityRepo := repository.NewInMemoryCapacityRepository()
+
 	// 4. Run Worker
 	worker := loadengine.NewWorker(
 		"worker-test",
 		jobRepo,
 		loadTestRepo,
 		projectRepo,
+		capacityRepo,
 		loadengine.NewEngine(),
 		sseHub,
 		cryptoKey,
@@ -152,4 +155,11 @@ func TestWorker_ProcessJob_Success(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, results)
 	assert.NotEmpty(t, results.Summary)
+
+	// Verify CapacityReport automatically generated & stored
+	capReport, err := capacityRepo.FindByLoadTestID(ctx, "test-1")
+	require.NoError(t, err)
+	require.NotNil(t, capReport)
+	assert.Equal(t, "test-1", capReport.LoadTestID)
+	assert.Equal(t, "proj-1", capReport.ProjectID)
 }

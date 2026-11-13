@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Prince-695/strim/backend/internal/analysis"
 	"github.com/Prince-695/strim/backend/internal/domain"
 	"github.com/Prince-695/strim/backend/internal/platform/crypto"
 	"github.com/Prince-695/strim/backend/internal/repository"
@@ -28,6 +29,7 @@ type Worker struct {
 	jobRepo      repository.JobRepository
 	loadTestRepo repository.LoadTestRepository
 	projectRepo  repository.ProjectRepository
+	capacityRepo repository.CapacityRepository
 	engine       Engine
 	sseHub       *sse.Hub
 	cryptoKey    string
@@ -43,6 +45,7 @@ func NewWorker(
 	jobRepo repository.JobRepository,
 	loadTestRepo repository.LoadTestRepository,
 	projectRepo repository.ProjectRepository,
+	capacityRepo repository.CapacityRepository,
 	engine Engine,
 	sseHub *sse.Hub,
 	cryptoKey string,
@@ -63,6 +66,7 @@ func NewWorker(
 		jobRepo:      jobRepo,
 		loadTestRepo: loadTestRepo,
 		projectRepo:  projectRepo,
+		capacityRepo: capacityRepo,
 		engine:       engine,
 		sseHub:       sseHub,
 		cryptoKey:    cryptoKey,
@@ -286,6 +290,21 @@ func (w *Worker) processJob(parentCtx context.Context, job *domain.Job) {
 		CreatedAt:           finishTime,
 	}
 	_ = w.loadTestRepo.CreateResults(parentCtx, loadTestResults)
+
+	// Automatically compute and persist CapacityReport if repository is configured
+	if w.capacityRepo != nil && (finalStatus == domain.LoadTestStatusCompleted || finalStatus == domain.LoadTestStatusStopped) {
+		tsList, _ := w.loadTestRepo.GetTimeseries(parentCtx, test.ID, 1)
+		var thresholds domain.CapacityThresholds
+		if cfg.CapacityThresholds != nil {
+			thresholds = *cfg.CapacityThresholds
+		}
+		flags := &domain.LoadTestFlags{
+			GeneratorSaturated: results.Flags.GeneratorSaturated,
+			MaxScheduleLagMS:   results.Flags.MaxScheduleLagMS,
+		}
+		capacityReport := analysis.AnalyzeCapacity(test, tsList, thresholds, flags)
+		_ = w.capacityRepo.Save(parentCtx, capacityReport)
+	}
 
 	// Broadcast final SSE events
 	if w.sseHub != nil {

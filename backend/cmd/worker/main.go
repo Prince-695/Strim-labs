@@ -67,12 +67,14 @@ func main() {
 	jobRepo := repository.NewJobRepository(db)
 	loadTestRepo := repository.NewLoadTestRepository(db)
 	projectRepo := repository.NewProjectRepository(db)
+	capacityRepo := repository.NewCapacityRepository(db)
 	engine := loadengine.NewEngine()
 	loadWorker := loadengine.NewWorker(
 		"",
 		jobRepo,
 		loadTestRepo,
 		projectRepo,
+		capacityRepo,
 		engine,
 		nil,
 		cfg.JWTSecret,
