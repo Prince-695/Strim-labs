@@ -102,6 +102,7 @@ func main() {
 				&domain.LoadTestResults{},
 				&domain.LoadTestTimeseries{},
 				&domain.Job{},
+				&domain.CapacityReport{},
 			); err != nil {
 				fmt.Printf("\033[38;2;239;68;68m[DATABASE]\033[0m \033[31m✗ Auto-migration failed: %v\033[0m\n", err)
 			} else {
@@ -121,6 +122,7 @@ func main() {
 	endpointRepo := repository.NewEndpointRepository(db)
 	loadTestRepo := repository.NewLoadTestRepository(db)
 	jobRepo := repository.NewJobRepository(db)
+	capacityRepo := repository.NewCapacityRepository(db)
 
 	tokenCache := cache.NewMemoryCache()
 	tenantCache := cache.NewTenantCache(tokenCache)
@@ -197,10 +199,14 @@ func main() {
 	metricsHandler := handlers.NewMetricsHandler(metricsSvc, sseHub, appLogger)
 
 	// 9. Load Testing Engine & Distributed Execution
-	loadWorker := loadengine.NewWorker("", jobRepo, loadTestRepo, projectRepo, nil, sseHub, cfg.JWTSecret, appLogger)
+	loadWorker := loadengine.NewWorker("", jobRepo, loadTestRepo, projectRepo, capacityRepo, nil, sseHub, cfg.JWTSecret, appLogger)
 	go loadWorker.Start(context.Background())
 	loadTestSvc := service.NewLoadTestService(loadTestRepo, projectRepo, jobRepo, loadWorker, ssrfGuard, cfg.JWTSecret, clk)
 	loadTestHandler := handlers.NewLoadTestHandler(loadTestSvc, sseHub, appLogger)
+
+	// 10. Capacity Analysis and Comparison Engine
+	capacitySvc := service.NewCapacityService(capacityRepo, loadTestRepo)
+	capacityHandler := handlers.NewCapacityHandler(capacitySvc, appLogger)
 
 	handlerContainer := handlers.NewContainer(
 		systemHandler,
@@ -214,6 +220,7 @@ func main() {
 		ingestHandler,
 		metricsHandler,
 		loadTestHandler,
+		capacityHandler,
 	)
 
 	// 10. Build Router & Middlewares

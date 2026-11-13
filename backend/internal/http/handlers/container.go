@@ -13,6 +13,7 @@ type Container struct {
 	Ingest    *IngestHandler
 	Metrics   *MetricsHandler
 	LoadTest  *LoadTestHandler
+	Capacity  *CapacityHandler
 }
 
 // NewContainer initializes a new Container with all handlers.
@@ -28,6 +29,7 @@ func NewContainer(
 	ingest *IngestHandler,
 	metrics *MetricsHandler,
 	loadTest *LoadTestHandler,
+	capacity *CapacityHandler,
 ) *Container {
 	return &Container{
 		System:    system,
@@ -41,5 +43,6 @@ func NewContainer(
 		Ingest:    ingest,
 		Metrics:   metrics,
 		LoadTest:  loadTest,
+		Capacity:  capacity,
 	}
 }
