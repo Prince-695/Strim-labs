@@ -15,6 +15,9 @@ type Container struct {
 	LoadTest    *LoadTestHandler
 	Capacity    *CapacityHandler
 	Diagnostics *DiagnosticsHandler
+	Alert       *AlertHandler
+	Incident    *IncidentHandler
+	Channel     *ChannelHandler
 }
 
 // NewContainer initializes a new Container with all handlers.
@@ -32,6 +35,9 @@ func NewContainer(
 	loadTest *LoadTestHandler,
 	capacity *CapacityHandler,
 	diagnostics *DiagnosticsHandler,
+	alert *AlertHandler,
+	incident *IncidentHandler,
+	channel *ChannelHandler,
 ) *Container {
 	return &Container{
 		System:      system,
@@ -47,5 +53,8 @@ func NewContainer(
 		LoadTest:    loadTest,
 		Capacity:    capacity,
 		Diagnostics: diagnostics,
+		Alert:       alert,
+		Incident:    incident,
+		Channel:     channel,
 	}
 }

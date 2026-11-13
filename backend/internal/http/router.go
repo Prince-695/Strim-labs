@@ -175,6 +175,32 @@ func NewRouter(
 	diag.Get("/regressions", requireViewer, handlers.Diagnostics.GetRegressions)
 	diag.Get("/bottlenecks", requireViewer, handlers.Diagnostics.GetBottlenecks)
 
+	// Alert Rules Sub-Routes: /v1/organizations/:orgID/projects/:projectID/alert-rules
+	alertRules := projects.Group("/:projectID/alert-rules")
+	alertRules.Post("/", requireMember, csrfGuard, handlers.Alert.CreateRule)
+	alertRules.Get("/", requireViewer, handlers.Alert.ListRules)
+	alertRules.Get("/:ruleID", requireViewer, handlers.Alert.GetRule)
+	alertRules.Put("/:ruleID", requireMember, csrfGuard, handlers.Alert.UpdateRule)
+	alertRules.Delete("/:ruleID", requireMember, csrfGuard, handlers.Alert.DeleteRule)
+	alertRules.Post("/:ruleID/mute", requireMember, csrfGuard, handlers.Alert.MuteRule)
+
+	// Incidents Sub-Routes: /v1/organizations/:orgID/projects/:projectID/incidents
+	incidents := projects.Group("/:projectID/incidents")
+	incidents.Get("/", requireViewer, handlers.Incident.ListIncidents)
+	incidents.Get("/:incidentID", requireViewer, handlers.Incident.GetIncident)
+	incidents.Post("/:incidentID/acknowledge", requireMember, csrfGuard, handlers.Incident.AcknowledgeIncident)
+	incidents.Post("/:incidentID/resolve", requireMember, csrfGuard, handlers.Incident.ResolveIncident)
+	incidents.Post("/:incidentID/comments", requireMember, csrfGuard, handlers.Incident.AddComment)
+
+	// Notification Channels Sub-Routes: /v1/organizations/:orgID/projects/:projectID/notification-channels
+	channels := projects.Group("/:projectID/notification-channels")
+	channels.Post("/", requireAdmin, csrfGuard, handlers.Channel.CreateChannel)
+	channels.Get("/", requireViewer, handlers.Channel.ListChannels)
+	channels.Get("/:channelID", requireViewer, handlers.Channel.GetChannel)
+	channels.Put("/:channelID", requireAdmin, csrfGuard, handlers.Channel.UpdateChannel)
+	channels.Delete("/:channelID", requireAdmin, csrfGuard, handlers.Channel.DeleteChannel)
+	channels.Post("/:channelID/test", requireAdmin, csrfGuard, handlers.Channel.TestChannel)
+
 	// Ingestion Subgroup: /v1/ingest (CI scanner & traffic ingest)
 	ingest := v1.Group("/ingest")
 	ingest.Post("/discovery", handlers.Discovery.IngestDiscovery)

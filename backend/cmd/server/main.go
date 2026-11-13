@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Prince-695/strim/backend/internal/alerts"
 	"github.com/Prince-695/strim/backend/internal/cache"
 	"github.com/Prince-695/strim/backend/internal/config"
 	"github.com/Prince-695/strim/backend/internal/discovery"
@@ -17,6 +18,7 @@ import (
 	"github.com/Prince-695/strim/backend/internal/http/handlers"
 	"github.com/Prince-695/strim/backend/internal/ingest"
 	"github.com/Prince-695/strim/backend/internal/loadengine"
+	"github.com/Prince-695/strim/backend/internal/notify"
 	"github.com/Prince-695/strim/backend/internal/platform/clock"
 	"github.com/Prince-695/strim/backend/internal/platform/database"
 	"github.com/Prince-695/strim/backend/internal/platform/ids"
@@ -103,6 +105,11 @@ func main() {
 				&domain.LoadTestTimeseries{},
 				&domain.Job{},
 				&domain.CapacityReport{},
+				&domain.AlertRule{},
+				&domain.Incident{},
+				&domain.IncidentEvent{},
+				&domain.NotificationChannel{},
+				&domain.NotificationLog{},
 			); err != nil {
 				fmt.Printf("\033[38;2;239;68;68m[DATABASE]\033[0m \033[31m✗ Auto-migration failed: %v\033[0m\n", err)
 			} else {
@@ -123,6 +130,9 @@ func main() {
 	loadTestRepo := repository.NewLoadTestRepository(db)
 	jobRepo := repository.NewJobRepository(db)
 	capacityRepo := repository.NewCapacityRepository(db)
+	alertRepo := repository.NewAlertRuleRepository(db)
+	incidentRepo := repository.NewIncidentRepository(db)
+	channelRepo := repository.NewNotificationChannelRepository(db)
 
 	tokenCache := cache.NewMemoryCache()
 	tenantCache := cache.NewTenantCache(tokenCache)
@@ -212,6 +222,35 @@ func main() {
 	diagnosticsSvc := service.NewDiagnosticsService(ingestStore, endpointRepo, loadTestRepo, projectRepo, clk)
 	diagnosticsHandler := handlers.NewDiagnosticsHandler(diagnosticsSvc, appLogger)
 
+	// 12. Alerting, Incidents, and Notification Channels Engine
+	dispatcher := notify.NewDispatcher(mailerClient, ssrfGuard, appLogger)
+	alertEvaluator := alerts.NewEvaluator(
+		alertRepo,
+		incidentRepo,
+		channelRepo,
+		endpointRepo,
+		ingestStore,
+		dispatcher,
+		clk,
+		idGen,
+		appLogger,
+	)
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			_ = alertEvaluator.EvaluateAll(context.Background())
+		}
+	}()
+
+	alertSvc := service.NewAlertService(alertRepo, projectRepo, endpointRepo, channelRepo, clk, idGen)
+	incidentSvc := service.NewIncidentService(incidentRepo, projectRepo, clk, idGen)
+	channelSvc := service.NewNotificationService(channelRepo, projectRepo, dispatcher, ssrfGuard, clk, idGen)
+
+	alertHandler := handlers.NewAlertHandler(alertSvc, appLogger)
+	incidentHandler := handlers.NewIncidentHandler(incidentSvc, appLogger)
+	channelHandler := handlers.NewChannelHandler(channelSvc, appLogger)
+
 	handlerContainer := handlers.NewContainer(
 		systemHandler,
 		authHandler,
@@ -226,6 +265,9 @@ func main() {
 		loadTestHandler,
 		capacityHandler,
 		diagnosticsHandler,
+		alertHandler,
+		incidentHandler,
+		channelHandler,
 	)
 
 	// 10. Build Router & Middlewares
