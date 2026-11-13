@@ -145,6 +145,15 @@ func NewRouter(
 	projects.Post("/:projectID/discovery/manifest", requireAdmin, csrfGuard, handlers.Discovery.ImportManifest)
 	projects.Get("/:projectID/discovery/runs", requireViewer, handlers.Discovery.ListDiscoveryRuns)
 
+	// Metrics Sub-Routes: /v1/organizations/:orgID/projects/:projectID/metrics
+	metrics := projects.Group("/:projectID/metrics")
+	metrics.Get("/overview", requireViewer, handlers.Metrics.GetOverview)
+	metrics.Get("/timeseries", requireViewer, handlers.Metrics.GetTimeseries)
+	metrics.Get("/endpoints", requireViewer, handlers.Metrics.GetEndpointsMetrics)
+	metrics.Get("/status-codes", requireViewer, handlers.Metrics.GetStatusCodes)
+	metrics.Get("/hosts", requireViewer, handlers.Metrics.GetHostsMetrics)
+	metrics.Get("/stream", requireViewer, handlers.Metrics.StreamMetrics)
+
 	// Ingestion Subgroup: /v1/ingest (CI scanner & traffic ingest)
 	ingest := v1.Group("/ingest")
 	ingest.Post("/discovery", handlers.Discovery.IngestDiscovery)

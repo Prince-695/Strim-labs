@@ -11,6 +11,7 @@ type Container struct {
 	Endpoint  *EndpointHandler
 	Discovery *DiscoveryHandler
 	Ingest    *IngestHandler
+	Metrics   *MetricsHandler
 }
 
 // NewContainer initializes a new Container with all handlers.
@@ -24,6 +25,7 @@ func NewContainer(
 	endpoint *EndpointHandler,
 	discovery *DiscoveryHandler,
 	ingest *IngestHandler,
+	metrics *MetricsHandler,
 ) *Container {
 	return &Container{
 		System:    system,
@@ -35,5 +37,6 @@ func NewContainer(
 		Endpoint:  endpoint,
 		Discovery: discovery,
 		Ingest:    ingest,
+		Metrics:   metrics,
 	}
 }

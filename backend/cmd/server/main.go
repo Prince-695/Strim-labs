@@ -24,6 +24,7 @@ import (
 	"github.com/Prince-695/strim/backend/internal/platform/netguard"
 	"github.com/Prince-695/strim/backend/internal/repository"
 	"github.com/Prince-695/strim/backend/internal/service"
+	"github.com/Prince-695/strim/backend/internal/sse"
 	"github.com/Prince-695/strim/backend/pkg/startup"
 )
 
@@ -171,7 +172,12 @@ func main() {
 	rollupWorker.Start()
 	defer rollupWorker.Stop()
 
-	// 8. Dependency Injection: HTTP Handlers
+	// 8. Observability & Real-Time Metrics Engine
+	metricsCache := cache.NewMetricsCache(tokenCache)
+	metricsSvc := service.NewMetricsService(ingestStore, endpointRepo, projectRepo, metricsCache, clk)
+	sseHub := sse.NewHub()
+
+	// 9. Dependency Injection: HTTP Handlers
 	systemHandler := handlers.NewSystemHandler(systemSvc)
 	authHandler := handlers.NewAuthHandler(authSvc, cfg)
 	userHandler := handlers.NewUserHandler(userSvc)
@@ -181,6 +187,7 @@ func main() {
 	endpointHandler := handlers.NewEndpointHandler(endpointSvc)
 	discoveryHandler := handlers.NewDiscoveryHandler(discoverySvc)
 	ingestHandler := handlers.NewIngestHandler(batcher, projectRepo, clk)
+	metricsHandler := handlers.NewMetricsHandler(metricsSvc, sseHub, appLogger)
 
 	handlerContainer := handlers.NewContainer(
 		systemHandler,
@@ -192,9 +199,10 @@ func main() {
 		endpointHandler,
 		discoveryHandler,
 		ingestHandler,
+		metricsHandler,
 	)
 
-	// 9. Build Router & Middlewares
+	// 10. Build Router & Middlewares
 	app := http.NewRouter(cfg, handlerContainer, appLogger, idGen)
 
 	// 9. Display Startup Banner
