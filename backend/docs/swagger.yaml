@@ -387,6 +387,72 @@ definitions:
         example: https://api.acme.com/openapi.json
         type: string
     type: object
+  domain.IngestEventError:
+    properties:
+      index:
+        example: 4
+        type: integer
+      reason:
+        example: invalid status code
+        type: string
+    type: object
+  domain.IngestEventItem:
+    properties:
+      bytes:
+        example: 1820
+        type: integer
+      duration_ms:
+        example: 41.7
+        type: number
+      error:
+        example: false
+        type: boolean
+      method:
+        example: GET
+        type: string
+      path:
+        example: /orders/123
+        type: string
+      route:
+        example: /orders/{id}
+        type: string
+      status:
+        example: 200
+        type: integer
+      ts:
+        example: "2026-11-11T12:00:00.123Z"
+        type: string
+    required:
+    - method
+    - path
+    type: object
+  domain.IngestEventsRequest:
+    properties:
+      events:
+        items:
+          $ref: '#/definitions/domain.IngestEventItem'
+        maxItems: 1000
+        minItems: 1
+        type: array
+      service:
+        example: orders
+        type: string
+    required:
+    - events
+    type: object
+  domain.IngestEventsResponse:
+    properties:
+      accepted:
+        example: 998
+        type: integer
+      errors:
+        items:
+          $ref: '#/definitions/domain.IngestEventError'
+        type: array
+      rejected:
+        example: 2
+        type: integer
+    type: object
   domain.InitiateVerificationRequest:
     properties:
       method:
@@ -1311,6 +1377,70 @@ paths:
       summary: Ingest discovery from CI scanner
       tags:
       - Discovery
+  /v1/ingest/events:
+    post:
+      consumes:
+      - application/json
+      description: Ingests batches of up to 1,000 HTTP request telemetry events (gzip
+        supported, <= 1MB compressed, <= 5MB uncompressed)
+      parameters:
+      - description: Project API Key
+        in: header
+        name: X-API-Key
+        type: string
+      - description: Project ID
+        in: header
+        name: X-Project-ID
+        type: string
+      - description: Bearer Project API Key
+        in: header
+        name: Authorization
+        type: string
+      - description: Project ID
+        in: query
+        name: project_id
+        type: string
+      - description: Encoding (e.g. gzip)
+        in: header
+        name: Content-Encoding
+        type: string
+      - description: Batched telemetry events payload
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.IngestEventsRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.IngestEventsResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "429":
+          description: Too Many Requests
+          schema:
+            $ref: '#/definitions/domain.Response'
+      summary: Ingest telemetry events
+      tags:
+      - Ingestion
   /v1/organizations:
     get:
       description: Lists organizations the authenticated user belongs to (up to 3)

@@ -655,6 +655,106 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/ingest/events": {
+            "post": {
+                "description": "Ingests batches of up to 1,000 HTTP request telemetry events (gzip supported, \u003c= 1MB compressed, \u003c= 5MB uncompressed)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Ingestion"
+                ],
+                "summary": "Ingest telemetry events",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project API Key",
+                        "name": "X-API-Key",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "X-Project-ID",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bearer Project API Key",
+                        "name": "Authorization",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "project_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Encoding (e.g. gzip)",
+                        "name": "Content-Encoding",
+                        "in": "header"
+                    },
+                    {
+                        "description": "Batched telemetry events payload",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.IngestEventsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.IngestEventsResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "429": {
+                        "description": "Too Many Requests",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/organizations": {
             "get": {
                 "security": [
@@ -3169,6 +3269,99 @@ const docTemplate = `{
                 "url": {
                     "type": "string",
                     "example": "https://api.acme.com/openapi.json"
+                }
+            }
+        },
+        "domain.IngestEventError": {
+            "type": "object",
+            "properties": {
+                "index": {
+                    "type": "integer",
+                    "example": 4
+                },
+                "reason": {
+                    "type": "string",
+                    "example": "invalid status code"
+                }
+            }
+        },
+        "domain.IngestEventItem": {
+            "type": "object",
+            "required": [
+                "method",
+                "path"
+            ],
+            "properties": {
+                "bytes": {
+                    "type": "integer",
+                    "example": 1820
+                },
+                "duration_ms": {
+                    "type": "number",
+                    "example": 41.7
+                },
+                "error": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "method": {
+                    "type": "string",
+                    "example": "GET"
+                },
+                "path": {
+                    "type": "string",
+                    "example": "/orders/123"
+                },
+                "route": {
+                    "type": "string",
+                    "example": "/orders/{id}"
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "ts": {
+                    "type": "string",
+                    "example": "2026-11-11T12:00:00.123Z"
+                }
+            }
+        },
+        "domain.IngestEventsRequest": {
+            "type": "object",
+            "required": [
+                "events"
+            ],
+            "properties": {
+                "events": {
+                    "type": "array",
+                    "maxItems": 1000,
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/domain.IngestEventItem"
+                    }
+                },
+                "service": {
+                    "type": "string",
+                    "example": "orders"
+                }
+            }
+        },
+        "domain.IngestEventsResponse": {
+            "type": "object",
+            "properties": {
+                "accepted": {
+                    "type": "integer",
+                    "example": 998
+                },
+                "errors": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.IngestEventError"
+                    }
+                },
+                "rejected": {
+                    "type": "integer",
+                    "example": 2
                 }
             }
         },
