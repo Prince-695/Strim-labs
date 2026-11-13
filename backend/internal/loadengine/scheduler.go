@@ -1,33 +1,68 @@
 package loadengine
 
-import "time"
+import (
+	"math"
 
-// LoadProfile defines the arrival pattern: sustained, ramp, spike, or step.
-type LoadProfile string
-
-const (
-	ProfileSustained LoadProfile = "sustained"
-	ProfileRamp      LoadProfile = "ramp"
-	ProfileSpike     LoadProfile = "spike"
-	ProfileStep      LoadProfile = "step"
+	"github.com/Prince-695/strim/backend/internal/domain"
 )
 
-// LoadModel defines open (arrival rate) vs closed (virtual users).
-type LoadModel string
+// CalculateTargetRate computes the target requests-per-second (RPS) for second t (0 <= t < duration).
+func CalculateTargetRate(profile domain.LoadTestProfile, cfg domain.LoadTestConfig, second int) float64 {
+	if second < 0 {
+		second = 0
+	}
 
-const (
-	ModelOpen   LoadModel = "open"
-	ModelClosed LoadModel = "closed"
-)
+	switch profile {
+	case domain.ProfileSustained:
+		if cfg.StartRate > 0 {
+			return cfg.StartRate
+		}
+		return cfg.PeakRate
 
-// TestConfig holds validated configuration for a load test run.
-type TestConfig struct {
-	Model        LoadModel     `json:"model"`
-	Profile      LoadProfile   `json:"profile"`
-	TargetURL    string        `json:"target_url"`
-	BaseRPS      int           `json:"base_rps"`
-	PeakRPS      int           `json:"peak_rps"`
-	Duration     time.Duration `json:"duration"`
-	RampUp       time.Duration `json:"ramp_up"`
-	VirtualUsers int           `json:"virtual_users"`
+	case domain.ProfileRamp:
+		if cfg.RampUpSeconds <= 0 {
+			return cfg.PeakRate
+		}
+		if second < cfg.RampUpSeconds {
+			fraction := float64(second) / float64(cfg.RampUpSeconds)
+			rate := cfg.StartRate + fraction*(cfg.PeakRate-cfg.StartRate)
+			return math.Max(0, rate)
+		}
+		return cfg.PeakRate
+
+	case domain.ProfileSpike:
+		if cfg.Spike == nil {
+			if cfg.StartRate > 0 {
+				return cfg.StartRate
+			}
+			return cfg.PeakRate
+		}
+		spikeStart := cfg.Spike.SpikeAtSeconds
+		spikeEnd := spikeStart + cfg.Spike.SpikeDurationSeconds
+		if second >= spikeStart && second < spikeEnd {
+			return cfg.Spike.SpikeRate
+		}
+		return cfg.Spike.BaseRate
+
+	case domain.ProfileStep:
+		if cfg.Step == nil {
+			if cfg.StartRate > 0 {
+				return cfg.StartRate
+			}
+			return cfg.PeakRate
+		}
+		stepSeconds := cfg.Step.StepSeconds
+		if stepSeconds <= 0 {
+			stepSeconds = 30
+		}
+		stepIndex := second / stepSeconds
+		rate := cfg.Step.StartRate + float64(stepIndex)*cfg.Step.StepRate
+		if cfg.Step.MaxRate > 0 && rate > cfg.Step.MaxRate {
+			rate = cfg.Step.MaxRate
+		}
+		return math.Max(0, rate)
+
+	default:
+		return cfg.StartRate
+	}
 }
