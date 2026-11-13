@@ -117,6 +117,11 @@ func setupIngestTestRig(t *testing.T, batcherCfg ingest.BatcherConfig) *ingestTe
 	sseHub := sse.NewHub()
 	metricsHandler := handlers.NewMetricsHandler(metricsSvc, sseHub, logger)
 
+	loadTestRepo := repository.NewInMemoryLoadTestRepository()
+	jobRepo := repository.NewInMemoryJobRepository()
+	loadTestSvc := service.NewLoadTestService(loadTestRepo, projectRepo, jobRepo, nil, ssrfGuard, cfg.JWTSecret, clk)
+	loadTestHandler := handlers.NewLoadTestHandler(loadTestSvc, sseHub, logger)
+
 	container := handlers.NewContainer(
 		sysHandler,
 		authHandler,
@@ -128,6 +133,7 @@ func setupIngestTestRig(t *testing.T, batcherCfg ingest.BatcherConfig) *ingestTe
 		discoveryHandler,
 		ingestHandler,
 		metricsHandler,
+		loadTestHandler,
 	)
 
 	app := apphttp.NewRouter(cfg, container, logger, idGen)
@@ -516,10 +522,15 @@ func TestIngestEvents_Backpressure(t *testing.T) {
 	sseHub := sse.NewHub()
 	metricsHandler := handlers.NewMetricsHandler(metricsSvc, sseHub, logger)
 
+	loadTestRepo := repository.NewInMemoryLoadTestRepository()
+	jobRepo := repository.NewInMemoryJobRepository()
+	loadTestSvc := service.NewLoadTestService(loadTestRepo, projectRepo, jobRepo, nil, ssrfGuard, cfg.JWTSecret, clk)
+	loadTestHandler := handlers.NewLoadTestHandler(loadTestSvc, sseHub, logger)
+
 	container := handlers.NewContainer(
 		sysHandler, authHandler, userHandler, orgHandler, memberHandler,
 		projectHandler, endpointHandler, discoveryHandler, ingestHandler,
-		metricsHandler,
+		metricsHandler, loadTestHandler,
 	)
 	app := apphttp.NewRouter(cfg, container, logger, idGen)
 

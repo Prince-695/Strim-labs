@@ -52,6 +52,8 @@ type testRig struct {
 	verifRepo    repository.VerificationRepository
 	endpointRepo repository.EndpointRepository
 	ingestStore  ingest.TimeSeriesStore
+	loadTestRepo repository.LoadTestRepository
+	jobRepo      repository.JobRepository
 	sseHub       *sse.Hub
 	orgSvc       service.OrgService
 	userSvc      service.UserService
@@ -59,6 +61,7 @@ type testRig struct {
 	projectSvc   service.ProjectService
 	endpointSvc  service.EndpointService
 	discoverySvc service.DiscoveryService
+	loadTestSvc  service.LoadTestService
 }
 
 func newTestRig(t *testing.T) *testRig {
@@ -131,6 +134,11 @@ func newTestRig(t *testing.T) *testRig {
 	sseHub := sse.NewHub()
 	metricsHandler := handlers.NewMetricsHandler(metricsSvc, sseHub, logger)
 
+	loadTestRepo := repository.NewInMemoryLoadTestRepository()
+	jobRepo := repository.NewInMemoryJobRepository()
+	loadTestSvc := service.NewLoadTestService(loadTestRepo, projectRepo, jobRepo, nil, ssrfGuard, cfg.JWTSecret, clk)
+	loadTestHandler := handlers.NewLoadTestHandler(loadTestSvc, sseHub, logger)
+
 	container := handlers.NewContainer(
 		sysHandler,
 		authHandler,
@@ -142,6 +150,7 @@ func newTestRig(t *testing.T) *testRig {
 		discoveryHandler,
 		ingestHandler,
 		metricsHandler,
+		loadTestHandler,
 	)
 	app := apphttp.NewRouter(cfg, container, logger, idGen)
 
@@ -155,6 +164,8 @@ func newTestRig(t *testing.T) *testRig {
 		verifRepo:    verificationRepo,
 		endpointRepo: endpointRepo,
 		ingestStore:  ingestStore,
+		loadTestRepo: loadTestRepo,
+		jobRepo:      jobRepo,
 		sseHub:       sseHub,
 		orgSvc:       orgSvc,
 		userSvc:      userSvc,
@@ -162,6 +173,7 @@ func newTestRig(t *testing.T) *testRig {
 		projectSvc:   projectSvc,
 		endpointSvc:  endpointSvc,
 		discoverySvc: discoverySvc,
+		loadTestSvc:  loadTestSvc,
 	}
 }
 

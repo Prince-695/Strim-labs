@@ -112,6 +112,11 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 	sseHub := sse.NewHub()
 	metricsHandler := handlers.NewMetricsHandler(metricsSvc, sseHub, logger)
 
+	loadTestRepo := repository.NewInMemoryLoadTestRepository()
+	jobRepo := repository.NewInMemoryJobRepository()
+	loadTestSvc := service.NewLoadTestService(loadTestRepo, projectRepo, jobRepo, nil, ssrfGuard, cfg.JWTSecret, clk)
+	loadTestHandler := handlers.NewLoadTestHandler(loadTestSvc, sseHub, logger)
+
 	container := handlers.NewContainer(
 		sysHandler,
 		authHandler,
@@ -123,6 +128,7 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 		discoveryHandler,
 		ingestHandler,
 		metricsHandler,
+		loadTestHandler,
 	)
 
 	app := apphttp.NewRouter(cfg, container, logger, idGen)
