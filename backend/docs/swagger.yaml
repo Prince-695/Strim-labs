@@ -348,6 +348,11 @@ definitions:
       verified_at:
         type: string
     type: object
+  domain.CloneDashboardRequest:
+    properties:
+      name:
+        type: string
+    type: object
   domain.CompareLoadTestsRequest:
     properties:
       baseline_id:
@@ -482,6 +487,26 @@ definitions:
     - config
     - name
     - type
+    type: object
+  domain.CreateDashboardRequest:
+    properties:
+      name:
+        maxLength: 128
+        minLength: 2
+        type: string
+      refresh_seconds:
+        type: integer
+      time_range:
+        type: string
+      widgets:
+        items:
+          $ref: '#/definitions/domain.Widget'
+        maxItems: 30
+        minItems: 1
+        type: array
+    required:
+    - name
+    - widgets
     type: object
   domain.CreateLoadTestRequest:
     properties:
@@ -650,6 +675,44 @@ definitions:
         type: integer
       requests_generated:
         type: integer
+    type: object
+  domain.DashboardListItemResponse:
+    properties:
+      id:
+        type: string
+      is_default:
+        type: boolean
+      name:
+        type: string
+      updated_at:
+        type: string
+      version:
+        type: integer
+    type: object
+  domain.DashboardResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      is_default:
+        type: boolean
+      name:
+        type: string
+      project_id:
+        type: string
+      refresh_seconds:
+        type: integer
+      time_range:
+        type: string
+      updated_at:
+        type: string
+      version:
+        type: integer
+      widgets:
+        items:
+          $ref: '#/definitions/domain.Widget'
+        type: array
     type: object
   domain.DeleteOrgRequest:
     properties:
@@ -2176,6 +2239,24 @@ definitions:
         minLength: 2
         type: string
     type: object
+  domain.UpdateDashboardRequest:
+    properties:
+      name:
+        type: string
+      refresh_seconds:
+        type: integer
+      time_range:
+        type: string
+      version:
+        minimum: 1
+        type: integer
+      widgets:
+        items:
+          $ref: '#/definitions/domain.Widget'
+        type: array
+    required:
+    - version
+    type: object
   domain.UpdateMemberRoleRequest:
     properties:
       role:
@@ -2436,6 +2517,65 @@ definitions:
       url:
         type: string
     type: object
+  domain.Widget:
+    properties:
+      id:
+        type: string
+      layout:
+        $ref: '#/definitions/domain.WidgetLayout'
+      options:
+        $ref: '#/definitions/domain.WidgetOptions'
+      query:
+        $ref: '#/definitions/domain.WidgetQuery'
+      title:
+        type: string
+      type:
+        $ref: '#/definitions/domain.WidgetType'
+    type: object
+  domain.WidgetLayout:
+    properties:
+      h:
+        type: integer
+      w:
+        type: integer
+      x:
+        type: integer
+      "y":
+        type: integer
+    type: object
+  domain.WidgetOptions:
+    properties:
+      stacked:
+        type: boolean
+      unit:
+        description: '"ms", "rps", "%", "count"'
+        type: string
+    type: object
+  domain.WidgetQuery:
+    properties:
+      endpoint_ids:
+        items:
+          type: string
+        type: array
+      group_by:
+        type: string
+      metric:
+        type: string
+    type: object
+  domain.WidgetType:
+    enum:
+    - timeseries
+    - stat
+    - table
+    - status_pie
+    - heatmap
+    type: string
+    x-enum-varnames:
+    - WidgetTypeTimeseries
+    - WidgetTypeStat
+    - WidgetTypeTable
+    - WidgetTypeStatusPie
+    - WidgetTypeHeatmap
 info:
   contact:
     email: support@strimlabs.dev
@@ -4119,6 +4259,325 @@ paths:
       summary: Rotate project API key
       tags:
       - APIKeys
+  /v1/organizations/{orgID}/projects/{projectID}/dashboards:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves summary metadata for all dashboards in a project (auto-seeds
+        default if empty).
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.DashboardListItemResponse'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Project Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: List project dashboards
+      tags:
+      - Dashboards
+    post:
+      consumes:
+      - application/json
+      description: Creates a new customizable dashboard with up to 30 widgets and
+        templated queries.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Dashboard Configuration
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateDashboardRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.DashboardResponse'
+              type: object
+        "400":
+          description: Bad Request / Validation Error
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Project Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Create custom dashboard
+      tags:
+      - Dashboards
+  /v1/organizations/{orgID}/projects/{projectID}/dashboards/{dashboardID}:
+    delete:
+      consumes:
+      - application/json
+      description: Permanently removes a dashboard. Default system dashboards cannot
+        be deleted.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Dashboard ID
+        in: path
+        name: dashboardID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden / Default Undeletable
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Dashboard Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Delete dashboard
+      tags:
+      - Dashboards
+    get:
+      consumes:
+      - application/json
+      description: Retrieves full dashboard object with grid layout coordinates and
+        widget query configurations.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Dashboard ID
+        in: path
+        name: dashboardID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.DashboardResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Dashboard Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Get dashboard details
+      tags:
+      - Dashboards
+    put:
+      consumes:
+      - application/json
+      description: Updates dashboard settings and widgets with optimistic concurrency
+        control. Requires current version.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Dashboard ID
+        in: path
+        name: dashboardID
+        required: true
+        type: string
+      - description: Updated Dashboard Configuration
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateDashboardRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.DashboardResponse'
+              type: object
+        "400":
+          description: Validation Error
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Dashboard Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "409":
+          description: Version Conflict
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Update dashboard
+      tags:
+      - Dashboards
+  /v1/organizations/{orgID}/projects/{projectID}/dashboards/{dashboardID}/clone:
+    post:
+      consumes:
+      - application/json
+      description: Duplicates an existing dashboard and all its widgets with fresh
+        IDs.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Dashboard ID
+        in: path
+        name: dashboardID
+        required: true
+        type: string
+      - description: Clone Options
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/domain.CloneDashboardRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.DashboardResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Dashboard Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Clone dashboard
+      tags:
+      - Dashboards
   /v1/organizations/{orgID}/projects/{projectID}/diagnostics/bottlenecks:
     get:
       description: Produces diagnostic correlation hints identifying throughput saturation
