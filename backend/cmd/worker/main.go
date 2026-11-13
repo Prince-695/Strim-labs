@@ -10,9 +10,11 @@ import (
 	"time"
 
 	"github.com/Prince-695/strim/backend/internal/config"
+	"github.com/Prince-695/strim/backend/internal/loadengine"
 	"github.com/Prince-695/strim/backend/internal/platform/clock"
 	"github.com/Prince-695/strim/backend/internal/platform/database"
 	"github.com/Prince-695/strim/backend/internal/platform/logger"
+	"github.com/Prince-695/strim/backend/internal/repository"
 	"github.com/Prince-695/strim/backend/pkg/startup"
 )
 
@@ -61,7 +63,24 @@ func main() {
 	shutdownSignals := make(chan os.Signal, 1)
 	signal.Notify(shutdownSignals, os.Interrupt, syscall.SIGTERM, syscall.SIGINT)
 
-	// Worker heartbeat loop (placeholder for load engine, alert evaluator, roll-up jobs)
+	// Initialize Repositories & Load Engine Worker Daemon
+	jobRepo := repository.NewJobRepository(db)
+	loadTestRepo := repository.NewLoadTestRepository(db)
+	projectRepo := repository.NewProjectRepository(db)
+	engine := loadengine.NewEngine()
+	loadWorker := loadengine.NewWorker(
+		"",
+		jobRepo,
+		loadTestRepo,
+		projectRepo,
+		engine,
+		nil,
+		cfg.JWTSecret,
+		appLogger,
+	)
+	go loadWorker.Start(ctx)
+
+	// Worker heartbeat loop
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
