@@ -82,6 +82,12 @@ func (e *AppError) Unwrap() error {
 	return e.InternalErr
 }
 
+// WithDetails attaches structured details to an AppError and returns it.
+func (e *AppError) WithDetails(details interface{}) *AppError {
+	e.Details = details
+	return e
+}
+
 // Factory functions for standard application errors
 func NewAppError(status int, code, message string, internalErr error) *AppError {
 	return &AppError{
@@ -211,6 +217,20 @@ func NewInvalidManifestError(reason string) *AppError {
 	return NewAppError(fiber.StatusBadRequest, ErrCodeInvalidManifest, msg, nil)
 }
 
+func NewIngestBackpressureError(retryAfterSec int) *AppError {
+	if retryAfterSec <= 0 {
+		retryAfterSec = 2
+	}
+	return &AppError{
+		HTTPStatus: fiber.StatusTooManyRequests,
+		ErrorCode:  ErrCodeIngestBackpressure,
+		Message:    "Ingestion buffer is currently saturated. Please back off and retry",
+		Details: fiber.Map{
+			"retry_after_seconds": retryAfterSec,
+		},
+	}
+}
+
 func NewTargetBlockedError(reason string) *AppError {
 	msg := "Target host resolves to a private, loopback, or blocked address"
 	if reason != "" {
@@ -297,6 +317,9 @@ func CentralErrorHandler(logger *slog.Logger) fiber.ErrorHandler {
 					slog.String("error_code", appErr.ErrorCode),
 					slog.String("message", appErr.Message),
 				)
+			}
+			if appErr.ErrorCode == ErrCodeIngestBackpressure {
+				c.Set("Retry-After", "2")
 			}
 			return SendError(c, appErr.HTTPStatus, appErr.ErrorCode, appErr.Message, appErr.Details)
 		}

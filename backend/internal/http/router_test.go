@@ -17,12 +17,14 @@ import (
 	"github.com/Prince-695/strim/backend/internal/domain"
 	apphttp "github.com/Prince-695/strim/backend/internal/http"
 	"github.com/Prince-695/strim/backend/internal/http/handlers"
+	"github.com/Prince-695/strim/backend/internal/ingest"
 	"github.com/Prince-695/strim/backend/internal/platform/clock"
 	"github.com/Prince-695/strim/backend/internal/platform/ids"
 	"github.com/Prince-695/strim/backend/internal/platform/mailer"
 	"github.com/Prince-695/strim/backend/internal/platform/netguard"
 	"github.com/Prince-695/strim/backend/internal/repository"
 	"github.com/Prince-695/strim/backend/internal/service"
+	"github.com/Prince-695/strim/backend/internal/sse"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -93,6 +95,21 @@ func setupTestApp(t *testing.T, repoErr error) *fiber.App {
 	discoverySvc := service.NewDiscoveryService(endpointRepo, projectRepo, openapiParser)
 	endpointHandler := handlers.NewEndpointHandler(endpointSvc)
 	discoveryHandler := handlers.NewDiscoveryHandler(discoverySvc)
+	ingestStore := ingest.NewInMemoryTimeSeriesStore()
+	batcher := ingest.NewBatcher(ingest.BatcherConfig{}, ingestStore, endpointRepo, logger)
+	batcher.Start()
+	ingestHandler := handlers.NewIngestHandler(batcher, projectRepo, clk)
+	metricsSvc := service.NewMetricsService(ingestStore, endpointRepo, projectRepo, nil, clk)
+	sseHub := sse.NewHub()
+	metricsHandler := handlers.NewMetricsHandler(metricsSvc, sseHub, logger)
+
+	loadTestRepo := repository.NewInMemoryLoadTestRepository()
+	jobRepo := repository.NewInMemoryJobRepository()
+	capRepo := repository.NewInMemoryCapacityRepository()
+	loadTestSvc := service.NewLoadTestService(loadTestRepo, projectRepo, jobRepo, nil, ssrfGuard, cfg.JWTSecret, clk)
+	loadTestHandler := handlers.NewLoadTestHandler(loadTestSvc, sseHub, logger)
+	capacitySvc := service.NewCapacityService(capRepo, loadTestRepo)
+	capacityHandler := handlers.NewCapacityHandler(capacitySvc, logger)
 
 	container := handlers.NewContainer(
 		sysHandler,
@@ -103,6 +120,10 @@ func setupTestApp(t *testing.T, repoErr error) *fiber.App {
 		projectHandler,
 		endpointHandler,
 		discoveryHandler,
+		ingestHandler,
+		metricsHandler,
+		loadTestHandler,
+		capacityHandler,
 	)
 
 	return apphttp.NewRouter(cfg, container, logger, idGen)

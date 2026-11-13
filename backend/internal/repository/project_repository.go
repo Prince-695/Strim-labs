@@ -17,6 +17,7 @@ import (
 type ProjectRepository interface {
 	CreateWithLimitCheck(ctx context.Context, project *domain.Project) error
 	FindByID(ctx context.Context, orgID, projectID string) (*domain.Project, error)
+	FindOnlyByID(ctx context.Context, projectID string) (*domain.Project, error)
 	FindBySlug(ctx context.Context, orgID, slug string) (*domain.Project, error)
 	ListByOrg(ctx context.Context, orgID string) ([]*domain.Project, error)
 	Update(ctx context.Context, project *domain.Project) error
@@ -91,6 +92,21 @@ func (r *GormProjectRepository) FindByID(ctx context.Context, orgID, projectID s
 	var project domain.Project
 	err := r.db.WithContext(ctx).
 		Where("id = ? AND org_id = ? AND deleted_at IS NULL", projectID, orgID).
+		First(&project).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, domain.NewProjectNotFoundError()
+		}
+		return nil, err
+	}
+	return &project, nil
+}
+
+// FindOnlyByID retrieves a project by its primary key ID regardless of org.
+func (r *GormProjectRepository) FindOnlyByID(ctx context.Context, projectID string) (*domain.Project, error) {
+	var project domain.Project
+	err := r.db.WithContext(ctx).
+		Where("id = ? AND deleted_at IS NULL", projectID).
 		First(&project).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

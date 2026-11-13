@@ -145,9 +145,34 @@ func NewRouter(
 	projects.Post("/:projectID/discovery/manifest", requireAdmin, csrfGuard, handlers.Discovery.ImportManifest)
 	projects.Get("/:projectID/discovery/runs", requireViewer, handlers.Discovery.ListDiscoveryRuns)
 
+	// Metrics Sub-Routes: /v1/organizations/:orgID/projects/:projectID/metrics
+	metrics := projects.Group("/:projectID/metrics")
+	metrics.Get("/overview", requireViewer, handlers.Metrics.GetOverview)
+	metrics.Get("/timeseries", requireViewer, handlers.Metrics.GetTimeseries)
+	metrics.Get("/endpoints", requireViewer, handlers.Metrics.GetEndpointsMetrics)
+	metrics.Get("/status-codes", requireViewer, handlers.Metrics.GetStatusCodes)
+	metrics.Get("/hosts", requireViewer, handlers.Metrics.GetHostsMetrics)
+	metrics.Get("/stream", requireViewer, handlers.Metrics.StreamMetrics)
+
+	// Load Tests Sub-Routes: /v1/organizations/:orgID/projects/:projectID/load-tests
+	loadTests := projects.Group("/:projectID/load-tests")
+	loadTests.Post("/", requireMember, csrfGuard, handlers.LoadTest.CreateLoadTest)
+	loadTests.Get("/", requireViewer, handlers.LoadTest.ListLoadTests)
+	loadTests.Post("/compare", requireViewer, handlers.Capacity.CompareLoadTests)
+	loadTests.Get("/:testID", requireViewer, handlers.LoadTest.GetLoadTest)
+	loadTests.Post("/:testID/stop", requireMember, csrfGuard, handlers.LoadTest.StopLoadTest)
+	loadTests.Post("/:testID/rerun", requireMember, csrfGuard, handlers.LoadTest.RerunLoadTest)
+	loadTests.Delete("/:testID", requireAdmin, csrfGuard, handlers.LoadTest.DeleteLoadTest)
+	loadTests.Get("/:testID/results", requireViewer, handlers.LoadTest.GetResults)
+	loadTests.Get("/:testID/timeseries", requireViewer, handlers.LoadTest.GetTimeseries)
+	loadTests.Get("/:testID/progress", requireViewer, handlers.LoadTest.StreamProgress)
+	loadTests.Get("/:testID/capacity", requireViewer, handlers.Capacity.GetCapacityReport)
+	loadTests.Post("/:testID/capacity/recompute", requireMember, csrfGuard, handlers.Capacity.RecomputeCapacity)
+
 	// Ingestion Subgroup: /v1/ingest (CI scanner & traffic ingest)
 	ingest := v1.Group("/ingest")
 	ingest.Post("/discovery", handlers.Discovery.IngestDiscovery)
+	ingest.Post("/events", handlers.Ingest.IngestEvents)
 
 	// Catch-all 404 handler returning standard Response envelope
 	app.Use(func(c *fiber.Ctx) error {

@@ -17,6 +17,7 @@ import (
 	"github.com/Prince-695/strim/backend/internal/domain"
 	apphttp "github.com/Prince-695/strim/backend/internal/http"
 	"github.com/Prince-695/strim/backend/internal/http/handlers"
+	"github.com/Prince-695/strim/backend/internal/ingest"
 	"github.com/Prince-695/strim/backend/internal/platform/clock"
 	"github.com/Prince-695/strim/backend/internal/platform/crypto"
 	"github.com/Prince-695/strim/backend/internal/platform/ids"
@@ -24,6 +25,7 @@ import (
 	"github.com/Prince-695/strim/backend/internal/platform/netguard"
 	"github.com/Prince-695/strim/backend/internal/repository"
 	"github.com/Prince-695/strim/backend/internal/service"
+	"github.com/Prince-695/strim/backend/internal/sse"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -49,12 +51,19 @@ type testRig struct {
 	projectRepo  repository.ProjectRepository
 	verifRepo    repository.VerificationRepository
 	endpointRepo repository.EndpointRepository
+	ingestStore  ingest.TimeSeriesStore
+	loadTestRepo repository.LoadTestRepository
+	jobRepo      repository.JobRepository
+	capRepo      repository.CapacityRepository
+	sseHub       *sse.Hub
 	orgSvc       service.OrgService
 	userSvc      service.UserService
 	authSvc      service.AuthService
 	projectSvc   service.ProjectService
 	endpointSvc  service.EndpointService
 	discoverySvc service.DiscoveryService
+	loadTestSvc  service.LoadTestService
+	capacitySvc  service.CapacityService
 }
 
 func newTestRig(t *testing.T) *testRig {
@@ -119,6 +128,22 @@ func newTestRig(t *testing.T) *testRig {
 	discoverySvc := service.NewDiscoveryService(endpointRepo, projectRepo, openapiParser)
 	endpointHandler := handlers.NewEndpointHandler(endpointSvc)
 	discoveryHandler := handlers.NewDiscoveryHandler(discoverySvc)
+	ingestStore := ingest.NewInMemoryTimeSeriesStore()
+	batcher := ingest.NewBatcher(ingest.BatcherConfig{}, ingestStore, endpointRepo, logger)
+	batcher.Start()
+	ingestHandler := handlers.NewIngestHandler(batcher, projectRepo, clk)
+	metricsSvc := service.NewMetricsService(ingestStore, endpointRepo, projectRepo, nil, clk)
+	sseHub := sse.NewHub()
+	metricsHandler := handlers.NewMetricsHandler(metricsSvc, sseHub, logger)
+
+	loadTestRepo := repository.NewInMemoryLoadTestRepository()
+	jobRepo := repository.NewInMemoryJobRepository()
+	capRepo := repository.NewInMemoryCapacityRepository()
+	loadTestSvc := service.NewLoadTestService(loadTestRepo, projectRepo, jobRepo, nil, ssrfGuard, cfg.JWTSecret, clk)
+	loadTestHandler := handlers.NewLoadTestHandler(loadTestSvc, sseHub, logger)
+
+	capacitySvc := service.NewCapacityService(capRepo, loadTestRepo)
+	capacityHandler := handlers.NewCapacityHandler(capacitySvc, logger)
 
 	container := handlers.NewContainer(
 		sysHandler,
@@ -129,6 +154,10 @@ func newTestRig(t *testing.T) *testRig {
 		projectHandler,
 		endpointHandler,
 		discoveryHandler,
+		ingestHandler,
+		metricsHandler,
+		loadTestHandler,
+		capacityHandler,
 	)
 	app := apphttp.NewRouter(cfg, container, logger, idGen)
 
@@ -141,12 +170,19 @@ func newTestRig(t *testing.T) *testRig {
 		projectRepo:  projectRepo,
 		verifRepo:    verificationRepo,
 		endpointRepo: endpointRepo,
+		ingestStore:  ingestStore,
+		loadTestRepo: loadTestRepo,
+		jobRepo:      jobRepo,
+		capRepo:      capRepo,
+		sseHub:       sseHub,
 		orgSvc:       orgSvc,
 		userSvc:      userSvc,
 		authSvc:      authSvc,
 		projectSvc:   projectSvc,
 		endpointSvc:  endpointSvc,
 		discoverySvc: discoverySvc,
+		loadTestSvc:  loadTestSvc,
+		capacitySvc:  capacitySvc,
 	}
 }
 

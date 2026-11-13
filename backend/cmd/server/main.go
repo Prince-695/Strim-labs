@@ -15,6 +15,8 @@ import (
 	"github.com/Prince-695/strim/backend/internal/domain"
 	"github.com/Prince-695/strim/backend/internal/http"
 	"github.com/Prince-695/strim/backend/internal/http/handlers"
+	"github.com/Prince-695/strim/backend/internal/ingest"
+	"github.com/Prince-695/strim/backend/internal/loadengine"
 	"github.com/Prince-695/strim/backend/internal/platform/clock"
 	"github.com/Prince-695/strim/backend/internal/platform/database"
 	"github.com/Prince-695/strim/backend/internal/platform/ids"
@@ -23,6 +25,7 @@ import (
 	"github.com/Prince-695/strim/backend/internal/platform/netguard"
 	"github.com/Prince-695/strim/backend/internal/repository"
 	"github.com/Prince-695/strim/backend/internal/service"
+	"github.com/Prince-695/strim/backend/internal/sse"
 	"github.com/Prince-695/strim/backend/pkg/startup"
 )
 
@@ -92,10 +95,18 @@ func main() {
 				&domain.APIEndpoint{},
 				&domain.EndpointSource{},
 				&domain.DiscoveryRun{},
+				&domain.RequestEvent{},
+				&domain.RequestRollup1m{},
+				&domain.RequestRollup1h{},
+				&domain.LoadTest{},
+				&domain.LoadTestResults{},
+				&domain.LoadTestTimeseries{},
+				&domain.Job{},
+				&domain.CapacityReport{},
 			); err != nil {
 				fmt.Printf("\033[38;2;239;68;68m[DATABASE]\033[0m \033[31m✗ Auto-migration failed: %v\033[0m\n", err)
 			} else {
-				fmt.Printf("\033[38;2;168;85;247m[DATABASE]\033[0m \033[38;2;192;132;252m✓ Schema migration complete: tables synchronized successfully (users, otp, organizations, org_members, projects, project_verifications, api_endpoints, endpoint_sources, discovery_runs)\033[0m\n")
+				fmt.Printf("\033[38;2;168;85;247m[DATABASE]\033[0m \033[38;2;192;132;252m✓ Schema migration complete: tables synchronized successfully (users, otp, organizations, org_members, projects, project_verifications, api_endpoints, endpoint_sources, discovery_runs, request_events_raw, request_rollup_1m, request_rollup_1h)\033[0m\n")
 			}
 		}
 	}
@@ -109,6 +120,9 @@ func main() {
 	projectRepo := repository.NewProjectRepository(db)
 	verificationRepo := repository.NewVerificationRepository(db)
 	endpointRepo := repository.NewEndpointRepository(db)
+	loadTestRepo := repository.NewLoadTestRepository(db)
+	jobRepo := repository.NewJobRepository(db)
+	capacityRepo := repository.NewCapacityRepository(db)
 
 	tokenCache := cache.NewMemoryCache()
 	tenantCache := cache.NewTenantCache(tokenCache)
@@ -151,7 +165,28 @@ func main() {
 	endpointSvc := service.NewEndpointService(endpointRepo, projectRepo)
 	discoverySvc := service.NewDiscoveryService(endpointRepo, projectRepo, openapiParser)
 
-	// 7. Dependency Injection: HTTP Handlers
+	// 7. Telemetry Ingestion Engine & TimeSeries Storage
+	var ingestStore ingest.TimeSeriesStore
+	if db != nil && db.DB != nil {
+		ingestStore = ingest.NewGormTimeSeriesStore(db.DB)
+	} else {
+		ingestStore = ingest.NewInMemoryTimeSeriesStore()
+	}
+
+	batcher := ingest.NewBatcher(ingest.BatcherConfig{}, ingestStore, endpointRepo, appLogger)
+	batcher.Start()
+	defer batcher.Stop()
+
+	rollupWorker := ingest.NewRollupWorker(ingestStore, appLogger)
+	rollupWorker.Start()
+	defer rollupWorker.Stop()
+
+	// 8. Observability & Real-Time Metrics Engine
+	metricsCache := cache.NewMetricsCache(tokenCache)
+	metricsSvc := service.NewMetricsService(ingestStore, endpointRepo, projectRepo, metricsCache, clk)
+	sseHub := sse.NewHub()
+
+	// 9. Dependency Injection: HTTP Handlers
 	systemHandler := handlers.NewSystemHandler(systemSvc)
 	authHandler := handlers.NewAuthHandler(authSvc, cfg)
 	userHandler := handlers.NewUserHandler(userSvc)
@@ -160,6 +195,18 @@ func main() {
 	projectHandler := handlers.NewProjectHandler(projectSvc)
 	endpointHandler := handlers.NewEndpointHandler(endpointSvc)
 	discoveryHandler := handlers.NewDiscoveryHandler(discoverySvc)
+	ingestHandler := handlers.NewIngestHandler(batcher, projectRepo, clk)
+	metricsHandler := handlers.NewMetricsHandler(metricsSvc, sseHub, appLogger)
+
+	// 9. Load Testing Engine & Distributed Execution
+	loadWorker := loadengine.NewWorker("", jobRepo, loadTestRepo, projectRepo, capacityRepo, nil, sseHub, cfg.JWTSecret, appLogger)
+	go loadWorker.Start(context.Background())
+	loadTestSvc := service.NewLoadTestService(loadTestRepo, projectRepo, jobRepo, loadWorker, ssrfGuard, cfg.JWTSecret, clk)
+	loadTestHandler := handlers.NewLoadTestHandler(loadTestSvc, sseHub, appLogger)
+
+	// 10. Capacity Analysis and Comparison Engine
+	capacitySvc := service.NewCapacityService(capacityRepo, loadTestRepo)
+	capacityHandler := handlers.NewCapacityHandler(capacitySvc, appLogger)
 
 	handlerContainer := handlers.NewContainer(
 		systemHandler,
@@ -170,9 +217,13 @@ func main() {
 		projectHandler,
 		endpointHandler,
 		discoveryHandler,
+		ingestHandler,
+		metricsHandler,
+		loadTestHandler,
+		capacityHandler,
 	)
 
-	// 8. Build Router & Middlewares
+	// 10. Build Router & Middlewares
 	app := http.NewRouter(cfg, handlerContainer, appLogger, idGen)
 
 	// 9. Display Startup Banner
