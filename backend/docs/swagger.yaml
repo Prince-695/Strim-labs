@@ -36,6 +36,13 @@ definitions:
       user:
         $ref: '#/definitions/domain.UserResponse'
     type: object
+  domain.CapacityThresholds:
+    properties:
+      max_error_rate:
+        type: number
+      p95_multiplier:
+        type: number
+    type: object
   domain.ChangePasswordRequest:
     properties:
       new_password:
@@ -70,6 +77,83 @@ definitions:
         example: verified
       verified_at:
         type: string
+    type: object
+  domain.CreateLoadTestRequest:
+    properties:
+      capacity_thresholds:
+        $ref: '#/definitions/domain.CapacityThresholds'
+      duration_seconds:
+        example: 300
+        maximum: 1800
+        type: integer
+      max_virtual_users:
+        example: 200
+        maximum: 500
+        minimum: 0
+        type: integer
+      model:
+        allOf:
+        - $ref: '#/definitions/domain.LoadTestModel'
+        enum:
+        - open
+        - closed
+        example: open
+      name:
+        example: Checkout Ramp Test
+        maxLength: 100
+        minLength: 2
+        type: string
+      peak_rate:
+        example: 500
+        minimum: 0
+        type: number
+      profile:
+        allOf:
+        - $ref: '#/definitions/domain.LoadTestProfile'
+        enum:
+        - sustained
+        - ramp
+        - spike
+        - step
+        example: ramp
+      ramp_up_seconds:
+        example: 120
+        minimum: 0
+        type: integer
+      spike:
+        $ref: '#/definitions/domain.SpikeConfig'
+      start_now:
+        example: true
+        type: boolean
+      start_rate:
+        example: 10
+        minimum: 0
+        type: number
+      step:
+        $ref: '#/definitions/domain.StepConfig'
+      targets:
+        items:
+          $ref: '#/definitions/domain.TargetItemRequest'
+        maxItems: 20
+        minItems: 1
+        type: array
+      think_time_ms:
+        example: 0
+        minimum: 0
+        type: integer
+      timeout_ms:
+        example: 5000
+        maximum: 60000
+        minimum: 100
+        type: integer
+      total_requests:
+        type: integer
+    required:
+    - duration_seconds
+    - model
+    - name
+    - profile
+    - targets
     type: object
   domain.CreateOrgRequest:
     properties:
@@ -519,6 +603,265 @@ definitions:
   domain.JSONMap:
     additionalProperties: true
     type: object
+  domain.LatencyDistributionBucket:
+    properties:
+      count:
+        type: integer
+      le_ms:
+        type: number
+    type: object
+  domain.LoadTestConfig:
+    properties:
+      capacity_thresholds:
+        $ref: '#/definitions/domain.CapacityThresholds'
+      duration_seconds:
+        type: integer
+      max_virtual_users:
+        type: integer
+      model:
+        $ref: '#/definitions/domain.LoadTestModel'
+      peak_rate:
+        type: number
+      profile:
+        $ref: '#/definitions/domain.LoadTestProfile'
+      ramp_up_seconds:
+        type: integer
+      spike:
+        $ref: '#/definitions/domain.SpikeConfig'
+      start_rate:
+        type: number
+      step:
+        $ref: '#/definitions/domain.StepConfig'
+      targets:
+        items:
+          $ref: '#/definitions/domain.LoadTestTarget'
+        type: array
+      think_time_ms:
+        type: integer
+      timeout_ms:
+        type: integer
+      total_requests:
+        type: integer
+    type: object
+  domain.LoadTestDetailResponse:
+    properties:
+      config:
+        $ref: '#/definitions/domain.LoadTestConfig'
+      created_at:
+        example: "2026-11-13T19:59:00Z"
+        type: string
+      created_by:
+        example: 018f3a5b-7c91-7b00-8000-000000000002
+        type: string
+      error_message:
+        type: string
+      finished_at:
+        type: string
+      id:
+        example: 018f3a5b-7c91-7b00-8000-000000000099
+        type: string
+      model:
+        allOf:
+        - $ref: '#/definitions/domain.LoadTestModel'
+        example: open
+      name:
+        example: Checkout Ramp Test
+        type: string
+      org_id:
+        example: 018f3a5b-7c91-7b00-8000-000000000001
+        type: string
+      profile:
+        allOf:
+        - $ref: '#/definitions/domain.LoadTestProfile'
+        example: ramp
+      project_id:
+        example: 018f3a5b-7c91-7b00-8000-000000000010
+        type: string
+      started_at:
+        example: "2026-11-13T20:00:00Z"
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/domain.LoadTestStatus'
+        example: queued
+      summary:
+        $ref: '#/definitions/domain.LoadTestSummary'
+      updated_at:
+        example: "2026-11-13T20:00:00Z"
+        type: string
+    type: object
+  domain.LoadTestFlags:
+    properties:
+      generator_saturated:
+        type: boolean
+      max_schedule_lag_ms:
+        type: integer
+    type: object
+  domain.LoadTestLatencySummary:
+    properties:
+      avg:
+        type: number
+      max:
+        type: number
+      p50:
+        type: number
+      p90:
+        type: number
+      p95:
+        type: number
+      p99:
+        type: number
+    type: object
+  domain.LoadTestModel:
+    enum:
+    - open
+    - closed
+    type: string
+    x-enum-varnames:
+    - ModelOpen
+    - ModelClosed
+  domain.LoadTestProfile:
+    enum:
+    - sustained
+    - ramp
+    - spike
+    - step
+    type: string
+    x-enum-varnames:
+    - ProfileSustained
+    - ProfileRamp
+    - ProfileSpike
+    - ProfileStep
+  domain.LoadTestResponse:
+    properties:
+      config:
+        $ref: '#/definitions/domain.LoadTestConfig'
+      created_at:
+        example: "2026-11-13T19:59:00Z"
+        type: string
+      created_by:
+        example: 018f3a5b-7c91-7b00-8000-000000000002
+        type: string
+      error_message:
+        type: string
+      finished_at:
+        type: string
+      id:
+        example: 018f3a5b-7c91-7b00-8000-000000000099
+        type: string
+      model:
+        allOf:
+        - $ref: '#/definitions/domain.LoadTestModel'
+        example: open
+      name:
+        example: Checkout Ramp Test
+        type: string
+      org_id:
+        example: 018f3a5b-7c91-7b00-8000-000000000001
+        type: string
+      profile:
+        allOf:
+        - $ref: '#/definitions/domain.LoadTestProfile'
+        example: ramp
+      project_id:
+        example: 018f3a5b-7c91-7b00-8000-000000000010
+        type: string
+      started_at:
+        example: "2026-11-13T20:00:00Z"
+        type: string
+      status:
+        allOf:
+        - $ref: '#/definitions/domain.LoadTestStatus'
+        example: queued
+      updated_at:
+        example: "2026-11-13T20:00:00Z"
+        type: string
+    type: object
+  domain.LoadTestResultsResponse:
+    properties:
+      flags:
+        $ref: '#/definitions/domain.LoadTestFlags'
+      latency_distribution:
+        items:
+          $ref: '#/definitions/domain.LatencyDistributionBucket'
+        type: array
+      per_endpoint:
+        items:
+          $ref: '#/definitions/domain.PerEndpointResult'
+        type: array
+      summary:
+        $ref: '#/definitions/domain.LoadTestSummary'
+    type: object
+  domain.LoadTestStatus:
+    enum:
+    - draft
+    - queued
+    - running
+    - completed
+    - stopped
+    - failed
+    type: string
+    x-enum-varnames:
+    - LoadTestStatusDraft
+    - LoadTestStatusQueued
+    - LoadTestStatusRunning
+    - LoadTestStatusCompleted
+    - LoadTestStatusStopped
+    - LoadTestStatusFailed
+  domain.LoadTestSummary:
+    properties:
+      avg_rps:
+        type: number
+      bytes_received:
+        type: integer
+      duration_seconds:
+        type: integer
+      error_rate:
+        type: number
+      failed:
+        type: integer
+      latency_ms:
+        $ref: '#/definitions/domain.LoadTestLatencySummary'
+      peak_rps:
+        type: number
+      status_codes:
+        additionalProperties:
+          type: integer
+        type: object
+      successful:
+        type: integer
+      timeouts:
+        type: integer
+      total_requests:
+        type: integer
+    type: object
+  domain.LoadTestTarget:
+    properties:
+      body:
+        type: string
+      endpoint_id:
+        type: string
+      headers:
+        additionalProperties:
+          type: string
+        type: object
+      method:
+        type: string
+      path:
+        type: string
+      weight:
+        type: integer
+    type: object
+  domain.LoadTestTimeseriesResponse:
+    properties:
+      points:
+        items:
+          $ref: '#/definitions/domain.TimeseriesPointLoadTest'
+        type: array
+      step:
+        example: 1s
+        type: string
+    type: object
   domain.LoginRequest:
     properties:
       email:
@@ -699,6 +1042,19 @@ definitions:
         items:
           type: string
         type: array
+    type: object
+  domain.PerEndpointResult:
+    properties:
+      error_rate:
+        type: number
+      latency_ms:
+        $ref: '#/definitions/domain.LoadTestLatencySummary'
+      method:
+        type: string
+      path:
+        type: string
+      requests:
+        type: integer
     type: object
   domain.PreviousSummary:
     properties:
@@ -943,6 +1299,17 @@ definitions:
     - last_name
     - password
     type: object
+  domain.SpikeConfig:
+    properties:
+      base_rate:
+        type: number
+      spike_at_seconds:
+        type: integer
+      spike_duration_seconds:
+        type: integer
+      spike_rate:
+        type: number
+    type: object
   domain.StatsSummary:
     properties:
       error_rate:
@@ -978,12 +1345,84 @@ definitions:
           $ref: '#/definitions/domain.StatusCodeCount'
         type: array
     type: object
+  domain.StepConfig:
+    properties:
+      max_rate:
+        type: number
+      start_rate:
+        type: number
+      step_rate:
+        type: number
+      step_seconds:
+        type: integer
+    type: object
+  domain.TargetItemRequest:
+    properties:
+      body:
+        example: '{"item":"laptop","qty":1}'
+        type: string
+      endpoint_id:
+        example: 018f3a5b-7c91-7b00-8000-000000000021
+        type: string
+      headers:
+        additionalProperties:
+          type: string
+        type: object
+      method:
+        enum:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - HEAD
+        - OPTIONS
+        example: POST
+        type: string
+      path:
+        example: /orders
+        type: string
+      weight:
+        example: 1
+        minimum: 1
+        type: integer
+    required:
+    - method
+    - path
+    type: object
   domain.TimeseriesPoint:
     properties:
       timestamp:
         type: string
       value:
         type: number
+    type: object
+  domain.TimeseriesPointLoadTest:
+    properties:
+      achieved_rps:
+        example: 10
+        type: number
+      active:
+        example: 3
+        type: integer
+      errors:
+        example: 0
+        type: integer
+      offered_rps:
+        example: 10
+        type: number
+      p50:
+        example: 41
+        type: number
+      p95:
+        example: 80
+        type: number
+      p99:
+        example: 120
+        type: number
+      t:
+        example: 0
+        type: integer
     type: object
   domain.TimeseriesSeries:
     properties:
@@ -2558,6 +2997,393 @@ paths:
       summary: Update endpoint
       tags:
       - Registry
+  /v1/organizations/{orgID}/projects/{projectID}/load-tests:
+    get:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Filter by status (draft, queued, running, completed, stopped,
+          failed)
+        in: query
+        name: status
+        type: string
+      - description: Filter by profile (sustained, ramp, spike, step)
+        in: query
+        name: profile
+        type: string
+      - default: -created_at
+        description: Sort order (-created_at, created_at)
+        in: query
+        name: sort
+        type: string
+      - default: 50
+        description: Pagination limit
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.LoadTestResponse'
+                  type: array
+              type: object
+      security:
+      - BearerAuth: []
+      summary: List load tests
+      tags:
+      - LoadTests
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Idempotency key
+        in: header
+        name: Idempotency-Key
+        type: string
+      - description: Load test configuration
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateLoadTestRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.LoadTestResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Create a load test
+      tags:
+      - LoadTests
+  /v1/organizations/{orgID}/projects/{projectID}/load-tests/{testID}:
+    delete:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Load Test ID
+        in: path
+        name: testID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Delete a load test
+      tags:
+      - LoadTests
+    get:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Load Test ID
+        in: path
+        name: testID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.LoadTestDetailResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Get load test details
+      tags:
+      - LoadTests
+  /v1/organizations/{orgID}/projects/{projectID}/load-tests/{testID}/progress:
+    get:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Load Test ID
+        in: path
+        name: testID
+        required: true
+        type: string
+      produces:
+      - text/event-stream
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Stream load test progress (SSE)
+      tags:
+      - LoadTests
+  /v1/organizations/{orgID}/projects/{projectID}/load-tests/{testID}/rerun:
+    post:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Load Test ID
+        in: path
+        name: testID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.LoadTestResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Rerun a load test
+      tags:
+      - LoadTests
+  /v1/organizations/{orgID}/projects/{projectID}/load-tests/{testID}/results:
+    get:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Load Test ID
+        in: path
+        name: testID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.LoadTestResultsResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Get load test results
+      tags:
+      - LoadTests
+  /v1/organizations/{orgID}/projects/{projectID}/load-tests/{testID}/stop:
+    post:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Load Test ID
+        in: path
+        name: testID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.LoadTestResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Stop a running load test
+      tags:
+      - LoadTests
+  /v1/organizations/{orgID}/projects/{projectID}/load-tests/{testID}/timeseries:
+    get:
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Load Test ID
+        in: path
+        name: testID
+        required: true
+        type: string
+      - default: 1s
+        description: Timeseries step (1s, 5s, 10s)
+        in: query
+        name: step
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.LoadTestTimeseriesResponse'
+              type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Get load test timeseries
+      tags:
+      - LoadTests
   /v1/organizations/{orgID}/projects/{projectID}/metrics/endpoints:
     get:
       description: Returns list of endpoints with throughput, p50/p95/p99 latency,

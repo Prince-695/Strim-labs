@@ -2290,6 +2290,632 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/organizations/{orgID}/projects/{projectID}/load-tests": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LoadTests"
+                ],
+                "summary": "List load tests",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by status (draft, queued, running, completed, stopped, failed)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by profile (sustained, ramp, spike, step)",
+                        "name": "profile",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "-created_at",
+                        "description": "Sort order (-created_at, created_at)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Pagination limit",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/domain.LoadTestResponse"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LoadTests"
+                ],
+                "summary": "Create a load test",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Idempotency key",
+                        "name": "Idempotency-Key",
+                        "in": "header"
+                    },
+                    {
+                        "description": "Load test configuration",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CreateLoadTestRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.LoadTestResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/load-tests/{testID}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LoadTests"
+                ],
+                "summary": "Get load test details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Load Test ID",
+                        "name": "testID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.LoadTestDetailResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LoadTests"
+                ],
+                "summary": "Delete a load test",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Load Test ID",
+                        "name": "testID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/load-tests/{testID}/progress": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "LoadTests"
+                ],
+                "summary": "Stream load test progress (SSE)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Load Test ID",
+                        "name": "testID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/load-tests/{testID}/rerun": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LoadTests"
+                ],
+                "summary": "Rerun a load test",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Load Test ID",
+                        "name": "testID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.LoadTestResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/load-tests/{testID}/results": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LoadTests"
+                ],
+                "summary": "Get load test results",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Load Test ID",
+                        "name": "testID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.LoadTestResultsResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/load-tests/{testID}/stop": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LoadTests"
+                ],
+                "summary": "Stop a running load test",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Load Test ID",
+                        "name": "testID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.LoadTestResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/load-tests/{testID}/timeseries": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "LoadTests"
+                ],
+                "summary": "Get load test timeseries",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Load Test ID",
+                        "name": "testID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": "1s",
+                        "description": "Timeseries step (1s, 5s, 10s)",
+                        "name": "step",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.LoadTestTimeseriesResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/organizations/{orgID}/projects/{projectID}/metrics/endpoints": {
             "get": {
                 "security": [
@@ -3326,6 +3952,17 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.CapacityThresholds": {
+            "type": "object",
+            "properties": {
+                "max_error_rate": {
+                    "type": "number"
+                },
+                "p95_multiplier": {
+                    "type": "number"
+                }
+            }
+        },
         "domain.ChangePasswordRequest": {
             "type": "object",
             "required": [
@@ -3375,6 +4012,111 @@ const docTemplate = `{
                 },
                 "verified_at": {
                     "type": "string"
+                }
+            }
+        },
+        "domain.CreateLoadTestRequest": {
+            "type": "object",
+            "required": [
+                "duration_seconds",
+                "model",
+                "name",
+                "profile",
+                "targets"
+            ],
+            "properties": {
+                "capacity_thresholds": {
+                    "$ref": "#/definitions/domain.CapacityThresholds"
+                },
+                "duration_seconds": {
+                    "type": "integer",
+                    "maximum": 1800,
+                    "example": 300
+                },
+                "max_virtual_users": {
+                    "type": "integer",
+                    "maximum": 500,
+                    "minimum": 0,
+                    "example": 200
+                },
+                "model": {
+                    "enum": [
+                        "open",
+                        "closed"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.LoadTestModel"
+                        }
+                    ],
+                    "example": "open"
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "minLength": 2,
+                    "example": "Checkout Ramp Test"
+                },
+                "peak_rate": {
+                    "type": "number",
+                    "minimum": 0,
+                    "example": 500
+                },
+                "profile": {
+                    "enum": [
+                        "sustained",
+                        "ramp",
+                        "spike",
+                        "step"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.LoadTestProfile"
+                        }
+                    ],
+                    "example": "ramp"
+                },
+                "ramp_up_seconds": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "example": 120
+                },
+                "spike": {
+                    "$ref": "#/definitions/domain.SpikeConfig"
+                },
+                "start_now": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "start_rate": {
+                    "type": "number",
+                    "minimum": 0,
+                    "example": 10
+                },
+                "step": {
+                    "$ref": "#/definitions/domain.StepConfig"
+                },
+                "targets": {
+                    "type": "array",
+                    "maxItems": 20,
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/domain.TargetItemRequest"
+                    }
+                },
+                "think_time_ms": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "example": 0
+                },
+                "timeout_ms": {
+                    "type": "integer",
+                    "maximum": 60000,
+                    "minimum": 100,
+                    "example": 5000
+                },
+                "total_requests": {
+                    "type": "integer"
                 }
             }
         },
@@ -4023,6 +4765,394 @@ const docTemplate = `{
             "type": "object",
             "additionalProperties": true
         },
+        "domain.LatencyDistributionBucket": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "le_ms": {
+                    "type": "number"
+                }
+            }
+        },
+        "domain.LoadTestConfig": {
+            "type": "object",
+            "properties": {
+                "capacity_thresholds": {
+                    "$ref": "#/definitions/domain.CapacityThresholds"
+                },
+                "duration_seconds": {
+                    "type": "integer"
+                },
+                "max_virtual_users": {
+                    "type": "integer"
+                },
+                "model": {
+                    "$ref": "#/definitions/domain.LoadTestModel"
+                },
+                "peak_rate": {
+                    "type": "number"
+                },
+                "profile": {
+                    "$ref": "#/definitions/domain.LoadTestProfile"
+                },
+                "ramp_up_seconds": {
+                    "type": "integer"
+                },
+                "spike": {
+                    "$ref": "#/definitions/domain.SpikeConfig"
+                },
+                "start_rate": {
+                    "type": "number"
+                },
+                "step": {
+                    "$ref": "#/definitions/domain.StepConfig"
+                },
+                "targets": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.LoadTestTarget"
+                    }
+                },
+                "think_time_ms": {
+                    "type": "integer"
+                },
+                "timeout_ms": {
+                    "type": "integer"
+                },
+                "total_requests": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.LoadTestDetailResponse": {
+            "type": "object",
+            "properties": {
+                "config": {
+                    "$ref": "#/definitions/domain.LoadTestConfig"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-11-13T19:59:00Z"
+                },
+                "created_by": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000002"
+                },
+                "error_message": {
+                    "type": "string"
+                },
+                "finished_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000099"
+                },
+                "model": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.LoadTestModel"
+                        }
+                    ],
+                    "example": "open"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Checkout Ramp Test"
+                },
+                "org_id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000001"
+                },
+                "profile": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.LoadTestProfile"
+                        }
+                    ],
+                    "example": "ramp"
+                },
+                "project_id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000010"
+                },
+                "started_at": {
+                    "type": "string",
+                    "example": "2026-11-13T20:00:00Z"
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.LoadTestStatus"
+                        }
+                    ],
+                    "example": "queued"
+                },
+                "summary": {
+                    "$ref": "#/definitions/domain.LoadTestSummary"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2026-11-13T20:00:00Z"
+                }
+            }
+        },
+        "domain.LoadTestFlags": {
+            "type": "object",
+            "properties": {
+                "generator_saturated": {
+                    "type": "boolean"
+                },
+                "max_schedule_lag_ms": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.LoadTestLatencySummary": {
+            "type": "object",
+            "properties": {
+                "avg": {
+                    "type": "number"
+                },
+                "max": {
+                    "type": "number"
+                },
+                "p50": {
+                    "type": "number"
+                },
+                "p90": {
+                    "type": "number"
+                },
+                "p95": {
+                    "type": "number"
+                },
+                "p99": {
+                    "type": "number"
+                }
+            }
+        },
+        "domain.LoadTestModel": {
+            "type": "string",
+            "enum": [
+                "open",
+                "closed"
+            ],
+            "x-enum-varnames": [
+                "ModelOpen",
+                "ModelClosed"
+            ]
+        },
+        "domain.LoadTestProfile": {
+            "type": "string",
+            "enum": [
+                "sustained",
+                "ramp",
+                "spike",
+                "step"
+            ],
+            "x-enum-varnames": [
+                "ProfileSustained",
+                "ProfileRamp",
+                "ProfileSpike",
+                "ProfileStep"
+            ]
+        },
+        "domain.LoadTestResponse": {
+            "type": "object",
+            "properties": {
+                "config": {
+                    "$ref": "#/definitions/domain.LoadTestConfig"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2026-11-13T19:59:00Z"
+                },
+                "created_by": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000002"
+                },
+                "error_message": {
+                    "type": "string"
+                },
+                "finished_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000099"
+                },
+                "model": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.LoadTestModel"
+                        }
+                    ],
+                    "example": "open"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Checkout Ramp Test"
+                },
+                "org_id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000001"
+                },
+                "profile": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.LoadTestProfile"
+                        }
+                    ],
+                    "example": "ramp"
+                },
+                "project_id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000010"
+                },
+                "started_at": {
+                    "type": "string",
+                    "example": "2026-11-13T20:00:00Z"
+                },
+                "status": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.LoadTestStatus"
+                        }
+                    ],
+                    "example": "queued"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2026-11-13T20:00:00Z"
+                }
+            }
+        },
+        "domain.LoadTestResultsResponse": {
+            "type": "object",
+            "properties": {
+                "flags": {
+                    "$ref": "#/definitions/domain.LoadTestFlags"
+                },
+                "latency_distribution": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.LatencyDistributionBucket"
+                    }
+                },
+                "per_endpoint": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.PerEndpointResult"
+                    }
+                },
+                "summary": {
+                    "$ref": "#/definitions/domain.LoadTestSummary"
+                }
+            }
+        },
+        "domain.LoadTestStatus": {
+            "type": "string",
+            "enum": [
+                "draft",
+                "queued",
+                "running",
+                "completed",
+                "stopped",
+                "failed"
+            ],
+            "x-enum-varnames": [
+                "LoadTestStatusDraft",
+                "LoadTestStatusQueued",
+                "LoadTestStatusRunning",
+                "LoadTestStatusCompleted",
+                "LoadTestStatusStopped",
+                "LoadTestStatusFailed"
+            ]
+        },
+        "domain.LoadTestSummary": {
+            "type": "object",
+            "properties": {
+                "avg_rps": {
+                    "type": "number"
+                },
+                "bytes_received": {
+                    "type": "integer"
+                },
+                "duration_seconds": {
+                    "type": "integer"
+                },
+                "error_rate": {
+                    "type": "number"
+                },
+                "failed": {
+                    "type": "integer"
+                },
+                "latency_ms": {
+                    "$ref": "#/definitions/domain.LoadTestLatencySummary"
+                },
+                "peak_rps": {
+                    "type": "number"
+                },
+                "status_codes": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "successful": {
+                    "type": "integer"
+                },
+                "timeouts": {
+                    "type": "integer"
+                },
+                "total_requests": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.LoadTestTarget": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "endpoint_id": {
+                    "type": "string"
+                },
+                "headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "method": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "weight": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.LoadTestTimeseriesResponse": {
+            "type": "object",
+            "properties": {
+                "points": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.TimeseriesPointLoadTest"
+                    }
+                },
+                "step": {
+                    "type": "string",
+                    "example": "1s"
+                }
+            }
+        },
         "domain.LoginRequest": {
             "type": "object",
             "required": [
@@ -4279,6 +5409,26 @@ const docTemplate = `{
                         "[\"checkout\"",
                         "\"v1\"]"
                     ]
+                }
+            }
+        },
+        "domain.PerEndpointResult": {
+            "type": "object",
+            "properties": {
+                "error_rate": {
+                    "type": "number"
+                },
+                "latency_ms": {
+                    "$ref": "#/definitions/domain.LoadTestLatencySummary"
+                },
+                "method": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "requests": {
+                    "type": "integer"
                 }
             }
         },
@@ -4630,6 +5780,23 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.SpikeConfig": {
+            "type": "object",
+            "properties": {
+                "base_rate": {
+                    "type": "number"
+                },
+                "spike_at_seconds": {
+                    "type": "integer"
+                },
+                "spike_duration_seconds": {
+                    "type": "integer"
+                },
+                "spike_rate": {
+                    "type": "number"
+                }
+            }
+        },
         "domain.StatsSummary": {
             "type": "object",
             "properties": {
@@ -4681,6 +5848,68 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.StepConfig": {
+            "type": "object",
+            "properties": {
+                "max_rate": {
+                    "type": "number"
+                },
+                "start_rate": {
+                    "type": "number"
+                },
+                "step_rate": {
+                    "type": "number"
+                },
+                "step_seconds": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.TargetItemRequest": {
+            "type": "object",
+            "required": [
+                "method",
+                "path"
+            ],
+            "properties": {
+                "body": {
+                    "type": "string",
+                    "example": "{\"item\":\"laptop\",\"qty\":1}"
+                },
+                "endpoint_id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000021"
+                },
+                "headers": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "method": {
+                    "type": "string",
+                    "enum": [
+                        "GET",
+                        "POST",
+                        "PUT",
+                        "PATCH",
+                        "DELETE",
+                        "HEAD",
+                        "OPTIONS"
+                    ],
+                    "example": "POST"
+                },
+                "path": {
+                    "type": "string",
+                    "example": "/orders"
+                },
+                "weight": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "example": 1
+                }
+            }
+        },
         "domain.TimeseriesPoint": {
             "type": "object",
             "properties": {
@@ -4689,6 +5918,43 @@ const docTemplate = `{
                 },
                 "value": {
                     "type": "number"
+                }
+            }
+        },
+        "domain.TimeseriesPointLoadTest": {
+            "type": "object",
+            "properties": {
+                "achieved_rps": {
+                    "type": "number",
+                    "example": 10
+                },
+                "active": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "errors": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "offered_rps": {
+                    "type": "number",
+                    "example": 10
+                },
+                "p50": {
+                    "type": "number",
+                    "example": 41
+                },
+                "p95": {
+                    "type": "number",
+                    "example": 80
+                },
+                "p99": {
+                    "type": "number",
+                    "example": 120
+                },
+                "t": {
+                    "type": "integer",
+                    "example": 0
                 }
             }
         },
