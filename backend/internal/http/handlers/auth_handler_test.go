@@ -145,10 +145,13 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 	webhookSvc := service.NewWebhookService(webhookRepo, deliveryRepo, projectRepo, ssrfGuard, nil, auditRec)
 	auditSvc := service.NewAuditService(auditRepo, orgRepo)
 	usageSvc := service.NewUsageService(usageRepo, projectRepo, orgRepo)
+	dashRepo := repository.NewInMemoryDashboardRepository()
+	dashSvc := service.NewDashboardService(dashRepo, projectRepo, auditRec)
 	apiKeyHandler := handlers.NewAPIKeyHandler(apiKeySvc, logger)
 	webhookHandler := handlers.NewWebhookHandler(webhookSvc, logger)
 	auditHandler := handlers.NewAuditHandler(auditSvc, logger)
 	usageHandler := handlers.NewUsageHandler(usageSvc, logger)
+	dashboardHandler := handlers.NewDashboardHandler(dashSvc, logger)
 
 	container := handlers.NewContainer(
 		sysHandler,
@@ -167,6 +170,7 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 		alertHandler,
 		incidentHandler,
 		channelHandler,
+		dashboardHandler,
 		apiKeyHandler,
 		webhookHandler,
 		auditHandler,

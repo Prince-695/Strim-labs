@@ -117,6 +117,7 @@ func main() {
 				&domain.WebhookDelivery{},
 				&domain.AuditLog{},
 				&domain.DailyUsageCounter{},
+				&domain.Dashboard{},
 			); err != nil {
 				fmt.Printf("\033[38;2;239;68;68m[DATABASE]\033[0m \033[31m✗ Auto-migration failed: %v\033[0m\n", err)
 			} else {
@@ -145,6 +146,7 @@ func main() {
 	deliveryRepo := repository.NewWebhookDeliveryRepository(db)
 	auditRepo := repository.NewAuditLogRepository(db)
 	usageRepo := repository.NewUsageRepository(db)
+	dashboardRepo := repository.NewDashboardRepository(db)
 
 	tokenCache := cache.NewMemoryCache()
 	tenantCache := cache.NewTenantCache(tokenCache)
@@ -274,6 +276,7 @@ func main() {
 	webhookSvc := service.NewWebhookService(webhookRepo, deliveryRepo, projectRepo, ssrfGuard, webhookDispatcher, auditRec)
 	auditSvc := service.NewAuditService(auditRepo, orgRepo)
 	usageSvc := service.NewUsageService(usageRepo, projectRepo, orgRepo)
+	dashboardSvc := service.NewDashboardService(dashboardRepo, projectRepo, auditRec)
 
 	ingestHandler.SetServices(apiKeySvc, usageSvc)
 	discoveryHandler.SetAPIKeyService(apiKeySvc)
@@ -282,6 +285,7 @@ func main() {
 	webhookHandler := handlers.NewWebhookHandler(webhookSvc, appLogger)
 	auditHandler := handlers.NewAuditHandler(auditSvc, appLogger)
 	usageHandler := handlers.NewUsageHandler(usageSvc, appLogger)
+	dashboardHandler := handlers.NewDashboardHandler(dashboardSvc, appLogger)
 
 	handlerContainer := handlers.NewContainer(
 		systemHandler,
@@ -300,6 +304,7 @@ func main() {
 		alertHandler,
 		incidentHandler,
 		channelHandler,
+		dashboardHandler,
 		apiKeyHandler,
 		webhookHandler,
 		auditHandler,

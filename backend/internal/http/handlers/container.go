@@ -18,6 +18,7 @@ type Container struct {
 	Alert       *AlertHandler
 	Incident    *IncidentHandler
 	Channel     *ChannelHandler
+	Dashboard   *DashboardHandler
 	APIKey      *APIKeyHandler
 	Webhook     *WebhookHandler
 	Audit       *AuditHandler
@@ -42,6 +43,7 @@ func NewContainer(
 	alert *AlertHandler,
 	incident *IncidentHandler,
 	channel *ChannelHandler,
+	dashboard *DashboardHandler,
 	apiKey *APIKeyHandler,
 	webhook *WebhookHandler,
 	audit *AuditHandler,
@@ -64,6 +66,7 @@ func NewContainer(
 		Alert:       alert,
 		Incident:    incident,
 		Channel:     channel,
+		Dashboard:   dashboard,
 		APIKey:      apiKey,
 		Webhook:     webhook,
 		Audit:       audit,

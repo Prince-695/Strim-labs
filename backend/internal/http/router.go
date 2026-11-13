@@ -177,6 +177,15 @@ func NewRouter(
 	diag.Get("/regressions", requireViewer, handlers.Diagnostics.GetRegressions)
 	diag.Get("/bottlenecks", requireViewer, handlers.Diagnostics.GetBottlenecks)
 
+	// Customizable Dashboards Sub-Routes: /v1/organizations/:orgID/projects/:projectID/dashboards
+	dashboards := projects.Group("/:projectID/dashboards")
+	dashboards.Post("/", requireMember, csrfGuard, handlers.Dashboard.CreateDashboard)
+	dashboards.Get("/", requireViewer, handlers.Dashboard.ListDashboards)
+	dashboards.Get("/:dashboardID", requireViewer, handlers.Dashboard.GetDashboard)
+	dashboards.Put("/:dashboardID", requireMember, csrfGuard, handlers.Dashboard.UpdateDashboard)
+	dashboards.Delete("/:dashboardID", requireMember, csrfGuard, handlers.Dashboard.DeleteDashboard)
+	dashboards.Post("/:dashboardID/clone", requireMember, csrfGuard, handlers.Dashboard.CloneDashboard)
+
 	// Alert Rules Sub-Routes: /v1/organizations/:orgID/projects/:projectID/alert-rules
 	alertRules := projects.Group("/:projectID/alert-rules")
 	alertRules.Post("/", requireMember, csrfGuard, handlers.Alert.CreateRule)
