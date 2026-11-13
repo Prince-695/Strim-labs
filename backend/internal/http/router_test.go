@@ -105,8 +105,11 @@ func setupTestApp(t *testing.T, repoErr error) *fiber.App {
 
 	loadTestRepo := repository.NewInMemoryLoadTestRepository()
 	jobRepo := repository.NewInMemoryJobRepository()
+	capRepo := repository.NewInMemoryCapacityRepository()
 	loadTestSvc := service.NewLoadTestService(loadTestRepo, projectRepo, jobRepo, nil, ssrfGuard, cfg.JWTSecret, clk)
 	loadTestHandler := handlers.NewLoadTestHandler(loadTestSvc, sseHub, logger)
+	capacitySvc := service.NewCapacityService(capRepo, loadTestRepo)
+	capacityHandler := handlers.NewCapacityHandler(capacitySvc, logger)
 
 	container := handlers.NewContainer(
 		sysHandler,
@@ -120,6 +123,7 @@ func setupTestApp(t *testing.T, repoErr error) *fiber.App {
 		ingestHandler,
 		metricsHandler,
 		loadTestHandler,
+		capacityHandler,
 	)
 
 	return apphttp.NewRouter(cfg, container, logger, idGen)

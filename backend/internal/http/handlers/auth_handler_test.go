@@ -114,8 +114,11 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 
 	loadTestRepo := repository.NewInMemoryLoadTestRepository()
 	jobRepo := repository.NewInMemoryJobRepository()
+	capRepo := repository.NewInMemoryCapacityRepository()
 	loadTestSvc := service.NewLoadTestService(loadTestRepo, projectRepo, jobRepo, nil, ssrfGuard, cfg.JWTSecret, clk)
 	loadTestHandler := handlers.NewLoadTestHandler(loadTestSvc, sseHub, logger)
+	capacitySvc := service.NewCapacityService(capRepo, loadTestRepo)
+	capacityHandler := handlers.NewCapacityHandler(capacitySvc, logger)
 
 	container := handlers.NewContainer(
 		sysHandler,
@@ -129,6 +132,7 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 		ingestHandler,
 		metricsHandler,
 		loadTestHandler,
+		capacityHandler,
 	)
 
 	app := apphttp.NewRouter(cfg, container, logger, idGen)
