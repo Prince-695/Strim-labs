@@ -82,6 +82,12 @@ func (e *AppError) Unwrap() error {
 	return e.InternalErr
 }
 
+// WithDetails attaches structured details to an AppError and returns it.
+func (e *AppError) WithDetails(details interface{}) *AppError {
+	e.Details = details
+	return e
+}
+
 // Factory functions for standard application errors
 func NewAppError(status int, code, message string, internalErr error) *AppError {
 	return &AppError{
