@@ -24,6 +24,7 @@ import (
 	"github.com/Prince-695/strim/backend/internal/platform/netguard"
 	"github.com/Prince-695/strim/backend/internal/repository"
 	"github.com/Prince-695/strim/backend/internal/service"
+	"github.com/Prince-695/strim/backend/internal/sse"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -98,6 +99,9 @@ func setupTestApp(t *testing.T, repoErr error) *fiber.App {
 	batcher := ingest.NewBatcher(ingest.BatcherConfig{}, ingestStore, endpointRepo, logger)
 	batcher.Start()
 	ingestHandler := handlers.NewIngestHandler(batcher, projectRepo, clk)
+	metricsSvc := service.NewMetricsService(ingestStore, endpointRepo, projectRepo, nil, clk)
+	sseHub := sse.NewHub()
+	metricsHandler := handlers.NewMetricsHandler(metricsSvc, sseHub, logger)
 
 	container := handlers.NewContainer(
 		sysHandler,
@@ -109,6 +113,7 @@ func setupTestApp(t *testing.T, repoErr error) *fiber.App {
 		endpointHandler,
 		discoveryHandler,
 		ingestHandler,
+		metricsHandler,
 	)
 
 	return apphttp.NewRouter(cfg, container, logger, idGen)

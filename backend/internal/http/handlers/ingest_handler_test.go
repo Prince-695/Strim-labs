@@ -24,6 +24,7 @@ import (
 	"github.com/Prince-695/strim/backend/internal/platform/netguard"
 	"github.com/Prince-695/strim/backend/internal/repository"
 	"github.com/Prince-695/strim/backend/internal/service"
+	"github.com/Prince-695/strim/backend/internal/sse"
 	"github.com/gofiber/fiber/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -112,6 +113,9 @@ func setupIngestTestRig(t *testing.T, batcherCfg ingest.BatcherConfig) *ingestTe
 	})
 
 	ingestHandler := handlers.NewIngestHandler(batcher, projectRepo, clk)
+	metricsSvc := service.NewMetricsService(store, endpointRepo, projectRepo, nil, clk)
+	sseHub := sse.NewHub()
+	metricsHandler := handlers.NewMetricsHandler(metricsSvc, sseHub, logger)
 
 	container := handlers.NewContainer(
 		sysHandler,
@@ -123,6 +127,7 @@ func setupIngestTestRig(t *testing.T, batcherCfg ingest.BatcherConfig) *ingestTe
 		endpointHandler,
 		discoveryHandler,
 		ingestHandler,
+		metricsHandler,
 	)
 
 	app := apphttp.NewRouter(cfg, container, logger, idGen)
@@ -507,9 +512,14 @@ func TestIngestEvents_Backpressure(t *testing.T) {
 	}
 
 	ingestHandler := handlers.NewIngestHandler(batcher, projectRepo, clk)
+	metricsSvc := service.NewMetricsService(slowStore, endpointRepo, projectRepo, nil, clk)
+	sseHub := sse.NewHub()
+	metricsHandler := handlers.NewMetricsHandler(metricsSvc, sseHub, logger)
+
 	container := handlers.NewContainer(
 		sysHandler, authHandler, userHandler, orgHandler, memberHandler,
 		projectHandler, endpointHandler, discoveryHandler, ingestHandler,
+		metricsHandler,
 	)
 	app := apphttp.NewRouter(cfg, container, logger, idGen)
 
