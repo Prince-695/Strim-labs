@@ -628,6 +628,18 @@ func (r *InMemoryProjectRepository) FindByID(ctx context.Context, orgID, project
 	return &copyP, nil
 }
 
+func (r *InMemoryProjectRepository) FindOnlyByID(ctx context.Context, projectID string) (*domain.Project, error) {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	p, ok := r.projects[projectID]
+	if !ok || p.DeletedAt.Valid {
+		return nil, domain.NewProjectNotFoundError()
+	}
+	copyP := *p
+	return &copyP, nil
+}
+
 func (r *InMemoryProjectRepository) FindBySlug(ctx context.Context, orgID, slug string) (*domain.Project, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
