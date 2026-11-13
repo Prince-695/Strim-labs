@@ -18,6 +18,10 @@ const (
 	ErrCodeTokenInvalid          = "TOKEN_INVALID"
 	ErrCodeTokenReused           = "TOKEN_REUSED"
 	ErrCodeInvalidAPIKey         = "INVALID_API_KEY"
+	ErrCodeAPIKeyRevoked         = "API_KEY_REVOKED"
+	ErrCodeAPIKeyNotFound        = "API_KEY_NOT_FOUND"
+	ErrCodeWebhookNotFound       = "WEBHOOK_NOT_FOUND"
+	ErrCodeDeliveryNotFound      = "DELIVERY_NOT_FOUND"
 	ErrCodeEmailNotVerified      = "EMAIL_NOT_VERIFIED"
 	ErrCodeForbiddenRole         = "FORBIDDEN_ROLE"
 	ErrCodeKeyScopeMissing       = "KEY_SCOPE_MISSING"
@@ -215,6 +219,29 @@ func NewChannelNotFoundError() *AppError {
 
 func NewVersionConflictError() *AppError {
 	return NewAppError(fiber.StatusConflict, ErrCodeVersionConflict, "Resource version conflict: resource has been modified by another operation", nil)
+}
+
+func NewAPIKeyNotFoundError() *AppError {
+	return NewAppError(fiber.StatusNotFound, ErrCodeAPIKeyNotFound, "API key not found", nil)
+}
+
+func NewAPIKeyRevokedError() *AppError {
+	return NewAppError(fiber.StatusUnauthorized, ErrCodeAPIKeyRevoked, "API key has been revoked", nil)
+}
+
+func NewWebhookNotFoundError() *AppError {
+	return NewAppError(fiber.StatusNotFound, ErrCodeWebhookNotFound, "Webhook not found", nil)
+}
+
+func NewDeliveryNotFoundError() *AppError {
+	return NewAppError(fiber.StatusNotFound, ErrCodeDeliveryNotFound, "Webhook delivery not found", nil)
+}
+
+func NewPlanLimitExceededError(message string) *AppError {
+	if message == "" {
+		message = "Organization plan limit exceeded"
+	}
+	return NewAppError(fiber.StatusForbidden, ErrCodePlanLimitExceeded, message, nil)
 }
 
 func NewInvalidOpenAPISpecError(reason string) *AppError {
