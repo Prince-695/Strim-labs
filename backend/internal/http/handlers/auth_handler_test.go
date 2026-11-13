@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Prince-695/strim/backend/internal/audit"
 	"github.com/Prince-695/strim/backend/internal/cache"
 	"github.com/Prince-695/strim/backend/internal/config"
 	"github.com/Prince-695/strim/backend/internal/discovery"
@@ -134,6 +135,21 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 	incidentHandler := handlers.NewIncidentHandler(incidentSvc, logger)
 	channelHandler := handlers.NewChannelHandler(channelSvc, logger)
 
+	apiKeyRepo := repository.NewInMemoryAPIKeyRepository()
+	webhookRepo := repository.NewInMemoryWebhookRepository()
+	deliveryRepo := repository.NewInMemoryWebhookDeliveryRepository()
+	auditRepo := repository.NewInMemoryAuditLogRepository()
+	usageRepo := repository.NewInMemoryUsageRepository()
+	auditRec := audit.NewAsyncRecorder(auditRepo)
+	apiKeySvc := service.NewAPIKeyService(apiKeyRepo, projectRepo, auditRec)
+	webhookSvc := service.NewWebhookService(webhookRepo, deliveryRepo, projectRepo, ssrfGuard, nil, auditRec)
+	auditSvc := service.NewAuditService(auditRepo, orgRepo)
+	usageSvc := service.NewUsageService(usageRepo, projectRepo, orgRepo)
+	apiKeyHandler := handlers.NewAPIKeyHandler(apiKeySvc, logger)
+	webhookHandler := handlers.NewWebhookHandler(webhookSvc, logger)
+	auditHandler := handlers.NewAuditHandler(auditSvc, logger)
+	usageHandler := handlers.NewUsageHandler(usageSvc, logger)
+
 	container := handlers.NewContainer(
 		sysHandler,
 		authHandler,
@@ -151,6 +167,10 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 		alertHandler,
 		incidentHandler,
 		channelHandler,
+		apiKeyHandler,
+		webhookHandler,
+		auditHandler,
+		usageHandler,
 	)
 
 	app := apphttp.NewRouter(cfg, container, logger, idGen)
