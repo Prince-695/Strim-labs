@@ -16,6 +16,7 @@ import (
 	"github.com/Prince-695/strim/backend/internal/http"
 	"github.com/Prince-695/strim/backend/internal/http/handlers"
 	"github.com/Prince-695/strim/backend/internal/ingest"
+	"github.com/Prince-695/strim/backend/internal/loadengine"
 	"github.com/Prince-695/strim/backend/internal/platform/clock"
 	"github.com/Prince-695/strim/backend/internal/platform/database"
 	"github.com/Prince-695/strim/backend/internal/platform/ids"
@@ -97,6 +98,10 @@ func main() {
 				&domain.RequestEvent{},
 				&domain.RequestRollup1m{},
 				&domain.RequestRollup1h{},
+				&domain.LoadTest{},
+				&domain.LoadTestResults{},
+				&domain.LoadTestTimeseries{},
+				&domain.Job{},
 			); err != nil {
 				fmt.Printf("\033[38;2;239;68;68m[DATABASE]\033[0m \033[31m✗ Auto-migration failed: %v\033[0m\n", err)
 			} else {
@@ -114,6 +119,8 @@ func main() {
 	projectRepo := repository.NewProjectRepository(db)
 	verificationRepo := repository.NewVerificationRepository(db)
 	endpointRepo := repository.NewEndpointRepository(db)
+	loadTestRepo := repository.NewLoadTestRepository(db)
+	jobRepo := repository.NewJobRepository(db)
 
 	tokenCache := cache.NewMemoryCache()
 	tenantCache := cache.NewTenantCache(tokenCache)
@@ -189,6 +196,12 @@ func main() {
 	ingestHandler := handlers.NewIngestHandler(batcher, projectRepo, clk)
 	metricsHandler := handlers.NewMetricsHandler(metricsSvc, sseHub, appLogger)
 
+	// 9. Load Testing Engine & Distributed Execution
+	loadWorker := loadengine.NewWorker("", jobRepo, loadTestRepo, projectRepo, nil, sseHub, cfg.JWTSecret, appLogger)
+	go loadWorker.Start(context.Background())
+	loadTestSvc := service.NewLoadTestService(loadTestRepo, projectRepo, jobRepo, loadWorker, ssrfGuard, cfg.JWTSecret, clk)
+	loadTestHandler := handlers.NewLoadTestHandler(loadTestSvc, sseHub, appLogger)
+
 	handlerContainer := handlers.NewContainer(
 		systemHandler,
 		authHandler,
@@ -200,6 +213,7 @@ func main() {
 		discoveryHandler,
 		ingestHandler,
 		metricsHandler,
+		loadTestHandler,
 	)
 
 	// 10. Build Router & Middlewares

@@ -154,6 +154,18 @@ func NewRouter(
 	metrics.Get("/hosts", requireViewer, handlers.Metrics.GetHostsMetrics)
 	metrics.Get("/stream", requireViewer, handlers.Metrics.StreamMetrics)
 
+	// Load Tests Sub-Routes: /v1/organizations/:orgID/projects/:projectID/load-tests
+	loadTests := projects.Group("/:projectID/load-tests")
+	loadTests.Post("/", requireMember, csrfGuard, handlers.LoadTest.CreateLoadTest)
+	loadTests.Get("/", requireViewer, handlers.LoadTest.ListLoadTests)
+	loadTests.Get("/:testID", requireViewer, handlers.LoadTest.GetLoadTest)
+	loadTests.Post("/:testID/stop", requireMember, csrfGuard, handlers.LoadTest.StopLoadTest)
+	loadTests.Post("/:testID/rerun", requireMember, csrfGuard, handlers.LoadTest.RerunLoadTest)
+	loadTests.Delete("/:testID", requireAdmin, csrfGuard, handlers.LoadTest.DeleteLoadTest)
+	loadTests.Get("/:testID/results", requireViewer, handlers.LoadTest.GetResults)
+	loadTests.Get("/:testID/timeseries", requireViewer, handlers.LoadTest.GetTimeseries)
+	loadTests.Get("/:testID/progress", requireViewer, handlers.LoadTest.StreamProgress)
+
 	// Ingestion Subgroup: /v1/ingest (CI scanner & traffic ingest)
 	ingest := v1.Group("/ingest")
 	ingest.Post("/discovery", handlers.Discovery.IngestDiscovery)
