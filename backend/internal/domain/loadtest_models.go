@@ -73,8 +73,24 @@ type StepConfig struct {
 
 // CapacityThresholds defines custom pass/fail criteria for capacity determination.
 type CapacityThresholds struct {
-	P95Multiplier float64 `json:"p95_multiplier"`
-	MaxErrorRate  float64 `json:"max_error_rate"`
+	P95Multiplier    float64 `json:"p95_multiplier"`
+	MaxErrorRate     float64 `json:"max_error_rate"`
+	MinAchievedRatio float64 `json:"min_achieved_ratio,omitempty"`
+}
+
+// WithDefaults returns a copy of CapacityThresholds with standard defaults populated.
+func (ct CapacityThresholds) WithDefaults() CapacityThresholds {
+	res := ct
+	if res.P95Multiplier <= 0 {
+		res.P95Multiplier = 2.0
+	}
+	if res.MaxErrorRate <= 0 {
+		res.MaxErrorRate = 0.01 // 1%
+	}
+	if res.MinAchievedRatio <= 0 {
+		res.MinAchievedRatio = 0.95 // 95%
+	}
+	return res
 }
 
 // LoadTestConfig contains the full operational configuration for a load test.
