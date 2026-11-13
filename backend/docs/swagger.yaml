@@ -296,6 +296,43 @@ definitions:
           type: string
         type: array
     type: object
+  domain.EndpointMetricItem:
+    properties:
+      endpoint_id:
+        example: 018f3a5b-7c91-7b00-8000-000000000021
+        type: string
+      error_rate:
+        example: 0.002
+        type: number
+      health:
+        allOf:
+        - $ref: '#/definitions/domain.ProjectHealth'
+        example: healthy
+      method:
+        example: GET
+        type: string
+      p50:
+        example: 14.2
+        type: number
+      p95:
+        example: 65
+        type: number
+      p99:
+        example: 110
+        type: number
+      path_template:
+        example: /orders/{id}
+        type: string
+      requests:
+        example: 45000
+        type: integer
+      rps:
+        example: 12.5
+        type: number
+      service:
+        example: orders
+        type: string
+    type: object
   domain.EndpointResponse:
     properties:
       first_seen:
@@ -380,6 +417,20 @@ definitions:
         type: string
     required:
     - email
+    type: object
+  domain.HostsMetricsResponse:
+    properties:
+      connected:
+        example: false
+        type: boolean
+      host:
+        type: string
+      metric:
+        type: string
+      series:
+        items:
+          $ref: '#/definitions/domain.TimeseriesSeries'
+        type: array
     type: object
   domain.ImportOpenAPIRequest:
     properties:
@@ -479,6 +530,68 @@ definitions:
     required:
     - email
     - password
+    type: object
+  domain.MetricSummary:
+    properties:
+      avg:
+        example: 24.1
+        type: number
+      error_count:
+        example: 1224
+        type: integer
+      error_rate:
+        example: 0.008
+        type: number
+      max:
+        example: 850
+        type: number
+      min:
+        example: 1.2
+        type: number
+      p50:
+        example: 18.2
+        type: number
+      p90:
+        example: 45
+        type: number
+      p95:
+        example: 82.4
+        type: number
+      p99:
+        example: 145
+        type: number
+      rps:
+        example: 42.5
+        type: number
+      success_rate:
+        example: 0.992
+        type: number
+      total_requests:
+        example: 153000
+        type: integer
+    type: object
+  domain.MetricTimeseriesResponse:
+    properties:
+      metric:
+        example: p95
+        type: string
+      series:
+        items:
+          $ref: '#/definitions/domain.TimeseriesSeries'
+        type: array
+      step:
+        example: 1m
+        type: string
+      unit:
+        example: ms
+        type: string
+    type: object
+  domain.MetricsOverviewResponse:
+    properties:
+      current:
+        $ref: '#/definitions/domain.MetricSummary'
+      previous:
+        $ref: '#/definitions/domain.PreviousSummary'
     type: object
   domain.OAuthLoginResponse:
     properties:
@@ -586,6 +699,21 @@ definitions:
         items:
           type: string
         type: array
+    type: object
+  domain.PreviousSummary:
+    properties:
+      error_rate:
+        example: 0.012
+        type: number
+      p95:
+        example: 88
+        type: number
+      rps:
+        example: 38.1
+        type: number
+      total_requests:
+        example: 137160
+        type: integer
     type: object
   domain.ProjectDetailResponse:
     properties:
@@ -829,6 +957,43 @@ definitions:
       rps:
         example: 3.3
         type: number
+    type: object
+  domain.StatusCodeCount:
+    properties:
+      count:
+        example: 135000
+        type: integer
+      status:
+        example: 200
+        type: integer
+    type: object
+  domain.StatusCodesResponse:
+    properties:
+      classes:
+        additionalProperties:
+          type: integer
+        type: object
+      codes:
+        items:
+          $ref: '#/definitions/domain.StatusCodeCount'
+        type: array
+    type: object
+  domain.TimeseriesPoint:
+    properties:
+      timestamp:
+        type: string
+      value:
+        type: number
+    type: object
+  domain.TimeseriesSeries:
+    properties:
+      key:
+        example: all
+        type: string
+      points:
+        items:
+          $ref: '#/definitions/domain.TimeseriesPoint'
+        type: array
     type: object
   domain.UpdateMemberRoleRequest:
     properties:
@@ -2393,6 +2558,369 @@ paths:
       summary: Update endpoint
       tags:
       - Registry
+  /v1/organizations/{orgID}/projects/{projectID}/metrics/endpoints:
+    get:
+      description: Returns list of endpoints with throughput, p50/p95/p99 latency,
+        error rate, and health status (healthy, degraded, failing, no_data)
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - default: 1h
+        description: Relative range (15m, 1h, 6h, 24h, 7d, 30d)
+        in: query
+        name: range
+        type: string
+      - description: Explicit start RFC3339 timestamp
+        in: query
+        name: from
+        type: string
+      - description: Explicit end RFC3339 timestamp
+        in: query
+        name: to
+        type: string
+      - default: -requests
+        description: Sort order (-requests, -p95, -error_rate)
+        in: query
+        name: sort
+        type: string
+      - default: 50
+        description: Maximum number of items
+        in: query
+        name: limit
+        type: integer
+      - description: Cursor for pagination
+        in: query
+        name: cursor
+        type: string
+      - description: Search pattern
+        in: query
+        name: q
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.EndpointMetricItem'
+                  type: array
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: List endpoint metrics
+      tags:
+      - Metrics
+  /v1/organizations/{orgID}/projects/{projectID}/metrics/hosts:
+    get:
+      description: Returns CPU, memory, network, and disk metrics for host infrastructure
+        or empty state when no agent is reporting
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - default: 1h
+        description: Relative range (15m, 1h, 6h, 24h, 7d, 30d)
+        in: query
+        name: range
+        type: string
+      - description: Host identifier
+        in: query
+        name: host
+        type: string
+      - description: Metric type (cpu, memory, network, disk)
+        in: query
+        name: metric
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.HostsMetricsResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Get host infrastructure metrics
+      tags:
+      - Metrics
+  /v1/organizations/{orgID}/projects/{projectID}/metrics/overview:
+    get:
+      description: Returns aggregate throughput (RPS), total requests, latency percentiles
+        (p50, p90, p95, p99), error rate, and previous period comparisons for trend
+        arrows
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - default: 1h
+        description: Relative range (15m, 1h, 6h, 24h, 7d, 30d)
+        in: query
+        name: range
+        type: string
+      - description: Explicit start RFC3339 timestamp
+        in: query
+        name: from
+        type: string
+      - description: Explicit end RFC3339 timestamp
+        in: query
+        name: to
+        type: string
+      - description: Optional Endpoint UUID filter
+        in: query
+        name: endpoint_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.MetricsOverviewResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Get project metrics overview
+      tags:
+      - Metrics
+  /v1/organizations/{orgID}/projects/{projectID}/metrics/status-codes:
+    get:
+      description: Returns counts grouped by class (2xx, 3xx, 4xx, 5xx) and individual
+        response codes
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - default: 1h
+        description: Relative range (15m, 1h, 6h, 24h, 7d, 30d)
+        in: query
+        name: range
+        type: string
+      - description: Explicit start RFC3339 timestamp
+        in: query
+        name: from
+        type: string
+      - description: Explicit end RFC3339 timestamp
+        in: query
+        name: to
+        type: string
+      - description: Optional Endpoint UUID filter
+        in: query
+        name: endpoint_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.StatusCodesResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Get status code distribution
+      tags:
+      - Metrics
+  /v1/organizations/{orgID}/projects/{projectID}/metrics/stream:
+    get:
+      description: 'Opens an SSE stream pushing periodic overview data every 2-10
+        seconds, endpoint health updates, and a '': ping'' heartbeat every 15 seconds'
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Optional Endpoint UUID filter
+        in: query
+        name: endpoint_id
+        type: string
+      - default: 5s
+        description: Push interval (2s, 5s, 10s)
+        in: query
+        name: interval
+        type: string
+      responses: {}
+      security:
+      - BearerAuth: []
+      summary: Stream real-time project metrics (SSE)
+      tags:
+      - Metrics
+  /v1/organizations/{orgID}/projects/{projectID}/metrics/timeseries:
+    get:
+      description: Returns granular time-series data for a chosen metric (rps, requests,
+        p50, p95, p99, avg, error_rate, success_rate, timeouts) with null for missing
+        intervals
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - default: rps
+        description: Metric type (rps, requests, p50, p95, p99, avg, error_rate, success_rate,
+          timeouts)
+        in: query
+        name: metric
+        type: string
+      - default: 1h
+        description: Relative range (15m, 1h, 6h, 24h, 7d, 30d)
+        in: query
+        name: range
+        type: string
+      - description: Explicit start RFC3339 timestamp
+        in: query
+        name: from
+        type: string
+      - description: Explicit end RFC3339 timestamp
+        in: query
+        name: to
+        type: string
+      - description: Time step interval (10s, 1m, 5m, 1h)
+        in: query
+        name: step
+        type: string
+      - description: Optional Endpoint UUID filter
+        in: query
+        name: endpoint_id
+        type: string
+      - description: Group by dimension (endpoint, status_class)
+        in: query
+        name: group_by
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.MetricTimeseriesResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Get metrics time-series
+      tags:
+      - Metrics
   /v1/organizations/{orgID}/projects/{projectID}/verification:
     get:
       description: Returns active domain verification status and setup instructions

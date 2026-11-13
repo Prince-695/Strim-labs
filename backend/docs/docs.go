@@ -2290,6 +2290,566 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/organizations/{orgID}/projects/{projectID}/metrics/endpoints": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns list of endpoints with throughput, p50/p95/p99 latency, error rate, and health status (healthy, degraded, failing, no_data)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Metrics"
+                ],
+                "summary": "List endpoint metrics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": "1h",
+                        "description": "Relative range (15m, 1h, 6h, 24h, 7d, 30d)",
+                        "name": "range",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Explicit start RFC3339 timestamp",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Explicit end RFC3339 timestamp",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "-requests",
+                        "description": "Sort order (-requests, -p95, -error_rate)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Maximum number of items",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Cursor for pagination",
+                        "name": "cursor",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search pattern",
+                        "name": "q",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/definitions/domain.EndpointMetricItem"
+                                            }
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/metrics/hosts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns CPU, memory, network, and disk metrics for host infrastructure or empty state when no agent is reporting",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Metrics"
+                ],
+                "summary": "Get host infrastructure metrics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": "1h",
+                        "description": "Relative range (15m, 1h, 6h, 24h, 7d, 30d)",
+                        "name": "range",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Host identifier",
+                        "name": "host",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Metric type (cpu, memory, network, disk)",
+                        "name": "metric",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.HostsMetricsResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/metrics/overview": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns aggregate throughput (RPS), total requests, latency percentiles (p50, p90, p95, p99), error rate, and previous period comparisons for trend arrows",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Metrics"
+                ],
+                "summary": "Get project metrics overview",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": "1h",
+                        "description": "Relative range (15m, 1h, 6h, 24h, 7d, 30d)",
+                        "name": "range",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Explicit start RFC3339 timestamp",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Explicit end RFC3339 timestamp",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Endpoint UUID filter",
+                        "name": "endpoint_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.MetricsOverviewResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/metrics/status-codes": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns counts grouped by class (2xx, 3xx, 4xx, 5xx) and individual response codes",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Metrics"
+                ],
+                "summary": "Get status code distribution",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": "1h",
+                        "description": "Relative range (15m, 1h, 6h, 24h, 7d, 30d)",
+                        "name": "range",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Explicit start RFC3339 timestamp",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Explicit end RFC3339 timestamp",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Endpoint UUID filter",
+                        "name": "endpoint_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.StatusCodesResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/metrics/stream": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Opens an SSE stream pushing periodic overview data every 2-10 seconds, endpoint health updates, and a ': ping' heartbeat every 15 seconds",
+                "tags": [
+                    "Metrics"
+                ],
+                "summary": "Stream real-time project metrics (SSE)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Endpoint UUID filter",
+                        "name": "endpoint_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "5s",
+                        "description": "Push interval (2s, 5s, 10s)",
+                        "name": "interval",
+                        "in": "query"
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/metrics/timeseries": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns granular time-series data for a chosen metric (rps, requests, p50, p95, p99, avg, error_rate, success_rate, timeouts) with null for missing intervals",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Metrics"
+                ],
+                "summary": "Get metrics time-series",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": "rps",
+                        "description": "Metric type (rps, requests, p50, p95, p99, avg, error_rate, success_rate, timeouts)",
+                        "name": "metric",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "1h",
+                        "description": "Relative range (15m, 1h, 6h, 24h, 7d, 30d)",
+                        "name": "range",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Explicit start RFC3339 timestamp",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Explicit end RFC3339 timestamp",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Time step interval (10s, 1m, 5m, 1h)",
+                        "name": "step",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Optional Endpoint UUID filter",
+                        "name": "endpoint_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Group by dimension (endpoint, status_class)",
+                        "name": "group_by",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.MetricTimeseriesResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/organizations/{orgID}/projects/{projectID}/verification": {
             "get": {
                 "security": [
@@ -3138,6 +3698,59 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.EndpointMetricItem": {
+            "type": "object",
+            "properties": {
+                "endpoint_id": {
+                    "type": "string",
+                    "example": "018f3a5b-7c91-7b00-8000-000000000021"
+                },
+                "error_rate": {
+                    "type": "number",
+                    "example": 0.002
+                },
+                "health": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.ProjectHealth"
+                        }
+                    ],
+                    "example": "healthy"
+                },
+                "method": {
+                    "type": "string",
+                    "example": "GET"
+                },
+                "p50": {
+                    "type": "number",
+                    "example": 14.2
+                },
+                "p95": {
+                    "type": "number",
+                    "example": 65
+                },
+                "p99": {
+                    "type": "number",
+                    "example": 110
+                },
+                "path_template": {
+                    "type": "string",
+                    "example": "/orders/{id}"
+                },
+                "requests": {
+                    "type": "integer",
+                    "example": 45000
+                },
+                "rps": {
+                    "type": "number",
+                    "example": 12.5
+                },
+                "service": {
+                    "type": "string",
+                    "example": "orders"
+                }
+            }
+        },
         "domain.EndpointResponse": {
             "type": "object",
             "properties": {
@@ -3260,6 +3873,27 @@ const docTemplate = `{
                 "email": {
                     "type": "string",
                     "example": "dev@acme.com"
+                }
+            }
+        },
+        "domain.HostsMetricsResponse": {
+            "type": "object",
+            "properties": {
+                "connected": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "host": {
+                    "type": "string"
+                },
+                "metric": {
+                    "type": "string"
+                },
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.TimeseriesSeries"
+                    }
                 }
             }
         },
@@ -3403,6 +4037,93 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "example": "S3cure!pass"
+                }
+            }
+        },
+        "domain.MetricSummary": {
+            "type": "object",
+            "properties": {
+                "avg": {
+                    "type": "number",
+                    "example": 24.1
+                },
+                "error_count": {
+                    "type": "integer",
+                    "example": 1224
+                },
+                "error_rate": {
+                    "type": "number",
+                    "example": 0.008
+                },
+                "max": {
+                    "type": "number",
+                    "example": 850
+                },
+                "min": {
+                    "type": "number",
+                    "example": 1.2
+                },
+                "p50": {
+                    "type": "number",
+                    "example": 18.2
+                },
+                "p90": {
+                    "type": "number",
+                    "example": 45
+                },
+                "p95": {
+                    "type": "number",
+                    "example": 82.4
+                },
+                "p99": {
+                    "type": "number",
+                    "example": 145
+                },
+                "rps": {
+                    "type": "number",
+                    "example": 42.5
+                },
+                "success_rate": {
+                    "type": "number",
+                    "example": 0.992
+                },
+                "total_requests": {
+                    "type": "integer",
+                    "example": 153000
+                }
+            }
+        },
+        "domain.MetricTimeseriesResponse": {
+            "type": "object",
+            "properties": {
+                "metric": {
+                    "type": "string",
+                    "example": "p95"
+                },
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.TimeseriesSeries"
+                    }
+                },
+                "step": {
+                    "type": "string",
+                    "example": "1m"
+                },
+                "unit": {
+                    "type": "string",
+                    "example": "ms"
+                }
+            }
+        },
+        "domain.MetricsOverviewResponse": {
+            "type": "object",
+            "properties": {
+                "current": {
+                    "$ref": "#/definitions/domain.MetricSummary"
+                },
+                "previous": {
+                    "$ref": "#/definitions/domain.PreviousSummary"
                 }
             }
         },
@@ -3558,6 +4279,27 @@ const docTemplate = `{
                         "[\"checkout\"",
                         "\"v1\"]"
                     ]
+                }
+            }
+        },
+        "domain.PreviousSummary": {
+            "type": "object",
+            "properties": {
+                "error_rate": {
+                    "type": "number",
+                    "example": 0.012
+                },
+                "p95": {
+                    "type": "number",
+                    "example": 88
+                },
+                "rps": {
+                    "type": "number",
+                    "example": 38.1
+                },
+                "total_requests": {
+                    "type": "integer",
+                    "example": 137160
                 }
             }
         },
@@ -3906,6 +4648,62 @@ const docTemplate = `{
                 "rps": {
                     "type": "number",
                     "example": 3.3
+                }
+            }
+        },
+        "domain.StatusCodeCount": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer",
+                    "example": 135000
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 200
+                }
+            }
+        },
+        "domain.StatusCodesResponse": {
+            "type": "object",
+            "properties": {
+                "classes": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer"
+                    }
+                },
+                "codes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.StatusCodeCount"
+                    }
+                }
+            }
+        },
+        "domain.TimeseriesPoint": {
+            "type": "object",
+            "properties": {
+                "timestamp": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "number"
+                }
+            }
+        },
+        "domain.TimeseriesSeries": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string",
+                    "example": "all"
+                },
+                "points": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.TimeseriesPoint"
+                    }
                 }
             }
         },
