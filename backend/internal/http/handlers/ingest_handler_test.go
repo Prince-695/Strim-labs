@@ -18,6 +18,7 @@ import (
 	apphttp "github.com/Prince-695/strim/backend/internal/http"
 	"github.com/Prince-695/strim/backend/internal/http/handlers"
 	"github.com/Prince-695/strim/backend/internal/ingest"
+	"github.com/Prince-695/strim/backend/internal/notify"
 	"github.com/Prince-695/strim/backend/internal/platform/clock"
 	"github.com/Prince-695/strim/backend/internal/platform/ids"
 	"github.com/Prince-695/strim/backend/internal/platform/mailer"
@@ -127,6 +128,17 @@ func setupIngestTestRig(t *testing.T, batcherCfg ingest.BatcherConfig) *ingestTe
 	diagnosticsSvc := service.NewDiagnosticsService(store, endpointRepo, loadTestRepo, projectRepo, clk)
 	diagnosticsHandler := handlers.NewDiagnosticsHandler(diagnosticsSvc, logger)
 
+	alertRepo := repository.NewInMemoryAlertRuleRepository()
+	incidentRepo := repository.NewInMemoryIncidentRepository()
+	channelRepo := repository.NewInMemoryNotificationChannelRepository()
+	dispatcher := notify.NewDispatcher(mockMailer, ssrfGuard, logger)
+	alertSvc := service.NewAlertService(alertRepo, projectRepo, endpointRepo, channelRepo, clk, idGen)
+	incidentSvc := service.NewIncidentService(incidentRepo, projectRepo, clk, idGen)
+	channelSvc := service.NewNotificationService(channelRepo, projectRepo, dispatcher, ssrfGuard, clk, idGen)
+	alertHandler := handlers.NewAlertHandler(alertSvc, logger)
+	incidentHandler := handlers.NewIncidentHandler(incidentSvc, logger)
+	channelHandler := handlers.NewChannelHandler(channelSvc, logger)
+
 	container := handlers.NewContainer(
 		sysHandler,
 		authHandler,
@@ -141,6 +153,9 @@ func setupIngestTestRig(t *testing.T, batcherCfg ingest.BatcherConfig) *ingestTe
 		loadTestHandler,
 		capacityHandler,
 		diagnosticsHandler,
+		alertHandler,
+		incidentHandler,
+		channelHandler,
 	)
 
 	app := apphttp.NewRouter(cfg, container, logger, idGen)
@@ -539,10 +554,22 @@ func TestIngestEvents_Backpressure(t *testing.T) {
 	diagnosticsSvc := service.NewDiagnosticsService(slowStore, endpointRepo, loadTestRepo, projectRepo, clk)
 	diagnosticsHandler := handlers.NewDiagnosticsHandler(diagnosticsSvc, logger)
 
+	alertRepo := repository.NewInMemoryAlertRuleRepository()
+	incidentRepo := repository.NewInMemoryIncidentRepository()
+	channelRepo := repository.NewInMemoryNotificationChannelRepository()
+	dispatcher := notify.NewDispatcher(mockMailer, ssrfGuard, logger)
+	alertSvc := service.NewAlertService(alertRepo, projectRepo, endpointRepo, channelRepo, clk, idGen)
+	incidentSvc := service.NewIncidentService(incidentRepo, projectRepo, clk, idGen)
+	channelSvc := service.NewNotificationService(channelRepo, projectRepo, dispatcher, ssrfGuard, clk, idGen)
+	alertHandler := handlers.NewAlertHandler(alertSvc, logger)
+	incidentHandler := handlers.NewIncidentHandler(incidentSvc, logger)
+	channelHandler := handlers.NewChannelHandler(channelSvc, logger)
+
 	container := handlers.NewContainer(
 		sysHandler, authHandler, userHandler, orgHandler, memberHandler,
 		projectHandler, endpointHandler, discoveryHandler, ingestHandler,
 		metricsHandler, loadTestHandler, capacityHandler, diagnosticsHandler,
+		alertHandler, incidentHandler, channelHandler,
 	)
 	app := apphttp.NewRouter(cfg, container, logger, idGen)
 

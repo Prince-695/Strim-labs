@@ -18,6 +18,7 @@ import (
 	apphttp "github.com/Prince-695/strim/backend/internal/http"
 	"github.com/Prince-695/strim/backend/internal/http/handlers"
 	"github.com/Prince-695/strim/backend/internal/ingest"
+	"github.com/Prince-695/strim/backend/internal/notify"
 	"github.com/Prince-695/strim/backend/internal/platform/clock"
 	"github.com/Prince-695/strim/backend/internal/platform/crypto"
 	"github.com/Prince-695/strim/backend/internal/platform/ids"
@@ -65,6 +66,12 @@ type testRig struct {
 	loadTestSvc    service.LoadTestService
 	capacitySvc    service.CapacityService
 	diagnosticsSvc service.DiagnosticsService
+	alertRepo      repository.AlertRuleRepository
+	incidentRepo   repository.IncidentRepository
+	channelRepo    repository.NotificationChannelRepository
+	alertSvc       service.AlertService
+	incidentSvc    service.IncidentService
+	channelSvc     service.NotificationService
 }
 
 func newTestRig(t *testing.T) *testRig {
@@ -148,6 +155,19 @@ func newTestRig(t *testing.T) *testRig {
 	diagnosticsSvc := service.NewDiagnosticsService(ingestStore, endpointRepo, loadTestRepo, projectRepo, clk)
 	diagnosticsHandler := handlers.NewDiagnosticsHandler(diagnosticsSvc, logger)
 
+	alertRepo := repository.NewInMemoryAlertRuleRepository()
+	incidentRepo := repository.NewInMemoryIncidentRepository()
+	channelRepo := repository.NewInMemoryNotificationChannelRepository()
+	dispatcher := notify.NewDispatcher(mockMailer, ssrfGuard, logger)
+
+	alertSvc := service.NewAlertService(alertRepo, projectRepo, endpointRepo, channelRepo, clk, idGen)
+	incidentSvc := service.NewIncidentService(incidentRepo, projectRepo, clk, idGen)
+	channelSvc := service.NewNotificationService(channelRepo, projectRepo, dispatcher, ssrfGuard, clk, idGen)
+
+	alertHandler := handlers.NewAlertHandler(alertSvc, logger)
+	incidentHandler := handlers.NewIncidentHandler(incidentSvc, logger)
+	channelHandler := handlers.NewChannelHandler(channelSvc, logger)
+
 	container := handlers.NewContainer(
 		sysHandler,
 		authHandler,
@@ -162,6 +182,9 @@ func newTestRig(t *testing.T) *testRig {
 		loadTestHandler,
 		capacityHandler,
 		diagnosticsHandler,
+		alertHandler,
+		incidentHandler,
+		channelHandler,
 	)
 	app := apphttp.NewRouter(cfg, container, logger, idGen)
 
@@ -188,6 +211,12 @@ func newTestRig(t *testing.T) *testRig {
 		loadTestSvc:    loadTestSvc,
 		capacitySvc:    capacitySvc,
 		diagnosticsSvc: diagnosticsSvc,
+		alertRepo:      alertRepo,
+		incidentRepo:   incidentRepo,
+		channelRepo:    channelRepo,
+		alertSvc:       alertSvc,
+		incidentSvc:    incidentSvc,
+		channelSvc:     channelSvc,
 	}
 }
 
