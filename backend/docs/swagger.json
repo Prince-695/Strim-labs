@@ -2460,6 +2460,101 @@
                 }
             }
         },
+        "/v1/organizations/{orgID}/projects/{projectID}/load-tests/compare": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Compares 2 to 5 finished load tests within the project, calculating percentage deltas, regression verdicts, and synchronized time-series overlays.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Capacity"
+                ],
+                "summary": "Compare multiple load test runs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Test IDs and optional baseline ID",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CompareLoadTestsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.CompareLoadTestsResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Validation error",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Test not found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Test not finished",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/organizations/{orgID}/projects/{projectID}/load-tests/{testID}": {
             "get": {
                 "security": [
@@ -2575,6 +2670,192 @@
                     },
                     "409": {
                         "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/load-tests/{testID}/capacity": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the analyzed capacity limit, sustainable RPS, breaking point, and per-window health metrics for a finished load test.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Capacity"
+                ],
+                "summary": "Get capacity analysis report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Load Test ID",
+                        "name": "testID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.CapacityReportResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Load test not found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Test not finished",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/organizations/{orgID}/projects/{projectID}/load-tests/{testID}/capacity/recompute": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Recomputes capacity and breaking point metrics using custom thresholds on historical data without re-running the test.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Capacity"
+                ],
+                "summary": "Recompute capacity with custom thresholds",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Organization ID",
+                        "name": "orgID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Load Test ID",
+                        "name": "testID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated capacity thresholds and save option",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.RecomputeCapacityRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.CapacityReportResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "404": {
+                        "description": "Load test not found",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    },
+                    "409": {
+                        "description": "Test not finished",
                         "schema": {
                             "$ref": "#/definitions/domain.Response"
                         }
@@ -3949,14 +4230,96 @@
                 }
             }
         },
+        "domain.CapacityReportResponse": {
+            "type": "object",
+            "properties": {
+                "baseline_p95_ms": {
+                    "type": "number"
+                },
+                "breaking_point_rps": {
+                    "type": "number"
+                },
+                "breaking_reason": {
+                    "type": "string"
+                },
+                "confidence": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "load_test_id": {
+                    "type": "string"
+                },
+                "note": {
+                    "type": "string"
+                },
+                "project_id": {
+                    "type": "string"
+                },
+                "sustainable_rps": {
+                    "type": "number"
+                },
+                "thresholds": {
+                    "$ref": "#/definitions/domain.CapacityThresholds"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "windows": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.CapacityWindow"
+                    }
+                }
+            }
+        },
         "domain.CapacityThresholds": {
             "type": "object",
             "properties": {
                 "max_error_rate": {
                     "type": "number"
                 },
+                "min_achieved_ratio": {
+                    "type": "number"
+                },
                 "p95_multiplier": {
                     "type": "number"
+                }
+            }
+        },
+        "domain.CapacityWindow": {
+            "type": "object",
+            "properties": {
+                "achieved_rps": {
+                    "type": "number"
+                },
+                "end_second": {
+                    "type": "integer"
+                },
+                "error_rate": {
+                    "type": "number"
+                },
+                "failure_reason": {
+                    "type": "string"
+                },
+                "healthy": {
+                    "type": "boolean"
+                },
+                "index": {
+                    "type": "integer"
+                },
+                "offered_rps": {
+                    "type": "number"
+                },
+                "p95_ms": {
+                    "type": "number"
+                },
+                "start_second": {
+                    "type": "integer"
                 }
             }
         },
@@ -4009,6 +4372,107 @@
                 },
                 "verified_at": {
                     "type": "string"
+                }
+            }
+        },
+        "domain.CompareLoadTestsRequest": {
+            "type": "object",
+            "properties": {
+                "baseline_id": {
+                    "type": "string"
+                },
+                "test_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "domain.CompareLoadTestsResponse": {
+            "type": "object",
+            "properties": {
+                "baseline_id": {
+                    "type": "string"
+                },
+                "deltas": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.CompareTestDelta"
+                    }
+                },
+                "overlay": {
+                    "$ref": "#/definitions/domain.CompareOverlay"
+                },
+                "tests": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.CompareTestSummary"
+                    }
+                }
+            }
+        },
+        "domain.CompareOverlay": {
+            "type": "object",
+            "properties": {
+                "series": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.OverlaySeries"
+                    }
+                },
+                "step": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.CompareTestDelta": {
+            "type": "object",
+            "properties": {
+                "avg_rps_pct": {
+                    "type": "number"
+                },
+                "error_rate_pct": {
+                    "type": "number"
+                },
+                "p95_pct": {
+                    "type": "number"
+                },
+                "peak_rps_pct": {
+                    "type": "number"
+                },
+                "test_id": {
+                    "type": "string"
+                },
+                "verdict": {
+                    "description": "improved, regressed, unchanged",
+                    "type": "string"
+                }
+            }
+        },
+        "domain.CompareTestSummary": {
+            "type": "object",
+            "properties": {
+                "avg_rps": {
+                    "type": "number"
+                },
+                "error_rate": {
+                    "type": "number"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "p95_ms": {
+                    "type": "number"
+                },
+                "peak_rps": {
+                    "type": "number"
+                },
+                "sustainable_rps": {
+                    "type": "number"
                 }
             }
         },
@@ -5356,6 +5820,43 @@
                 "RoleViewer"
             ]
         },
+        "domain.OverlayPoint": {
+            "type": "object",
+            "properties": {
+                "achieved_rps": {
+                    "type": "number"
+                },
+                "errors": {
+                    "type": "integer"
+                },
+                "offered_rps": {
+                    "type": "number"
+                },
+                "p95": {
+                    "type": "number"
+                },
+                "t": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.OverlaySeries": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "points": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.OverlayPoint"
+                    }
+                },
+                "test_id": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.PageMeta": {
             "type": "object",
             "properties": {
@@ -5650,6 +6151,17 @@
                 "requests": {
                     "type": "integer",
                     "example": 0
+                }
+            }
+        },
+        "domain.RecomputeCapacityRequest": {
+            "type": "object",
+            "properties": {
+                "save": {
+                    "type": "boolean"
+                },
+                "thresholds": {
+                    "$ref": "#/definitions/domain.CapacityThresholds"
                 }
             }
         },

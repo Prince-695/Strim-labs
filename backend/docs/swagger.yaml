@@ -36,12 +36,66 @@ definitions:
       user:
         $ref: '#/definitions/domain.UserResponse'
     type: object
+  domain.CapacityReportResponse:
+    properties:
+      baseline_p95_ms:
+        type: number
+      breaking_point_rps:
+        type: number
+      breaking_reason:
+        type: string
+      confidence:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      load_test_id:
+        type: string
+      note:
+        type: string
+      project_id:
+        type: string
+      sustainable_rps:
+        type: number
+      thresholds:
+        $ref: '#/definitions/domain.CapacityThresholds'
+      updated_at:
+        type: string
+      windows:
+        items:
+          $ref: '#/definitions/domain.CapacityWindow'
+        type: array
+    type: object
   domain.CapacityThresholds:
     properties:
       max_error_rate:
         type: number
+      min_achieved_ratio:
+        type: number
       p95_multiplier:
         type: number
+    type: object
+  domain.CapacityWindow:
+    properties:
+      achieved_rps:
+        type: number
+      end_second:
+        type: integer
+      error_rate:
+        type: number
+      failure_reason:
+        type: string
+      healthy:
+        type: boolean
+      index:
+        type: integer
+      offered_rps:
+        type: number
+      p95_ms:
+        type: number
+      start_second:
+        type: integer
     type: object
   domain.ChangePasswordRequest:
     properties:
@@ -77,6 +131,72 @@ definitions:
         example: verified
       verified_at:
         type: string
+    type: object
+  domain.CompareLoadTestsRequest:
+    properties:
+      baseline_id:
+        type: string
+      test_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  domain.CompareLoadTestsResponse:
+    properties:
+      baseline_id:
+        type: string
+      deltas:
+        items:
+          $ref: '#/definitions/domain.CompareTestDelta'
+        type: array
+      overlay:
+        $ref: '#/definitions/domain.CompareOverlay'
+      tests:
+        items:
+          $ref: '#/definitions/domain.CompareTestSummary'
+        type: array
+    type: object
+  domain.CompareOverlay:
+    properties:
+      series:
+        items:
+          $ref: '#/definitions/domain.OverlaySeries'
+        type: array
+      step:
+        type: string
+    type: object
+  domain.CompareTestDelta:
+    properties:
+      avg_rps_pct:
+        type: number
+      error_rate_pct:
+        type: number
+      p95_pct:
+        type: number
+      peak_rps_pct:
+        type: number
+      test_id:
+        type: string
+      verdict:
+        description: improved, regressed, unchanged
+        type: string
+    type: object
+  domain.CompareTestSummary:
+    properties:
+      avg_rps:
+        type: number
+      error_rate:
+        type: number
+      id:
+        type: string
+      name:
+        type: string
+      p95_ms:
+        type: number
+      peak_rps:
+        type: number
+      sustainable_rps:
+        type: number
     type: object
   domain.CreateLoadTestRequest:
     properties:
@@ -1007,6 +1127,30 @@ definitions:
     - RoleAdmin
     - RoleMember
     - RoleViewer
+  domain.OverlayPoint:
+    properties:
+      achieved_rps:
+        type: number
+      errors:
+        type: integer
+      offered_rps:
+        type: number
+      p95:
+        type: number
+      t:
+        type: integer
+    type: object
+  domain.OverlaySeries:
+    properties:
+      name:
+        type: string
+      points:
+        items:
+          $ref: '#/definitions/domain.OverlayPoint'
+        type: array
+      test_id:
+        type: string
+    type: object
   domain.PageMeta:
     properties:
       has_more:
@@ -1207,6 +1351,13 @@ definitions:
       requests:
         example: 0
         type: integer
+    type: object
+  domain.RecomputeCapacityRequest:
+    properties:
+      save:
+        type: boolean
+      thresholds:
+        $ref: '#/definitions/domain.CapacityThresholds'
     type: object
   domain.RefreshRequest:
     properties:
@@ -3181,6 +3332,124 @@ paths:
       summary: Get load test details
       tags:
       - LoadTests
+  /v1/organizations/{orgID}/projects/{projectID}/load-tests/{testID}/capacity:
+    get:
+      description: Returns the analyzed capacity limit, sustainable RPS, breaking
+        point, and per-window health metrics for a finished load test.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Load Test ID
+        in: path
+        name: testID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.CapacityReportResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Load test not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "409":
+          description: Test not finished
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Get capacity analysis report
+      tags:
+      - Capacity
+  /v1/organizations/{orgID}/projects/{projectID}/load-tests/{testID}/capacity/recompute:
+    post:
+      consumes:
+      - application/json
+      description: Recomputes capacity and breaking point metrics using custom thresholds
+        on historical data without re-running the test.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Load Test ID
+        in: path
+        name: testID
+        required: true
+        type: string
+      - description: Updated capacity thresholds and save option
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.RecomputeCapacityRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.CapacityReportResponse'
+              type: object
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Load test not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "409":
+          description: Test not finished
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Recompute capacity with custom thresholds
+      tags:
+      - Capacity
   /v1/organizations/{orgID}/projects/{projectID}/load-tests/{testID}/progress:
     get:
       parameters:
@@ -3384,6 +3653,66 @@ paths:
       summary: Get load test timeseries
       tags:
       - LoadTests
+  /v1/organizations/{orgID}/projects/{projectID}/load-tests/compare:
+    post:
+      consumes:
+      - application/json
+      description: Compares 2 to 5 finished load tests within the project, calculating
+        percentage deltas, regression verdicts, and synchronized time-series overlays.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Test IDs and optional baseline ID
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CompareLoadTestsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.CompareLoadTestsResponse'
+              type: object
+        "400":
+          description: Validation error
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Test not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "409":
+          description: Test not finished
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Compare multiple load test runs
+      tags:
+      - Capacity
   /v1/organizations/{orgID}/projects/{projectID}/metrics/endpoints:
     get:
       description: Returns list of endpoints with throughput, p50/p95/p99 latency,
