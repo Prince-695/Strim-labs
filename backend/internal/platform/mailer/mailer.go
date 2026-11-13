@@ -14,6 +14,7 @@ import (
 type Mailer interface {
 	SendVerificationOTP(ctx context.Context, toEmail, firstName, otp string) error
 	SendPasswordResetOTP(ctx context.Context, toEmail, firstName, otp string) error
+	SendAlertNotification(ctx context.Context, toEmail, subject, body string) error
 }
 
 // SMTPConfig holds connection details for sending email over SMTP.
@@ -143,6 +144,23 @@ func (s *SMTPMailer) SendPasswordResetOTP(ctx context.Context, toEmail, firstNam
 	return nil
 }
 
+func (s *SMTPMailer) SendAlertNotification(ctx context.Context, toEmail, subject, body string) error {
+	htmlBody := fmt.Sprintf(`
+		<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; color: #1f2937;">
+			<h2 style="color: #4f46e5; margin-top: 0;">STRIM Labs Alert Notification</h2>
+			<div style="background: #f9fafb; padding: 16px; border-radius: 8px; border-left: 4px solid #4f46e5; margin: 16px 0; font-family: monospace; white-space: pre-wrap;">%s</div>
+			<p style="color: #6b7280; font-size: 13px;">This is an automated notification from your STRIM Labs monitoring system.</p>
+		</div>
+	`, html.EscapeString(body))
+
+	if err := s.sendMail(toEmail, subject, htmlBody); err != nil {
+		s.logger.ErrorContext(ctx, "Failed to deliver alert email", slog.String("to", toEmail), slog.Any("error", err))
+		return err
+	}
+	s.logger.InfoContext(ctx, "Alert email successfully delivered", slog.String("to", toEmail), slog.String("subject", subject))
+	return nil
+}
+
 // ConsoleMailer prints transactional emails to structured logger / standard output.
 type ConsoleMailer struct {
 	logger *slog.Logger
@@ -171,11 +189,22 @@ func (c *ConsoleMailer) SendPasswordResetOTP(ctx context.Context, toEmail, first
 	return nil
 }
 
+func (c *ConsoleMailer) SendAlertNotification(ctx context.Context, toEmail, subject, body string) error {
+	c.logger.InfoContext(ctx, fmt.Sprintf("[MAILER ALERT] To %s | %s: %s", toEmail, subject, body),
+		slog.String("to", toEmail),
+		slog.String("subject", subject),
+		slog.String("purpose", "alert_notification"),
+	)
+	return nil
+}
+
 // SentEmail records email parameters for automated test assertions.
 type SentEmail struct {
 	ToEmail   string
 	FirstName string
 	OTP       string
+	Subject   string
+	Body      string
 	Purpose   string
 }
 
@@ -211,6 +240,18 @@ func (m *MockMailer) SendPasswordResetOTP(ctx context.Context, toEmail, firstNam
 		FirstName: firstName,
 		OTP:       otp,
 		Purpose:   "password_reset",
+	})
+	return nil
+}
+
+func (m *MockMailer) SendAlertNotification(ctx context.Context, toEmail, subject, body string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.emails = append(m.emails, SentEmail{
+		ToEmail: toEmail,
+		Subject: subject,
+		Body:    body,
+		Purpose: "alert_notification",
 	})
 	return nil
 }

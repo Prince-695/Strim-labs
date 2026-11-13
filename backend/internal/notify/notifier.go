@@ -1,14 +1,18 @@
 package notify
 
-import "context"
+import (
+	"context"
+
+	"github.com/Prince-695/strim/backend/internal/domain"
+)
 
 // ChannelType defines the alert notification dispatch target.
-type ChannelType string
+type ChannelType = domain.ChannelType
 
 const (
-	ChannelSlack   ChannelType = "slack"
-	ChannelEmail   ChannelType = "email"
-	ChannelWebhook ChannelType = "webhook"
+	ChannelSlack   = domain.ChannelTypeSlack
+	ChannelEmail   = domain.ChannelTypeEmail
+	ChannelWebhook = domain.ChannelTypeWebhook
 )
 
 // Notification represents an alert dispatch message.
