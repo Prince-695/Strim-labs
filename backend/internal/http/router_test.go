@@ -17,6 +17,7 @@ import (
 	"github.com/Prince-695/strim/backend/internal/domain"
 	apphttp "github.com/Prince-695/strim/backend/internal/http"
 	"github.com/Prince-695/strim/backend/internal/http/handlers"
+	"github.com/Prince-695/strim/backend/internal/ingest"
 	"github.com/Prince-695/strim/backend/internal/platform/clock"
 	"github.com/Prince-695/strim/backend/internal/platform/ids"
 	"github.com/Prince-695/strim/backend/internal/platform/mailer"
@@ -93,6 +94,10 @@ func setupTestApp(t *testing.T, repoErr error) *fiber.App {
 	discoverySvc := service.NewDiscoveryService(endpointRepo, projectRepo, openapiParser)
 	endpointHandler := handlers.NewEndpointHandler(endpointSvc)
 	discoveryHandler := handlers.NewDiscoveryHandler(discoverySvc)
+	ingestStore := ingest.NewInMemoryTimeSeriesStore()
+	batcher := ingest.NewBatcher(ingest.BatcherConfig{}, ingestStore, endpointRepo, logger)
+	batcher.Start()
+	ingestHandler := handlers.NewIngestHandler(batcher, projectRepo, clk)
 
 	container := handlers.NewContainer(
 		sysHandler,
@@ -103,6 +108,7 @@ func setupTestApp(t *testing.T, repoErr error) *fiber.App {
 		projectHandler,
 		endpointHandler,
 		discoveryHandler,
+		ingestHandler,
 	)
 
 	return apphttp.NewRouter(cfg, container, logger, idGen)

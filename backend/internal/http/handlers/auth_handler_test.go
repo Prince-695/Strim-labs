@@ -18,6 +18,7 @@ import (
 	apphttp "github.com/Prince-695/strim/backend/internal/http"
 	"github.com/Prince-695/strim/backend/internal/http/handlers"
 	"github.com/Prince-695/strim/backend/internal/http/middleware"
+	"github.com/Prince-695/strim/backend/internal/ingest"
 	"github.com/Prince-695/strim/backend/internal/platform/clock"
 	"github.com/Prince-695/strim/backend/internal/platform/ids"
 	"github.com/Prince-695/strim/backend/internal/platform/mailer"
@@ -102,6 +103,10 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 	discoverySvc := service.NewDiscoveryService(endpointRepo, projectRepo, openapiParser)
 	endpointHandler := handlers.NewEndpointHandler(endpointSvc)
 	discoveryHandler := handlers.NewDiscoveryHandler(discoverySvc)
+	ingestStore := ingest.NewInMemoryTimeSeriesStore()
+	batcher := ingest.NewBatcher(ingest.BatcherConfig{}, ingestStore, endpointRepo, logger)
+	batcher.Start()
+	ingestHandler := handlers.NewIngestHandler(batcher, projectRepo, clk)
 
 	container := handlers.NewContainer(
 		sysHandler,
@@ -112,6 +117,7 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 		projectHandler,
 		endpointHandler,
 		discoveryHandler,
+		ingestHandler,
 	)
 
 	app := apphttp.NewRouter(cfg, container, logger, idGen)
