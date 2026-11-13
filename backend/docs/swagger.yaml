@@ -1,5 +1,31 @@
 basePath: /
 definitions:
+  domain.APIKeyResponse:
+    properties:
+      created_at:
+        type: string
+      expires_at:
+        type: string
+      id:
+        type: string
+      last_used_at:
+        type: string
+      message:
+        type: string
+      name:
+        type: string
+      prefix:
+        type: string
+      project_id:
+        type: string
+      scopes:
+        items:
+          type: string
+        type: array
+      secret:
+        description: Populated ONLY on creation or rotation
+        type: string
+    type: object
   domain.AddIncidentCommentRequest:
     properties:
       body:
@@ -123,6 +149,35 @@ definitions:
     - AlertStateFiring
     - AlertStateMuted
     - AlertStateResolved
+  domain.AuditActor:
+    properties:
+      email:
+        type: string
+      id:
+        type: string
+    type: object
+  domain.AuditLogResponse:
+    properties:
+      action:
+        type: string
+      actor:
+        $ref: '#/definitions/domain.AuditActor'
+      at:
+        type: string
+      changes:
+        additionalProperties: true
+        type: object
+      id:
+        type: string
+      ip:
+        type: string
+      resource_id:
+        type: string
+      resource_type:
+        type: string
+      user_agent:
+        type: string
+    type: object
   domain.AuthMeResponseData:
     properties:
       expires_at:
@@ -359,6 +414,23 @@ definitions:
       sustainable_rps:
         type: number
     type: object
+  domain.CreateAPIKeyRequest:
+    properties:
+      expires_at:
+        type: string
+      name:
+        maxLength: 100
+        minLength: 1
+        type: string
+      scopes:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - name
+    - scopes
+    type: object
   domain.CreateAlertRuleRequest:
     properties:
       channel_ids:
@@ -540,6 +612,22 @@ definitions:
     - name
     - slug
     type: object
+  domain.CreateWebhookRequest:
+    properties:
+      events:
+        items:
+          type: string
+        minItems: 1
+        type: array
+      secret:
+        description: Optional; generated if omitted
+        type: string
+      url:
+        type: string
+    required:
+    - events
+    - url
+    type: object
   domain.DNSInstructions:
     properties:
       host:
@@ -551,6 +639,17 @@ definitions:
       value:
         example: strim-verify=8f3a9c...
         type: string
+    type: object
+  domain.DailyUsageItem:
+    properties:
+      date:
+        type: string
+      events_ingested:
+        type: integer
+      load_test_minutes:
+        type: integer
+      requests_generated:
+        type: integer
     type: object
   domain.DeleteOrgRequest:
     properties:
@@ -1802,6 +1901,14 @@ definitions:
       success:
         type: boolean
     type: object
+  domain.RotateAPIKeyRequest:
+    properties:
+      grace_hours:
+        description: Default 24 hours
+        maximum: 720
+        minimum: 0
+        type: integer
+    type: object
   domain.RunStatus:
     enum:
     - running
@@ -2135,6 +2242,55 @@ definitions:
     - first_name
     - last_name
     type: object
+  domain.UpdateWebhookRequest:
+    properties:
+      active:
+        type: boolean
+      events:
+        items:
+          type: string
+        type: array
+      secret:
+        type: string
+      url:
+        type: string
+    type: object
+  domain.UsageMetricItem:
+    properties:
+      limit:
+        type: integer
+      used:
+        type: integer
+    type: object
+  domain.UsageMetrics:
+    properties:
+      events_ingested:
+        $ref: '#/definitions/domain.UsageMetricItem'
+      load_test_minutes:
+        $ref: '#/definitions/domain.UsageMetricItem'
+      projects:
+        $ref: '#/definitions/domain.UsageMetricItem'
+      requests_generated:
+        $ref: '#/definitions/domain.UsageMetricItem'
+    type: object
+  domain.UsagePeriod:
+    properties:
+      from:
+        type: string
+      to:
+        type: string
+    type: object
+  domain.UsageResponse:
+    properties:
+      daily:
+        items:
+          $ref: '#/definitions/domain.DailyUsageItem'
+        type: array
+      metrics:
+        $ref: '#/definitions/domain.UsageMetrics'
+      period:
+        $ref: '#/definitions/domain.UsagePeriod'
+    type: object
   domain.UserResponse:
     properties:
       created_at:
@@ -2212,6 +2368,73 @@ definitions:
         type: string
     required:
     - otp
+    type: object
+  domain.WebhookDeliveryResponse:
+    properties:
+      attempts:
+        type: integer
+      created_at:
+        type: string
+      duration_ms:
+        type: integer
+      event:
+        $ref: '#/definitions/domain.WebhookEventType'
+      id:
+        type: string
+      request_payload:
+        type: string
+      response_payload:
+        type: string
+      status:
+        type: string
+      status_code:
+        type: integer
+      webhook_id:
+        type: string
+    type: object
+  domain.WebhookEventType:
+    enum:
+    - test.started
+    - test.completed
+    - test.failed
+    - test.stopped
+    - incident.opened
+    - incident.acknowledged
+    - incident.resolved
+    - endpoint.discovered
+    - verification.verified
+    type: string
+    x-enum-varnames:
+    - EventTestStarted
+    - EventTestCompleted
+    - EventTestFailed
+    - EventTestStopped
+    - EventIncidentOpened
+    - EventIncidentAcked
+    - EventIncidentResolved
+    - EventEndpointFound
+    - EventProjectVerified
+  domain.WebhookResponse:
+    properties:
+      active:
+        type: boolean
+      created_at:
+        type: string
+      events:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      project_id:
+        type: string
+      secret:
+        description: Always masked as "***"
+        type: string
+      updated_at:
+        type: string
+      url:
+        type: string
     type: object
 info:
   contact:
@@ -2858,6 +3081,77 @@ paths:
       summary: Update organization details
       tags:
       - Organizations
+  /v1/organizations/{orgID}/audit-logs:
+    get:
+      consumes:
+      - application/json
+      description: Queries append-only audit records with filtering on actor, action,
+        resource type, and time bounds.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Filter by actor user ID
+        in: query
+        name: actor_id
+        type: string
+      - description: Filter by action verb (e.g. member.role_changed)
+        in: query
+        name: action
+        type: string
+      - description: Filter by resource type (e.g. member, project)
+        in: query
+        name: resource_type
+        type: string
+      - description: RFC3339 start timestamp
+        in: query
+        name: from
+        type: string
+      - description: RFC3339 end timestamp
+        in: query
+        name: to
+        type: string
+      - description: Page size (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Pagination cursor (RFC3339 timestamp)
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.AuditLogResponse'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: List organization audit logs
+      tags:
+      - AuditLogs
   /v1/organizations/{orgID}/members:
     get:
       description: Lists members belonging to the organization with optional filtering
@@ -3611,6 +3905,220 @@ paths:
       summary: Mute an alert rule
       tags:
       - Alerts
+  /v1/organizations/{orgID}/projects/{projectID}/api-keys:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves all active and inactive API keys for a project (secrets
+        omitted).
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.APIKeyResponse'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: List project API keys
+      tags:
+      - APIKeys
+    post:
+      consumes:
+      - application/json
+      description: Generates a cryptographically secure API key. The secret token
+        is revealed only once.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: API Key Parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateAPIKeyRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.APIKeyResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Create project API key
+      tags:
+      - APIKeys
+  /v1/organizations/{orgID}/projects/{projectID}/api-keys/{keyID}:
+    delete:
+      consumes:
+      - application/json
+      description: Permanently revokes an API key immediately.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: API Key ID
+        in: path
+        name: keyID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Revoke project API key
+      tags:
+      - APIKeys
+  /v1/organizations/{orgID}/projects/{projectID}/api-keys/{keyID}/rotate:
+    post:
+      consumes:
+      - application/json
+      description: Issues a replacement API key while retaining the existing key for
+        a dual-active grace period.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: API Key ID
+        in: path
+        name: keyID
+        required: true
+        type: string
+      - description: Rotation Parameters
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/domain.RotateAPIKeyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.APIKeyResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Rotate project API key
+      tags:
+      - APIKeys
   /v1/organizations/{orgID}/projects/{projectID}/diagnostics/bottlenecks:
     get:
       description: Produces diagnostic correlation hints identifying throughput saturation
@@ -5771,6 +6279,394 @@ paths:
       summary: Check domain verification
       tags:
       - Projects
+  /v1/organizations/{orgID}/projects/{projectID}/webhooks:
+    get:
+      consumes:
+      - application/json
+      description: Returns all outbound webhooks configured for a project (secrets
+        masked as '***').
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.WebhookResponse'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: List project webhooks
+      tags:
+      - Webhooks
+    post:
+      consumes:
+      - application/json
+      description: Subscribes an HTTPS URL to system event notifications with HMAC-SHA256
+        signature verification.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Webhook Parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateWebhookRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.WebhookResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Create outbound webhook
+      tags:
+      - Webhooks
+  /v1/organizations/{orgID}/projects/{projectID}/webhooks/{webhookID}:
+    delete:
+      consumes:
+      - application/json
+      description: Permanently removes an outbound webhook registration.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Webhook ID
+        in: path
+        name: webhookID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  additionalProperties: true
+                  type: object
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Delete project webhook
+      tags:
+      - Webhooks
+    put:
+      consumes:
+      - application/json
+      description: Modifies an existing webhook's URL, subscribed event triggers,
+        or active status.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Webhook ID
+        in: path
+        name: webhookID
+        required: true
+        type: string
+      - description: Update Parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateWebhookRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.WebhookResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Update project webhook
+      tags:
+      - Webhooks
+  /v1/organizations/{orgID}/projects/{projectID}/webhooks/{webhookID}/deliveries:
+    get:
+      consumes:
+      - application/json
+      description: Returns recent outbound delivery attempts, status codes, and execution
+        latencies for a webhook.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Webhook ID
+        in: path
+        name: webhookID
+        required: true
+        type: string
+      - description: Delivery status filter (success, failed, pending)
+        in: query
+        name: status
+        type: string
+      - description: Page size (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Pagination cursor (RFC3339 timestamp)
+        in: query
+        name: cursor
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/domain.WebhookDeliveryResponse'
+                  type: array
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: List webhook deliveries
+      tags:
+      - Webhooks
+  /v1/organizations/{orgID}/projects/{projectID}/webhooks/{webhookID}/deliveries/{deliveryID}/redeliver:
+    post:
+      consumes:
+      - application/json
+      description: Re-triggers immediate execution of a previous outbound delivery
+        attempt.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Webhook ID
+        in: path
+        name: webhookID
+        required: true
+        type: string
+      - description: Delivery ID
+        in: path
+        name: deliveryID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.WebhookDeliveryResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Redeliver webhook
+      tags:
+      - Webhooks
+  /v1/organizations/{orgID}/usage:
+    get:
+      consumes:
+      - application/json
+      description: Fetches resource metrics against plan allowances and daily consumption
+        breakdowns.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Period preset (current_month, last_month)
+        in: query
+        name: period
+        type: string
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: from
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.UsageResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Get organization resource usage
+      tags:
+      - Usage
   /v1/users/me:
     get:
       description: Retrieves the authenticated caller's profile
