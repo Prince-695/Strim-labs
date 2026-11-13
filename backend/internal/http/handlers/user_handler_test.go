@@ -43,27 +43,28 @@ func (m *mockIPResolver) LookupIP(ctx context.Context, network, host string) ([]
 }
 
 type testRig struct {
-	app          *fiber.App
-	cfg          *config.Config
-	userRepo     repository.UserRepository
-	orgRepo      repository.OrgRepository
-	memberRepo   repository.MemberRepository
-	projectRepo  repository.ProjectRepository
-	verifRepo    repository.VerificationRepository
-	endpointRepo repository.EndpointRepository
-	ingestStore  ingest.TimeSeriesStore
-	loadTestRepo repository.LoadTestRepository
-	jobRepo      repository.JobRepository
-	capRepo      repository.CapacityRepository
-	sseHub       *sse.Hub
-	orgSvc       service.OrgService
-	userSvc      service.UserService
-	authSvc      service.AuthService
-	projectSvc   service.ProjectService
-	endpointSvc  service.EndpointService
-	discoverySvc service.DiscoveryService
-	loadTestSvc  service.LoadTestService
-	capacitySvc  service.CapacityService
+	app            *fiber.App
+	cfg            *config.Config
+	userRepo       repository.UserRepository
+	orgRepo        repository.OrgRepository
+	memberRepo     repository.MemberRepository
+	projectRepo    repository.ProjectRepository
+	verifRepo      repository.VerificationRepository
+	endpointRepo   repository.EndpointRepository
+	ingestStore    ingest.TimeSeriesStore
+	loadTestRepo   repository.LoadTestRepository
+	jobRepo        repository.JobRepository
+	capRepo        repository.CapacityRepository
+	sseHub         *sse.Hub
+	orgSvc         service.OrgService
+	userSvc        service.UserService
+	authSvc        service.AuthService
+	projectSvc     service.ProjectService
+	endpointSvc    service.EndpointService
+	discoverySvc   service.DiscoveryService
+	loadTestSvc    service.LoadTestService
+	capacitySvc    service.CapacityService
+	diagnosticsSvc service.DiagnosticsService
 }
 
 func newTestRig(t *testing.T) *testRig {
@@ -144,6 +145,8 @@ func newTestRig(t *testing.T) *testRig {
 
 	capacitySvc := service.NewCapacityService(capRepo, loadTestRepo)
 	capacityHandler := handlers.NewCapacityHandler(capacitySvc, logger)
+	diagnosticsSvc := service.NewDiagnosticsService(ingestStore, endpointRepo, loadTestRepo, projectRepo, clk)
+	diagnosticsHandler := handlers.NewDiagnosticsHandler(diagnosticsSvc, logger)
 
 	container := handlers.NewContainer(
 		sysHandler,
@@ -158,31 +161,33 @@ func newTestRig(t *testing.T) *testRig {
 		metricsHandler,
 		loadTestHandler,
 		capacityHandler,
+		diagnosticsHandler,
 	)
 	app := apphttp.NewRouter(cfg, container, logger, idGen)
 
 	return &testRig{
-		app:          app,
-		cfg:          cfg,
-		userRepo:     userRepo,
-		orgRepo:      orgRepo,
-		memberRepo:   memberRepo,
-		projectRepo:  projectRepo,
-		verifRepo:    verificationRepo,
-		endpointRepo: endpointRepo,
-		ingestStore:  ingestStore,
-		loadTestRepo: loadTestRepo,
-		jobRepo:      jobRepo,
-		capRepo:      capRepo,
-		sseHub:       sseHub,
-		orgSvc:       orgSvc,
-		userSvc:      userSvc,
-		authSvc:      authSvc,
-		projectSvc:   projectSvc,
-		endpointSvc:  endpointSvc,
-		discoverySvc: discoverySvc,
-		loadTestSvc:  loadTestSvc,
-		capacitySvc:  capacitySvc,
+		app:            app,
+		cfg:            cfg,
+		userRepo:       userRepo,
+		orgRepo:        orgRepo,
+		memberRepo:     memberRepo,
+		projectRepo:    projectRepo,
+		verifRepo:      verificationRepo,
+		endpointRepo:   endpointRepo,
+		ingestStore:    ingestStore,
+		loadTestRepo:   loadTestRepo,
+		jobRepo:        jobRepo,
+		capRepo:        capRepo,
+		sseHub:         sseHub,
+		orgSvc:         orgSvc,
+		userSvc:        userSvc,
+		authSvc:        authSvc,
+		projectSvc:     projectSvc,
+		endpointSvc:    endpointSvc,
+		discoverySvc:   discoverySvc,
+		loadTestSvc:    loadTestSvc,
+		capacitySvc:    capacitySvc,
+		diagnosticsSvc: diagnosticsSvc,
 	}
 }
 

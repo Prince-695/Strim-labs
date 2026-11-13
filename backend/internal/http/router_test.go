@@ -110,6 +110,8 @@ func setupTestApp(t *testing.T, repoErr error) *fiber.App {
 	loadTestHandler := handlers.NewLoadTestHandler(loadTestSvc, sseHub, logger)
 	capacitySvc := service.NewCapacityService(capRepo, loadTestRepo)
 	capacityHandler := handlers.NewCapacityHandler(capacitySvc, logger)
+	diagnosticsSvc := service.NewDiagnosticsService(ingestStore, endpointRepo, loadTestRepo, projectRepo, clk)
+	diagnosticsHandler := handlers.NewDiagnosticsHandler(diagnosticsSvc, logger)
 
 	container := handlers.NewContainer(
 		sysHandler,
@@ -124,6 +126,7 @@ func setupTestApp(t *testing.T, repoErr error) *fiber.App {
 		metricsHandler,
 		loadTestHandler,
 		capacityHandler,
+		diagnosticsHandler,
 	)
 
 	return apphttp.NewRouter(cfg, container, logger, idGen)
