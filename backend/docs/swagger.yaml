@@ -36,6 +36,30 @@ definitions:
       user:
         $ref: '#/definitions/domain.UserResponse'
     type: object
+  domain.BottleneckHint:
+    properties:
+      confidence:
+        type: string
+      evidence:
+        additionalProperties: true
+        type: object
+      kind:
+        description: Always "hint"
+        type: string
+      message:
+        type: string
+      type:
+        type: string
+    type: object
+  domain.BottlenecksResponse:
+    properties:
+      hints:
+        items:
+          $ref: '#/definitions/domain.BottleneckHint'
+        type: array
+      range:
+        type: string
+    type: object
   domain.CapacityReportResponse:
     properties:
       baseline_p95_ms:
@@ -1365,6 +1389,40 @@ definitions:
         example: d7a8b9c0...
         type: string
     type: object
+  domain.RegressionItem:
+    properties:
+      baseline_value:
+        type: number
+      change_pct:
+        type: number
+      current_value:
+        type: number
+      endpoint_id:
+        type: string
+      method:
+        type: string
+      metric:
+        type: string
+      route:
+        type: string
+      service:
+        type: string
+      severity:
+        type: string
+    type: object
+  domain.RegressionsResponse:
+    properties:
+      baseline:
+        type: string
+      range:
+        type: string
+      regressions:
+        items:
+          $ref: '#/definitions/domain.RegressionItem'
+        type: array
+      threshold_pct:
+        type: number
+    type: object
   domain.ResetPasswordRequest:
     properties:
       email:
@@ -1449,6 +1507,40 @@ definitions:
     - first_name
     - last_name
     - password
+    type: object
+  domain.SlowEndpointItem:
+    properties:
+      endpoint_id:
+        type: string
+      error_rate:
+        type: number
+      impact_score:
+        type: number
+      method:
+        type: string
+      p50_ms:
+        type: number
+      p95_ms:
+        type: number
+      p99_ms:
+        type: number
+      requests:
+        type: integer
+      route:
+        type: string
+      service:
+        type: string
+    type: object
+  domain.SlowEndpointsResponse:
+    properties:
+      endpoints:
+        items:
+          $ref: '#/definitions/domain.SlowEndpointItem'
+        type: array
+      range:
+        type: string
+      total_evaluated:
+        type: integer
     type: object
   domain.SpikeConfig:
     properties:
@@ -2813,6 +2905,193 @@ paths:
       summary: Update project
       tags:
       - Projects
+  /v1/organizations/{orgID}/projects/{projectID}/diagnostics/bottlenecks:
+    get:
+      description: Produces diagnostic correlation hints identifying throughput saturation
+        walls, tail latency dispersion, error surges, and execution time sinks.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - default: 1h
+        description: Time range window (15m, 1h, 6h, 24h, 7d, 30d)
+        in: query
+        name: range
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.BottlenecksResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Get architectural bottleneck hints
+      tags:
+      - Diagnostics
+  /v1/organizations/{orgID}/projects/{projectID}/diagnostics/regressions:
+    get:
+      description: Identifies endpoints with significant latency or error rate degradation
+        relative to prior periods or a load test baseline.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - default: 1h
+        description: Time range window (15m, 1h, 6h, 24h, 7d, 30d)
+        in: query
+        name: range
+        type: string
+      - default: previous
+        description: Baseline to compare against ('previous' or 'test:{id}')
+        in: query
+        name: baseline
+        type: string
+      - default: 10
+        description: Minimum percentage degradation to flag as regression
+        in: query
+        name: threshold_pct
+        type: number
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.RegressionsResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Project or baseline not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Detect performance regressions
+      tags:
+      - Diagnostics
+  /v1/organizations/{orgID}/projects/{projectID}/diagnostics/slow-endpoints:
+    get:
+      description: Returns endpoints ranked by volume-weighted impact score (P95 latency
+        * request count) within a time window.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - default: 1h
+        description: Time range window (15m, 1h, 6h, 24h, 7d, 30d, custom)
+        in: query
+        name: range
+        type: string
+      - default: 10
+        description: Max endpoints to return (1-50)
+        in: query
+        name: limit
+        type: integer
+      - default: 10
+        description: Minimum requests threshold
+        in: query
+        name: min_requests
+        type: integer
+      - description: Custom start timestamp (RFC3339)
+        in: query
+        name: start
+        type: string
+      - description: Custom end timestamp (RFC3339)
+        in: query
+        name: end
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.SlowEndpointsResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Rank slowest endpoints by volume-weighted impact score
+      tags:
+      - Diagnostics
   /v1/organizations/{orgID}/projects/{projectID}/discovery/manifest:
     post:
       consumes:
