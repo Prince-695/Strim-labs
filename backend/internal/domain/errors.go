@@ -201,6 +201,22 @@ func NewEndpointNotFoundError() *AppError {
 	return NewAppError(fiber.StatusNotFound, ErrCodeEndpointNotFound, "Endpoint not found", nil)
 }
 
+func NewAlertRuleNotFoundError() *AppError {
+	return NewAppError(fiber.StatusNotFound, ErrCodeNotFound, "Alert rule not found", nil)
+}
+
+func NewIncidentNotFoundError() *AppError {
+	return NewAppError(fiber.StatusNotFound, ErrCodeNotFound, "Incident not found", nil)
+}
+
+func NewChannelNotFoundError() *AppError {
+	return NewAppError(fiber.StatusNotFound, ErrCodeNotFound, "Notification channel not found", nil)
+}
+
+func NewVersionConflictError() *AppError {
+	return NewAppError(fiber.StatusConflict, ErrCodeVersionConflict, "Resource version conflict: resource has been modified by another operation", nil)
+}
+
 func NewInvalidOpenAPISpecError(reason string) *AppError {
 	msg := "Invalid OpenAPI specification"
 	if reason != "" {
