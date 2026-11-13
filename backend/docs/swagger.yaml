@@ -1,5 +1,14 @@
 basePath: /
 definitions:
+  domain.AddIncidentCommentRequest:
+    properties:
+      body:
+        maxLength: 2000
+        minLength: 1
+        type: string
+    required:
+    - body
+    type: object
   domain.AddMemberRequest:
     properties:
       email:
@@ -17,6 +26,103 @@ definitions:
     - email
     - role
     type: object
+  domain.AlertCondition:
+    properties:
+      for:
+        description: '"0m", "1m", "2m", "5m"'
+        type: string
+      metric:
+        description: '"error_rate", "latency_p95", "latency_p99", "rps"'
+        type: string
+      operator:
+        description: '">", ">=", "<", "<="'
+        type: string
+      threshold:
+        type: number
+      window:
+        description: '"1m", "5m", "15m", "1h"'
+        type: string
+    type: object
+  domain.AlertRuleResponse:
+    properties:
+      channel_ids:
+        items:
+          type: string
+        type: array
+      condition:
+        $ref: '#/definitions/domain.AlertCondition'
+      created_at:
+        type: string
+      description:
+        type: string
+      enabled:
+        type: boolean
+      id:
+        type: string
+      last_evaluated_at:
+        type: string
+      last_triggered_at:
+        type: string
+      muted_until:
+        type: string
+      name:
+        type: string
+      org_id:
+        type: string
+      pending_since:
+        type: string
+      project_id:
+        type: string
+      scope:
+        $ref: '#/definitions/domain.AlertScope'
+      severity:
+        $ref: '#/definitions/domain.AlertSeverity'
+      state:
+        $ref: '#/definitions/domain.AlertState'
+      updated_at:
+        type: string
+      version:
+        type: integer
+    type: object
+  domain.AlertScope:
+    properties:
+      endpoint_id:
+        type: string
+      type:
+        $ref: '#/definitions/domain.AlertScopeType'
+    type: object
+  domain.AlertScopeType:
+    enum:
+    - project
+    - endpoint
+    type: string
+    x-enum-varnames:
+    - AlertScopeProject
+    - AlertScopeEndpoint
+  domain.AlertSeverity:
+    enum:
+    - critical
+    - warning
+    - info
+    type: string
+    x-enum-varnames:
+    - AlertSeverityCritical
+    - AlertSeverityWarning
+    - AlertSeverityInfo
+  domain.AlertState:
+    enum:
+    - ok
+    - pending
+    - firing
+    - muted
+    - resolved
+    type: string
+    x-enum-varnames:
+    - AlertStateOK
+    - AlertStatePending
+    - AlertStateFiring
+    - AlertStateMuted
+    - AlertStateResolved
   domain.AuthMeResponseData:
     properties:
       expires_at:
@@ -135,6 +241,37 @@ definitions:
     - new_password
     - old_password
     type: object
+  domain.ChannelResponse:
+    properties:
+      config:
+        $ref: '#/definitions/domain.JSONMap'
+      created_at:
+        type: string
+      enabled:
+        type: boolean
+      id:
+        type: string
+      name:
+        type: string
+      org_id:
+        type: string
+      project_id:
+        type: string
+      type:
+        $ref: '#/definitions/domain.ChannelType'
+      updated_at:
+        type: string
+    type: object
+  domain.ChannelType:
+    enum:
+    - slack
+    - email
+    - webhook
+    type: string
+    x-enum-varnames:
+    - ChannelTypeSlack
+    - ChannelTypeEmail
+    - ChannelTypeWebhook
   domain.CheckUsernameResponse:
     properties:
       available:
@@ -221,6 +358,58 @@ definitions:
         type: number
       sustainable_rps:
         type: number
+    type: object
+  domain.CreateAlertRuleRequest:
+    properties:
+      channel_ids:
+        items:
+          type: string
+        type: array
+      condition:
+        $ref: '#/definitions/domain.AlertCondition'
+      description:
+        maxLength: 512
+        type: string
+      enabled:
+        type: boolean
+      name:
+        maxLength: 128
+        minLength: 2
+        type: string
+      scope:
+        $ref: '#/definitions/domain.AlertScope'
+      severity:
+        allOf:
+        - $ref: '#/definitions/domain.AlertSeverity'
+        enum:
+        - critical
+        - warning
+        - info
+    required:
+    - condition
+    - name
+    - scope
+    - severity
+    type: object
+  domain.CreateChannelRequest:
+    properties:
+      config:
+        $ref: '#/definitions/domain.JSONMap'
+      name:
+        maxLength: 128
+        minLength: 2
+        type: string
+      type:
+        allOf:
+        - $ref: '#/definitions/domain.ChannelType'
+        enum:
+        - slack
+        - email
+        - webhook
+    required:
+    - config
+    - name
+    - type
     type: object
   domain.CreateLoadTestRequest:
     properties:
@@ -666,6 +855,121 @@ definitions:
         example: https://api.acme.com/openapi.json
         type: string
     type: object
+  domain.IncidentDetailResponse:
+    properties:
+      acknowledged_at:
+        type: string
+      acknowledged_by:
+        type: string
+      auto_resolved:
+        type: boolean
+      created_at:
+        type: string
+      current_value:
+        type: number
+      id:
+        type: string
+      org_id:
+        type: string
+      project_id:
+        type: string
+      resolved_at:
+        type: string
+      resolved_by:
+        type: string
+      rule_id:
+        type: string
+      severity:
+        $ref: '#/definitions/domain.AlertSeverity'
+      status:
+        $ref: '#/definitions/domain.IncidentStatus'
+      summary:
+        type: string
+      threshold_value:
+        type: number
+      timeline:
+        items:
+          $ref: '#/definitions/domain.IncidentTimelineItem'
+        type: array
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  domain.IncidentEventType:
+    enum:
+    - opened
+    - notified
+    - acknowledged
+    - comment
+    - resolved
+    type: string
+    x-enum-varnames:
+    - IncidentEventOpened
+    - IncidentEventNotified
+    - IncidentEventAcknowledged
+    - IncidentEventComment
+    - IncidentEventResolved
+  domain.IncidentResponse:
+    properties:
+      acknowledged_at:
+        type: string
+      acknowledged_by:
+        type: string
+      auto_resolved:
+        type: boolean
+      created_at:
+        type: string
+      current_value:
+        type: number
+      id:
+        type: string
+      org_id:
+        type: string
+      project_id:
+        type: string
+      resolved_at:
+        type: string
+      resolved_by:
+        type: string
+      rule_id:
+        type: string
+      severity:
+        $ref: '#/definitions/domain.AlertSeverity'
+      status:
+        $ref: '#/definitions/domain.IncidentStatus'
+      summary:
+        type: string
+      threshold_value:
+        type: number
+      title:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  domain.IncidentStatus:
+    enum:
+    - open
+    - acknowledged
+    - resolved
+    type: string
+    x-enum-varnames:
+    - IncidentStatusOpen
+    - IncidentStatusAcknowledged
+    - IncidentStatusResolved
+  domain.IncidentTimelineItem:
+    properties:
+      actor:
+        type: string
+      at:
+        type: string
+      detail:
+        type: string
+      id:
+        type: string
+      type:
+        $ref: '#/definitions/domain.IncidentEventType'
+    type: object
   domain.IngestEventError:
     properties:
       index:
@@ -753,6 +1057,33 @@ definitions:
         type: integer
       le_ms:
         type: number
+    type: object
+  domain.ListAlertRulesResponse:
+    properties:
+      rules:
+        items:
+          $ref: '#/definitions/domain.AlertRuleResponse'
+        type: array
+      total:
+        type: integer
+    type: object
+  domain.ListChannelsResponse:
+    properties:
+      channels:
+        items:
+          $ref: '#/definitions/domain.ChannelResponse'
+        type: array
+      total:
+        type: integer
+    type: object
+  domain.ListIncidentsResponse:
+    properties:
+      incidents:
+        items:
+          $ref: '#/definitions/domain.IncidentResponse'
+        type: array
+      total:
+        type: integer
     type: object
   domain.LoadTestConfig:
     properties:
@@ -1079,6 +1410,15 @@ definitions:
         $ref: '#/definitions/domain.MetricSummary'
       previous:
         $ref: '#/definitions/domain.PreviousSummary'
+    type: object
+  domain.MuteAlertRuleRequest:
+    properties:
+      minutes:
+        maximum: 10080
+        minimum: 1
+        type: integer
+    required:
+    - minutes
     type: object
   domain.OAuthLoginResponse:
     properties:
@@ -1633,6 +1973,15 @@ definitions:
     - method
     - path
     type: object
+  domain.TestChannelResponse:
+    properties:
+      details:
+        $ref: '#/definitions/domain.JSONMap'
+      message:
+        type: string
+      success:
+        type: boolean
+    type: object
   domain.TimeseriesPoint:
     properties:
       timestamp:
@@ -1676,6 +2025,49 @@ definitions:
         items:
           $ref: '#/definitions/domain.TimeseriesPoint'
         type: array
+    type: object
+  domain.UpdateAlertRuleRequest:
+    properties:
+      channel_ids:
+        items:
+          type: string
+        type: array
+      condition:
+        $ref: '#/definitions/domain.AlertCondition'
+      description:
+        maxLength: 512
+        type: string
+      enabled:
+        type: boolean
+      name:
+        maxLength: 128
+        minLength: 2
+        type: string
+      scope:
+        $ref: '#/definitions/domain.AlertScope'
+      severity:
+        allOf:
+        - $ref: '#/definitions/domain.AlertSeverity'
+        enum:
+        - critical
+        - warning
+        - info
+      version:
+        minimum: 1
+        type: integer
+    required:
+    - version
+    type: object
+  domain.UpdateChannelRequest:
+    properties:
+      config:
+        $ref: '#/definitions/domain.JSONMap'
+      enabled:
+        type: boolean
+      name:
+        maxLength: 128
+        minLength: 2
+        type: string
     type: object
   domain.UpdateMemberRoleRequest:
     properties:
@@ -2905,6 +3297,320 @@ paths:
       summary: Update project
       tags:
       - Projects
+  /v1/organizations/{orgID}/projects/{projectID}/alert-rules:
+    get:
+      description: Returns all alerting policies configured for the specified project.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.ListAlertRulesResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: List alert rules for project
+      tags:
+      - Alerts
+    post:
+      consumes:
+      - application/json
+      description: Defines a metric threshold alert policy with condition window,
+        hysteresis duration, and notification channels.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Alert Rule Parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateAlertRuleRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.AlertRuleResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Create an alert rule
+      tags:
+      - Alerts
+  /v1/organizations/{orgID}/projects/{projectID}/alert-rules/{ruleID}:
+    delete:
+      description: Removes an alert policy permanently.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Alert Rule ID
+        in: path
+        name: ruleID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Alert rule not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Delete an alert rule
+      tags:
+      - Alerts
+    get:
+      description: Retrieves full configuration and current state of a specific alert
+        rule.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Alert Rule ID
+        in: path
+        name: ruleID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.AlertRuleResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Alert rule not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Get alert rule details
+      tags:
+      - Alerts
+    put:
+      consumes:
+      - application/json
+      description: Updates rule configuration using optimistic concurrency control
+        (must supply current version).
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Alert Rule ID
+        in: path
+        name: ruleID
+        required: true
+        type: string
+      - description: Alert Rule Updates
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateAlertRuleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.AlertRuleResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Alert rule not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "409":
+          description: Version conflict
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Update an alert rule
+      tags:
+      - Alerts
+  /v1/organizations/{orgID}/projects/{projectID}/alert-rules/{ruleID}/mute:
+    post:
+      consumes:
+      - application/json
+      description: Temporarily disables alert firing and incident opening for a specified
+        duration in minutes.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Alert Rule ID
+        in: path
+        name: ruleID
+        required: true
+        type: string
+      - description: Mute Parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.MuteAlertRuleRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.AlertRuleResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Alert rule not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Mute an alert rule
+      tags:
+      - Alerts
   /v1/organizations/{orgID}/projects/{projectID}/diagnostics/bottlenecks:
     get:
       description: Produces diagnostic correlation hints identifying throughput saturation
@@ -3427,6 +4133,287 @@ paths:
       summary: Update endpoint
       tags:
       - Registry
+  /v1/organizations/{orgID}/projects/{projectID}/incidents:
+    get:
+      description: Returns paginated incidents with filtering by status, severity,
+        and time range.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - default: all
+        description: Filter by status (open, acknowledged, resolved, all)
+        in: query
+        name: status
+        type: string
+      - description: Filter by severity (critical, warning, info)
+        in: query
+        name: severity
+        type: string
+      - default: 24h
+        description: Filter by time window (15m, 1h, 6h, 24h, 7d, 30d)
+        in: query
+        name: range
+        type: string
+      - default: 20
+        description: Max incidents to return (1-100)
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Pagination offset
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.ListIncidentsResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: List incidents for project
+      tags:
+      - Incidents
+  /v1/organizations/{orgID}/projects/{projectID}/incidents/{incidentID}:
+    get:
+      description: Returns single incident details including full chronological audit
+        event timeline.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Incident ID
+        in: path
+        name: incidentID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.IncidentDetailResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Incident not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Get incident details with timeline
+      tags:
+      - Incidents
+  /v1/organizations/{orgID}/projects/{projectID}/incidents/{incidentID}/acknowledge:
+    post:
+      description: Marks an open incident as acknowledged by the current user.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Incident ID
+        in: path
+        name: incidentID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.IncidentDetailResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Incident not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Acknowledge an incident
+      tags:
+      - Incidents
+  /v1/organizations/{orgID}/projects/{projectID}/incidents/{incidentID}/comments:
+    post:
+      consumes:
+      - application/json
+      description: Appends a collaboration comment entry to the incident's timeline.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Incident ID
+        in: path
+        name: incidentID
+        required: true
+        type: string
+      - description: Comment Body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.AddIncidentCommentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.IncidentTimelineItem'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Incident not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Add comment to incident
+      tags:
+      - Incidents
+  /v1/organizations/{orgID}/projects/{projectID}/incidents/{incidentID}/resolve:
+    post:
+      description: Marks an active incident as manually resolved.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Incident ID
+        in: path
+        name: incidentID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.IncidentDetailResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Incident not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Manually resolve an incident
+      tags:
+      - Incidents
   /v1/organizations/{orgID}/projects/{projectID}/load-tests:
     get:
       parameters:
@@ -4355,6 +5342,302 @@ paths:
       summary: Get metrics time-series
       tags:
       - Metrics
+  /v1/organizations/{orgID}/projects/{projectID}/notification-channels:
+    get:
+      description: Returns all notification channels configured for the project with
+        write-only secrets masked.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.ListChannelsResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: List notification channels
+      tags:
+      - Channels
+    post:
+      consumes:
+      - application/json
+      description: Creates an outbound alerting destination (Slack, Email, Webhook).
+        Secrets are write-only.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Channel Parameters
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CreateChannelRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.ChannelResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Create notification channel
+      tags:
+      - Channels
+  /v1/organizations/{orgID}/projects/{projectID}/notification-channels/{channelID}:
+    delete:
+      description: Removes an outbound alerting channel.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Channel ID
+        in: path
+        name: channelID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Channel not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Delete notification channel
+      tags:
+      - Channels
+    get:
+      description: Returns channel details with write-only secrets masked as '***'.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Channel ID
+        in: path
+        name: channelID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.ChannelResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Channel not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Get notification channel details
+      tags:
+      - Channels
+    put:
+      consumes:
+      - application/json
+      description: Modifies name, enabled state, or destination configuration.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Channel ID
+        in: path
+        name: channelID
+        required: true
+        type: string
+      - description: Channel Updates
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.UpdateChannelRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.ChannelResponse'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Channel not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Update notification channel
+      tags:
+      - Channels
+  /v1/organizations/{orgID}/projects/{projectID}/notification-channels/{channelID}/test:
+    post:
+      description: Sends a synthetic test message to verify external channel connectivity.
+      parameters:
+      - description: Organization ID
+        in: path
+        name: orgID
+        required: true
+        type: string
+      - description: Project ID
+        in: path
+        name: projectID
+        required: true
+        type: string
+      - description: Channel ID
+        in: path
+        name: channelID
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.TestChannelResponse'
+              type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/domain.Response'
+        "404":
+          description: Channel not found
+          schema:
+            $ref: '#/definitions/domain.Response'
+      security:
+      - BearerAuth: []
+      summary: Test dispatch to notification channel
+      tags:
+      - Channels
   /v1/organizations/{orgID}/projects/{projectID}/verification:
     get:
       description: Returns active domain verification status and setup instructions
