@@ -36,6 +36,7 @@ import (
 var (
 	Version = "1.0.0"
 	Commit  = "dev"
+	BuiltAt = ""
 )
 
 // @title STRIM Labs API
@@ -217,7 +218,12 @@ func main() {
 	sseHub := sse.NewHub()
 
 	// 9. Dependency Injection: HTTP Handlers
-	systemHandler := handlers.NewSystemHandler(systemSvc)
+	buildInfo := domain.BuildInfo{
+		Version: Version,
+		Commit:  Commit,
+		BuiltAt: BuiltAt,
+	}
+	systemHandler := handlers.NewSystemHandler(systemSvc, buildInfo)
 	authHandler := handlers.NewAuthHandler(authSvc, cfg)
 	userHandler := handlers.NewUserHandler(userSvc)
 	orgHandler := handlers.NewOrgHandler(orgSvc)

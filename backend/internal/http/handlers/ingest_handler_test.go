@@ -77,7 +77,7 @@ func setupIngestTestRig(t *testing.T, batcherCfg ingest.BatcherConfig) *ingestTe
 	openapiParser := discovery.NewOpenAPIParser(ssrfGuard)
 	discoverySvc := service.NewDiscoveryService(endpointRepo, projectRepo, openapiParser)
 
-	sysHandler := handlers.NewSystemHandler(sysSvc)
+	sysHandler := handlers.NewSystemHandler(sysSvc, domain.BuildInfo{Version: "1.0.0", Commit: "test", BuiltAt: "2026-11-14T00:00:00Z"})
 	authHandler := handlers.NewAuthHandler(authSvc, cfg)
 	userHandler := handlers.NewUserHandler(userSvc)
 	orgHandler := handlers.NewOrgHandler(orgSvc)
@@ -523,7 +523,7 @@ func TestIngestEvents_Backpressure(t *testing.T) {
 	openapiParser := discovery.NewOpenAPIParser(ssrfGuard)
 	discoverySvc := service.NewDiscoveryService(endpointRepo, projectRepo, openapiParser)
 
-	sysHandler := handlers.NewSystemHandler(sysSvc)
+	sysHandler := handlers.NewSystemHandler(sysSvc, domain.BuildInfo{Version: "1.0.0", Commit: "test", BuiltAt: "2026-11-14T00:00:00Z"})
 	authHandler := handlers.NewAuthHandler(authSvc, cfg)
 	userHandler := handlers.NewUserHandler(userSvc)
 	orgHandler := handlers.NewOrgHandler(orgSvc)

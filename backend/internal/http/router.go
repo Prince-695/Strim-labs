@@ -51,8 +51,11 @@ func NewRouter(
 		return c.SendStatus(fiber.StatusOK)
 	})
 
-	// System Health Route
+	// System Health, Liveness, Readiness, and Prometheus Routes (Docs/API.md Section 18)
 	app.Get("/health", handlers.System.Health)
+	app.Get("/healthz", handlers.System.Healthz)
+	app.Get("/readyz", handlers.System.Readyz)
+	app.Get("/metrics", handlers.System.Metrics)
 
 	// Swagger Documentation (Protected by HTTP Basic Auth)
 	swaggerGroup := app.Group("/swagger")
@@ -61,6 +64,7 @@ func NewRouter(
 
 	// Route Group: /v1
 	v1 := app.Group("/v1")
+	v1.Get("/version", handlers.System.Version)
 
 	// Auth Middlewares
 	authRateLimit := middleware.RateLimit(5, 1*time.Minute)

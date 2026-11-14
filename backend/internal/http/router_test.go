@@ -62,7 +62,7 @@ func setupTestApp(t *testing.T, repoErr error) *fiber.App {
 
 	repo := &mockSystemRepo{err: repoErr}
 	sysSvc := service.NewSystemService(repo, logger)
-	sysHandler := handlers.NewSystemHandler(sysSvc)
+	sysHandler := handlers.NewSystemHandler(sysSvc, domain.BuildInfo{Version: "1.0.0", Commit: "test", BuiltAt: "2026-11-14T00:00:00Z"})
 
 	userRepo := repository.NewInMemoryUserRepository()
 	otpRepo := repository.NewInMemoryOTPRepository()
@@ -240,4 +240,85 @@ func TestSwaggerBasicAuth(t *testing.T) {
 	respAuth, err := app.Test(reqWithAuth)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusOK, respAuth.StatusCode)
+}
+
+func TestHealthzEndpoint(t *testing.T) {
+	app := setupTestApp(t, nil)
+
+	req := httptest.NewRequest("GET", "/healthz", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+
+	var body domain.Response
+	err = json.NewDecoder(resp.Body).Decode(&body)
+	require.NoError(t, err)
+	assert.True(t, body.Success)
+
+	dataMap := body.Data.(map[string]interface{})
+	assert.Equal(t, "ok", dataMap["status"])
+	assert.NotEmpty(t, dataMap["time"])
+}
+
+func TestReadyzEndpoint_Healthy(t *testing.T) {
+	app := setupTestApp(t, nil)
+
+	req := httptest.NewRequest("GET", "/readyz", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+
+	var body domain.Response
+	err = json.NewDecoder(resp.Body).Decode(&body)
+	require.NoError(t, err)
+	assert.True(t, body.Success)
+
+	dataMap := body.Data.(map[string]interface{})
+	assert.Equal(t, "healthy", dataMap["status"])
+	assert.Equal(t, "connected", dataMap["database"])
+}
+
+func TestReadyzEndpoint_Degraded(t *testing.T) {
+	app := setupTestApp(t, errors.New("db down"))
+
+	req := httptest.NewRequest("GET", "/readyz", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusServiceUnavailable, resp.StatusCode)
+}
+
+func TestVersionEndpoint(t *testing.T) {
+	app := setupTestApp(t, nil)
+
+	req := httptest.NewRequest("GET", "/v1/version", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+
+	var body domain.Response
+	err = json.NewDecoder(resp.Body).Decode(&body)
+	require.NoError(t, err)
+	assert.True(t, body.Success)
+
+	dataMap := body.Data.(map[string]interface{})
+	assert.Equal(t, "1.0.0", dataMap["version"])
+	assert.Equal(t, "test", dataMap["commit"])
+	assert.Equal(t, "2026-11-14T00:00:00Z", dataMap["built_at"])
+}
+
+func TestMetricsEndpoint(t *testing.T) {
+	app := setupTestApp(t, nil)
+
+	req := httptest.NewRequest("GET", "/metrics", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+	assert.Contains(t, resp.Header.Get("Content-Type"), "text/plain")
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	metricsOutput := string(bodyBytes)
+	assert.Contains(t, metricsOutput, "strim_process_uptime_seconds")
+	assert.Contains(t, metricsOutput, "strim_go_goroutines")
+	assert.Contains(t, metricsOutput, "strim_go_memstats_alloc_bytes")
 }

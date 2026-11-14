@@ -110,7 +110,7 @@ func newTestRig(t *testing.T) *testRig {
 	userSvc := service.NewUserService(userRepo)
 	orgSvc := service.NewOrgService(orgRepo, memberRepo, userRepo, tenantCache)
 
-	sysHandler := handlers.NewSystemHandler(sysSvc)
+	sysHandler := handlers.NewSystemHandler(sysSvc, domain.BuildInfo{Version: "1.0.0", Commit: "test", BuiltAt: "2026-11-14T00:00:00Z"})
 	authHandler := handlers.NewAuthHandler(authSvc, cfg)
 	userHandler := handlers.NewUserHandler(userSvc)
 	orgHandler := handlers.NewOrgHandler(orgSvc)

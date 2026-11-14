@@ -79,7 +79,7 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 		logger,
 	)
 
-	sysHandler := handlers.NewSystemHandler(sysSvc)
+	sysHandler := handlers.NewSystemHandler(sysSvc, domain.BuildInfo{Version: "1.0.0", Commit: "test", BuiltAt: "2026-11-14T00:00:00Z"})
 	authHandler := handlers.NewAuthHandler(authSvc, cfg)
 
 	memberRepo := repository.NewInMemoryMemberRepository(userRepo)
