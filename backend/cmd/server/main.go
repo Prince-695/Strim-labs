@@ -128,26 +128,80 @@ func main() {
 	}
 
 	// 5. Dependency Injection: Repositories & Platform Caches
-	systemRepo := repository.NewSystemRepository(db)
-	userRepo := repository.NewUserRepository(db)
-	otpRepo := repository.NewOTPRepository(db)
-	orgRepo := repository.NewOrgRepository(db)
-	memberRepo := repository.NewMemberRepository(db)
-	projectRepo := repository.NewProjectRepository(db)
-	verificationRepo := repository.NewVerificationRepository(db)
-	endpointRepo := repository.NewEndpointRepository(db)
-	loadTestRepo := repository.NewLoadTestRepository(db)
-	jobRepo := repository.NewJobRepository(db)
-	capacityRepo := repository.NewCapacityRepository(db)
-	alertRepo := repository.NewAlertRuleRepository(db)
-	incidentRepo := repository.NewIncidentRepository(db)
-	channelRepo := repository.NewNotificationChannelRepository(db)
-	apiKeyRepo := repository.NewAPIKeyRepository(db)
-	webhookRepo := repository.NewWebhookRepository(db)
-	deliveryRepo := repository.NewWebhookDeliveryRepository(db)
-	auditRepo := repository.NewAuditLogRepository(db)
-	usageRepo := repository.NewUsageRepository(db)
-	dashboardRepo := repository.NewDashboardRepository(db)
+	var (
+		systemRepo       repository.SystemRepository
+		userRepo         repository.UserRepository
+		otpRepo          repository.OTPRepository
+		orgRepo          repository.OrgRepository
+		memberRepo       repository.MemberRepository
+		projectRepo      repository.ProjectRepository
+		verificationRepo repository.VerificationRepository
+		endpointRepo     repository.EndpointRepository
+		loadTestRepo     repository.LoadTestRepository
+		jobRepo          repository.JobRepository
+		capacityRepo     repository.CapacityRepository
+		alertRepo        repository.AlertRuleRepository
+		incidentRepo     repository.IncidentRepository
+		channelRepo      repository.NotificationChannelRepository
+		apiKeyRepo       repository.APIKeyRepository
+		webhookRepo      repository.WebhookRepository
+		deliveryRepo     repository.WebhookDeliveryRepository
+		auditRepo        repository.AuditLogRepository
+		usageRepo        repository.UsageRepository
+		dashboardRepo    repository.DashboardRepository
+	)
+
+	if db != nil && db.DB != nil {
+		systemRepo = repository.NewSystemRepository(db)
+		userRepo = repository.NewUserRepository(db)
+		otpRepo = repository.NewOTPRepository(db)
+		orgRepo = repository.NewOrgRepository(db)
+		memberRepo = repository.NewMemberRepository(db)
+		projectRepo = repository.NewProjectRepository(db)
+		verificationRepo = repository.NewVerificationRepository(db)
+		endpointRepo = repository.NewEndpointRepository(db)
+		loadTestRepo = repository.NewLoadTestRepository(db)
+		jobRepo = repository.NewJobRepository(db)
+		capacityRepo = repository.NewCapacityRepository(db)
+		alertRepo = repository.NewAlertRuleRepository(db)
+		incidentRepo = repository.NewIncidentRepository(db)
+		channelRepo = repository.NewNotificationChannelRepository(db)
+		apiKeyRepo = repository.NewAPIKeyRepository(db)
+		webhookRepo = repository.NewWebhookRepository(db)
+		deliveryRepo = repository.NewWebhookDeliveryRepository(db)
+		auditRepo = repository.NewAuditLogRepository(db)
+		usageRepo = repository.NewUsageRepository(db)
+		dashboardRepo = repository.NewDashboardRepository(db)
+	} else {
+		appLogger.Warn("Database unavailable on boot; initializing in-memory repository fallbacks for resilience")
+		userRepoMem := repository.NewInMemoryUserRepository()
+		memberRepoMem := repository.NewInMemoryMemberRepository(userRepoMem)
+		orgRepoMem := repository.NewInMemoryOrgRepository(memberRepoMem)
+		projectRepoMem := repository.NewInMemoryProjectRepository()
+		verifRepoMem := repository.NewInMemoryVerificationRepository(projectRepoMem)
+		endpointRepoMem := repository.NewInMemoryEndpointRepository()
+
+		systemRepo = repository.NewSystemRepository(nil)
+		userRepo = userRepoMem
+		otpRepo = repository.NewInMemoryOTPRepository()
+		orgRepo = orgRepoMem
+		memberRepo = memberRepoMem
+		projectRepo = projectRepoMem
+		verificationRepo = verifRepoMem
+		endpointRepo = endpointRepoMem
+		loadTestRepo = repository.NewInMemoryLoadTestRepository()
+		jobRepo = repository.NewInMemoryJobRepository()
+		capacityRepo = repository.NewInMemoryCapacityRepository()
+		alertRepo = repository.NewInMemoryAlertRuleRepository()
+		incidentRepo = repository.NewInMemoryIncidentRepository()
+		channelRepo = repository.NewInMemoryNotificationChannelRepository()
+		apiKeyRepo = repository.NewInMemoryAPIKeyRepository()
+		webhookRepo = repository.NewInMemoryWebhookRepository()
+		deliveryRepo = repository.NewInMemoryWebhookDeliveryRepository()
+		auditRepo = repository.NewInMemoryAuditLogRepository()
+		usageRepo = repository.NewInMemoryUsageRepository()
+		dashboardRepo = repository.NewInMemoryDashboardRepository()
+	}
 
 	tokenCache := cache.NewMemoryCache()
 	tenantCache := cache.NewTenantCache(tokenCache)

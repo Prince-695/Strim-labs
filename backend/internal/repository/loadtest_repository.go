@@ -57,14 +57,23 @@ func NewLoadTestRepository(db *database.DB) *GormLoadTestRepository {
 }
 
 func (r *GormLoadTestRepository) Create(ctx context.Context, test *domain.LoadTest) error {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return errors.New("database not available")
+	}
 	return r.db.WithContext(ctx).Create(test).Error
 }
 
 func (r *GormLoadTestRepository) Update(ctx context.Context, test *domain.LoadTest) error {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return errors.New("database not available")
+	}
 	return r.db.WithContext(ctx).Save(test).Error
 }
 
 func (r *GormLoadTestRepository) FindByID(ctx context.Context, testID string) (*domain.LoadTest, error) {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return nil, errors.New("database not available")
+	}
 	var test domain.LoadTest
 	err := r.db.WithContext(ctx).First(&test, "id = ?", testID).Error
 	if err != nil {
@@ -77,6 +86,9 @@ func (r *GormLoadTestRepository) FindByID(ctx context.Context, testID string) (*
 }
 
 func (r *GormLoadTestRepository) FindByProjectID(ctx context.Context, projectID string, query ListLoadTestsQuery) ([]*domain.LoadTest, int64, error) {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return nil, 0, errors.New("database not available")
+	}
 	db := r.db.WithContext(ctx).Model(&domain.LoadTest{}).Where("project_id = ?", projectID)
 
 	if query.Status != "" {
@@ -112,6 +124,9 @@ func (r *GormLoadTestRepository) FindByProjectID(ctx context.Context, projectID 
 }
 
 func (r *GormLoadTestRepository) FindActiveByProjectID(ctx context.Context, projectID string) (*domain.LoadTest, error) {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return nil, errors.New("database not available")
+	}
 	var test domain.LoadTest
 	err := r.db.WithContext(ctx).
 		Where("project_id = ? AND status IN (?, ?)", projectID, domain.LoadTestStatusQueued, domain.LoadTestStatusRunning).
@@ -126,6 +141,9 @@ func (r *GormLoadTestRepository) FindActiveByProjectID(ctx context.Context, proj
 }
 
 func (r *GormLoadTestRepository) FindActiveByOrgID(ctx context.Context, orgID string) (*domain.LoadTest, error) {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return nil, errors.New("database not available")
+	}
 	var test domain.LoadTest
 	err := r.db.WithContext(ctx).
 		Where("org_id = ? AND status IN (?, ?)", orgID, domain.LoadTestStatusQueued, domain.LoadTestStatusRunning).
@@ -140,6 +158,9 @@ func (r *GormLoadTestRepository) FindActiveByOrgID(ctx context.Context, orgID st
 }
 
 func (r *GormLoadTestRepository) Delete(ctx context.Context, testID string) error {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return errors.New("database not available")
+	}
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Delete(&domain.LoadTestTimeseries{}, "test_id = ?", testID).Error; err != nil {
 			return err
@@ -152,10 +173,16 @@ func (r *GormLoadTestRepository) Delete(ctx context.Context, testID string) erro
 }
 
 func (r *GormLoadTestRepository) CreateResults(ctx context.Context, results *domain.LoadTestResults) error {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return errors.New("database not available")
+	}
 	return r.db.WithContext(ctx).Create(results).Error
 }
 
 func (r *GormLoadTestRepository) GetResults(ctx context.Context, testID string) (*domain.LoadTestResults, error) {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return nil, errors.New("database not available")
+	}
 	var res domain.LoadTestResults
 	err := r.db.WithContext(ctx).First(&res, "test_id = ?", testID).Error
 	if err != nil {
@@ -168,6 +195,9 @@ func (r *GormLoadTestRepository) GetResults(ctx context.Context, testID string) 
 }
 
 func (r *GormLoadTestRepository) CreateTimeseriesBatch(ctx context.Context, batch []*domain.LoadTestTimeseries) error {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return errors.New("database not available")
+	}
 	if len(batch) == 0 {
 		return nil
 	}
@@ -175,6 +205,9 @@ func (r *GormLoadTestRepository) CreateTimeseriesBatch(ctx context.Context, batc
 }
 
 func (r *GormLoadTestRepository) GetTimeseries(ctx context.Context, testID string, stepSeconds int) ([]*domain.LoadTestTimeseries, error) {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return nil, errors.New("database not available")
+	}
 	var points []*domain.LoadTestTimeseries
 	err := r.db.WithContext(ctx).
 		Where("test_id = ?", testID).
@@ -207,10 +240,16 @@ func NewJobRepository(db *database.DB) *GormJobRepository {
 }
 
 func (r *GormJobRepository) EnqueueJob(ctx context.Context, job *domain.Job) error {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return errors.New("database not available")
+	}
 	return r.db.WithContext(ctx).Create(job).Error
 }
 
 func (r *GormJobRepository) ClaimJob(ctx context.Context, workerID string) (*domain.Job, error) {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return nil, errors.New("database not available")
+	}
 	var claimed *domain.Job
 	err := r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var job domain.Job
@@ -248,6 +287,9 @@ func (r *GormJobRepository) ClaimJob(ctx context.Context, workerID string) (*dom
 }
 
 func (r *GormJobRepository) HeartbeatJob(ctx context.Context, jobID, workerID string) error {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return errors.New("database not available")
+	}
 	now := time.Now().UTC()
 	return r.db.WithContext(ctx).Model(&domain.Job{}).
 		Where("id = ? AND locked_by = ?", jobID, workerID).
@@ -258,6 +300,9 @@ func (r *GormJobRepository) HeartbeatJob(ctx context.Context, jobID, workerID st
 }
 
 func (r *GormJobRepository) CompleteJob(ctx context.Context, jobID string) error {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return errors.New("database not available")
+	}
 	now := time.Now().UTC()
 	return r.db.WithContext(ctx).Model(&domain.Job{}).
 		Where("id = ?", jobID).
@@ -270,6 +315,9 @@ func (r *GormJobRepository) CompleteJob(ctx context.Context, jobID string) error
 }
 
 func (r *GormJobRepository) FailJob(ctx context.Context, jobID string, lastError string) error {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return errors.New("database not available")
+	}
 	now := time.Now().UTC()
 	return r.db.WithContext(ctx).Model(&domain.Job{}).
 		Where("id = ?", jobID).
@@ -283,6 +331,9 @@ func (r *GormJobRepository) FailJob(ctx context.Context, jobID string, lastError
 }
 
 func (r *GormJobRepository) ReclaimStaleJobs(ctx context.Context, olderThan time.Duration) (int64, error) {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return 0, errors.New("database not available")
+	}
 	cutoff := time.Now().UTC().Add(-olderThan)
 	res := r.db.WithContext(ctx).Model(&domain.Job{}).
 		Where("status = ? AND locked_at < ?", domain.JobStatusRunning, cutoff).

@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/Prince-695/strim/backend/internal/config"
@@ -118,6 +120,12 @@ func (s *SlogGormLogger) Trace(ctx context.Context, begin time.Time, fc func() (
 
 // New connects to PostgreSQL using GORM, applies connection pooling, and sets up logging.
 func New(cfg *config.Config, l *slog.Logger) (*DB, error) {
+	if strings.Contains(cfg.DatabaseURL, "localhost") && (cfg.AppEnv == "production" || os.Getenv("RENDER") != "") {
+		l.Warn("DATABASE_URL points to localhost in a production/cloud environment. Configure DATABASE_URL in your deployment settings.",
+			slog.String("database_url", cfg.DatabaseURL),
+		)
+	}
+
 	gormLog := NewSlogGormLogger(l, 200*time.Millisecond, cfg.DBRun)
 
 	gormConfig := &gorm.Config{
@@ -143,11 +151,26 @@ func New(cfg *config.Config, l *slog.Logger) (*DB, error) {
 	sqlDB.SetConnMaxLifetime(cfg.DatabaseConnMaxLife)
 	sqlDB.SetConnMaxIdleTime(10 * time.Minute)
 
-	// Verify connectivity with a bounded 3-second timeout so slow/unreachable DB never stalls startup
-	pingCtx, pingCancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer pingCancel()
-	if pingErr := sqlDB.PingContext(pingCtx); pingErr != nil {
-		return nil, fmt.Errorf("database connectivity check failed: %w", pingErr)
+	// Verify connectivity with bounded retries so cold starts or DNS delays don't fail boot immediately
+	var lastErr error
+	maxAttempts := 5
+	for attempt := 1; attempt <= maxAttempts; attempt++ {
+		pingCtx, pingCancel := context.WithTimeout(context.Background(), 3*time.Second)
+		pingErr := sqlDB.PingContext(pingCtx)
+		pingCancel()
+		if pingErr == nil {
+			lastErr = nil
+			break
+		}
+		lastErr = pingErr
+		if attempt < maxAttempts {
+			time.Sleep(time.Duration(attempt) * 400 * time.Millisecond)
+		}
+	}
+
+	if lastErr != nil {
+		_ = sqlDB.Close()
+		return nil, fmt.Errorf("database connectivity check failed after %d attempts: %w", maxAttempts, lastErr)
 	}
 
 	return &DB{
@@ -158,7 +181,7 @@ func New(cfg *config.Config, l *slog.Logger) (*DB, error) {
 
 // Ping verifies the database connection is alive within the given context.
 func (db *DB) Ping(ctx context.Context) error {
-	if db.sqlDB == nil {
+	if db == nil || db.sqlDB == nil {
 		return errors.New("database connection is not initialized")
 	}
 	return db.sqlDB.PingContext(ctx)
@@ -166,7 +189,7 @@ func (db *DB) Ping(ctx context.Context) error {
 
 // Close closes the underlying SQL database connection pool cleanly.
 func (db *DB) Close() error {
-	if db.sqlDB != nil {
+	if db != nil && db.sqlDB != nil {
 		return db.sqlDB.Close()
 	}
 	return nil
