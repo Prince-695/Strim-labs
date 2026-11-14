@@ -1,0 +1,50 @@
+# Stage 1: Build the static Go binary
+FROM golang:1.24-alpine AS builder
+
+WORKDIR /app
+
+# Install git, ca-certificates, and build utilities
+RUN apk add --no-cache git ca-certificates tzdata
+
+# Cache dependency layer
+COPY go.mod go.sum ./
+RUN go mod download
+
+# Copy backend source
+COPY . .
+
+# Build arguments for version stamping
+ARG VERSION=1.0.0
+ARG COMMIT=dev
+ARG BUILT_AT=unknown
+
+# Compile static binary with optimizations
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-s -w -X 'main.Version=${VERSION}' -X 'main.Commit=${COMMIT}' -X 'main.BuiltAt=${BUILT_AT}'" \
+    -o /bin/server ./cmd/server
+
+# Stage 2: Minimal, secure production runtime
+FROM alpine:3.20
+
+# Add CA certificates for secure external HTTPS dispatching
+RUN apk --no-cache add ca-certificates tzdata wget
+
+# Create unprivileged system user and group (non-root execution)
+RUN addgroup -S -g 10001 appgroup && \
+    adduser -S -u 10001 -G appgroup appuser
+
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /bin/server /bin/server
+
+# Use non-root user
+USER appuser:appgroup
+
+# Service configuration
+EXPOSE 8080
+
+HEALTHCHECK --interval=15s --timeout=3s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8080/healthz || exit 1
+
+ENTRYPOINT ["/bin/server"]
