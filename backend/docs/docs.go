@@ -64,6 +64,96 @@ const docTemplate = `{
                 }
             }
         },
+        "/healthz": {
+            "get": {
+                "description": "Instantaneous liveness check indicating the process is alive and responsive.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Liveness Probe",
+                "responses": {
+                    "200": {
+                        "description": "Process is responsive",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.HealthzResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
+        },
+        "/metrics": {
+            "get": {
+                "description": "Returns standard line-formatted Prometheus metrics for scraper consumption.",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Prometheus Exposition Metrics",
+                "responses": {
+                    "200": {
+                        "description": "Prometheus text-format metrics",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/readyz": {
+            "get": {
+                "description": "Deep readiness probe checking database connectivity and readiness to serve traffic.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Readiness Probe",
+                "responses": {
+                    "200": {
+                        "description": "System is ready to serve traffic",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.ReadyzResponse"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    },
+                    "503": {
+                        "description": "Database connectivity degraded",
+                        "schema": {
+                            "$ref": "#/definitions/domain.Response"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/auth/change-password": {
             "post": {
                 "security": [
@@ -7451,6 +7541,38 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/v1/version": {
+            "get": {
+                "description": "Exposes server binary version, git commit hash, and build timestamp.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Build Version Information",
+                "responses": {
+                    "200": {
+                        "description": "Build version metadata",
+                        "schema": {
+                            "allOf": [
+                                {
+                                    "$ref": "#/definitions/domain.Response"
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/definitions/domain.BuildInfo"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -7776,6 +7898,23 @@ const docTemplate = `{
                 },
                 "range": {
                     "type": "string"
+                }
+            }
+        },
+        "domain.BuildInfo": {
+            "type": "object",
+            "properties": {
+                "built_at": {
+                    "type": "string",
+                    "example": "2026-11-13T20:37:35Z"
+                },
+                "commit": {
+                    "type": "string",
+                    "example": "e2d016c"
+                },
+                "version": {
+                    "type": "string",
+                    "example": "1.0.0"
                 }
             }
         },
@@ -8905,6 +9044,19 @@ const docTemplate = `{
                 "email": {
                     "type": "string",
                     "example": "dev@acme.com"
+                }
+            }
+        },
+        "domain.HealthzResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "example": "ok"
+                },
+                "time": {
+                    "type": "string",
+                    "example": "2026-11-14T12:00:00Z"
                 }
             }
         },
@@ -10203,6 +10355,19 @@ const docTemplate = `{
                 "requests": {
                     "type": "integer",
                     "example": 0
+                }
+            }
+        },
+        "domain.ReadyzResponse": {
+            "type": "object",
+            "properties": {
+                "database": {
+                    "type": "string",
+                    "example": "connected"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "ready"
                 }
             }
         },

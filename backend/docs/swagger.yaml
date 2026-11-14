@@ -221,6 +221,18 @@ definitions:
       range:
         type: string
     type: object
+  domain.BuildInfo:
+    properties:
+      built_at:
+        example: "2026-11-13T20:37:35Z"
+        type: string
+      commit:
+        example: e2d016c
+        type: string
+      version:
+        example: 1.0.0
+        type: string
+    type: object
   domain.CapacityReportResponse:
     properties:
       baseline_p95_ms:
@@ -996,6 +1008,15 @@ definitions:
         type: string
     required:
     - email
+    type: object
+  domain.HealthzResponse:
+    properties:
+      status:
+        example: ok
+        type: string
+      time:
+        example: "2026-11-14T12:00:00Z"
+        type: string
     type: object
   domain.HostsMetricsResponse:
     properties:
@@ -1878,6 +1899,15 @@ definitions:
         example: 0
         type: integer
     type: object
+  domain.ReadyzResponse:
+    properties:
+      database:
+        example: connected
+        type: string
+      status:
+        example: ready
+        type: string
+    type: object
   domain.RecomputeCapacityRequest:
     properties:
       save:
@@ -2610,6 +2640,62 @@ paths:
           schema:
             $ref: '#/definitions/domain.Response'
       summary: System Health
+      tags:
+      - System
+  /healthz:
+    get:
+      description: Instantaneous liveness check indicating the process is alive and
+        responsive.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Process is responsive
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.HealthzResponse'
+              type: object
+      summary: Liveness Probe
+      tags:
+      - System
+  /metrics:
+    get:
+      description: Returns standard line-formatted Prometheus metrics for scraper
+        consumption.
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: Prometheus text-format metrics
+          schema:
+            type: string
+      summary: Prometheus Exposition Metrics
+      tags:
+      - System
+  /readyz:
+    get:
+      description: Deep readiness probe checking database connectivity and readiness
+        to serve traffic.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: System is ready to serve traffic
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.ReadyzResponse'
+              type: object
+        "503":
+          description: Database connectivity degraded
+          schema:
+            $ref: '#/definitions/domain.Response'
+      summary: Readiness Probe
       tags:
       - System
   /v1/auth/change-password:
@@ -7243,6 +7329,24 @@ paths:
       summary: Set one-time username
       tags:
       - Users
+  /v1/version:
+    get:
+      description: Exposes server binary version, git commit hash, and build timestamp.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Build version metadata
+          schema:
+            allOf:
+            - $ref: '#/definitions/domain.Response'
+            - properties:
+                data:
+                  $ref: '#/definitions/domain.BuildInfo'
+              type: object
+      summary: Build Version Information
+      tags:
+      - System
 schemes:
 - http
 - https
