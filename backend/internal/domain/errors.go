@@ -10,54 +10,61 @@ import (
 
 // Standard error codes per PRD Section 11.3 & API Section 22
 const (
-	ErrCodeValidationFailed      = "VALIDATION_FAILED"
-	ErrCodeBadRequest            = "BAD_REQUEST"
-	ErrCodeUnauthorized          = "UNAUTHORIZED"
-	ErrCodeInvalidCredentials    = "INVALID_CREDENTIALS"
-	ErrCodeTokenExpired          = "TOKEN_EXPIRED"
-	ErrCodeTokenInvalid          = "TOKEN_INVALID"
-	ErrCodeTokenReused           = "TOKEN_REUSED"
-	ErrCodeInvalidAPIKey         = "INVALID_API_KEY"
-	ErrCodeEmailNotVerified      = "EMAIL_NOT_VERIFIED"
-	ErrCodeForbiddenRole         = "FORBIDDEN_ROLE"
-	ErrCodeKeyScopeMissing       = "KEY_SCOPE_MISSING"
-	ErrCodeNotFound              = "NOT_FOUND"
-	ErrCodeUserNotFound          = "USER_NOT_FOUND"
-	ErrCodeProjectNotFound       = "PROJECT_NOT_FOUND"
-	ErrCodeEndpointNotFound      = "ENDPOINT_NOT_FOUND"
-	ErrCodeInvalidOpenAPISpec    = "INVALID_OPENAPI_SPEC"
-	ErrCodeInvalidManifest       = "INVALID_MANIFEST"
-	ErrCodeEmailTaken            = "EMAIL_TAKEN"
-	ErrCodeUsernameTaken         = "USERNAME_TAKEN"
-	ErrCodeUsernameAlreadySet    = "USERNAME_ALREADY_SET"
-	ErrCodeReservedUsername      = "RESERVED_USERNAME"
-	ErrCodeSlugTaken             = "SLUG_TAKEN"
-	ErrCodeReservedSlug          = "RESERVED_SLUG"
-	ErrCodeAlreadyMember         = "ALREADY_MEMBER"
-	ErrCodeAlreadyVerified       = "ALREADY_VERIFIED"
-	ErrCodeOrgLimitReached       = "ORG_LIMIT_REACHED"
-	ErrCodeTargetOrgLimitReached = "TARGET_ORG_LIMIT_REACHED"
-	ErrCodeProjectLimitReached   = "PROJECT_LIMIT_REACHED"
-	ErrCodeTestAlreadyRunning    = "TEST_ALREADY_RUNNING"
-	ErrCodeTestRunning           = "TEST_RUNNING"
-	ErrCodeTestNotFinished       = "TEST_NOT_FINISHED"
-	ErrCodeVersionConflict       = "VERSION_CONFLICT"
-	ErrCodeOTPInvalid            = "OTP_INVALID"
-	ErrCodeOTPExpired            = "OTP_EXPIRED"
-	ErrCodeOTPAttemptsExceeded   = "OTP_ATTEMPTS_EXCEEDED"
-	ErrCodeInvalidPassword       = "INVALID_PASSWORD"
-	ErrCodeLastOwner             = "LAST_OWNER"
-	ErrCodeConfirmationMismatch  = "CONFIRMATION_MISMATCH"
-	ErrCodeCannotModifyOwnRole   = "CANNOT_MODIFY_OWN_ROLE"
-	ErrCodeNotRunning            = "NOT_RUNNING"
-	ErrCodeTargetNotVerified     = "TARGET_NOT_VERIFIED"
-	ErrCodeTargetBlocked         = "TARGET_BLOCKED"
-	ErrCodePlanLimitExceeded     = "PLAN_LIMIT_EXCEEDED"
-	ErrCodeAccountLocked         = "ACCOUNT_LOCKED"
-	ErrCodeRateLimited           = "RATE_LIMITED"
-	ErrCodeIngestBackpressure    = "INGEST_BACKPRESSURE"
-	ErrCodeInternalError         = "INTERNAL_ERROR"
-	ErrCodeServiceUnavailable    = "SERVICE_UNAVAILABLE"
+	ErrCodeValidationFailed            = "VALIDATION_FAILED"
+	ErrCodeBadRequest                  = "BAD_REQUEST"
+	ErrCodeUnauthorized                = "UNAUTHORIZED"
+	ErrCodeInvalidCredentials          = "INVALID_CREDENTIALS"
+	ErrCodeTokenExpired                = "TOKEN_EXPIRED"
+	ErrCodeTokenInvalid                = "TOKEN_INVALID"
+	ErrCodeTokenReused                 = "TOKEN_REUSED"
+	ErrCodeInvalidAPIKey               = "INVALID_API_KEY"
+	ErrCodeAPIKeyRevoked               = "API_KEY_REVOKED"
+	ErrCodeAPIKeyNotFound              = "API_KEY_NOT_FOUND"
+	ErrCodeWebhookNotFound             = "WEBHOOK_NOT_FOUND"
+	ErrCodeDeliveryNotFound            = "DELIVERY_NOT_FOUND"
+	ErrCodeDashboardNotFound           = "DASHBOARD_NOT_FOUND"
+	ErrCodeDefaultDashboardUndeletable = "DEFAULT_DASHBOARD_UNDELETABLE"
+	ErrCodeTooManyWidgets              = "TOO_MANY_WIDGETS"
+	ErrCodeEmailNotVerified            = "EMAIL_NOT_VERIFIED"
+	ErrCodeForbiddenRole               = "FORBIDDEN_ROLE"
+	ErrCodeKeyScopeMissing             = "KEY_SCOPE_MISSING"
+	ErrCodeNotFound                    = "NOT_FOUND"
+	ErrCodeUserNotFound                = "USER_NOT_FOUND"
+	ErrCodeProjectNotFound             = "PROJECT_NOT_FOUND"
+	ErrCodeEndpointNotFound            = "ENDPOINT_NOT_FOUND"
+	ErrCodeInvalidOpenAPISpec          = "INVALID_OPENAPI_SPEC"
+	ErrCodeInvalidManifest             = "INVALID_MANIFEST"
+	ErrCodeEmailTaken                  = "EMAIL_TAKEN"
+	ErrCodeUsernameTaken               = "USERNAME_TAKEN"
+	ErrCodeUsernameAlreadySet          = "USERNAME_ALREADY_SET"
+	ErrCodeReservedUsername            = "RESERVED_USERNAME"
+	ErrCodeSlugTaken                   = "SLUG_TAKEN"
+	ErrCodeReservedSlug                = "RESERVED_SLUG"
+	ErrCodeAlreadyMember               = "ALREADY_MEMBER"
+	ErrCodeAlreadyVerified             = "ALREADY_VERIFIED"
+	ErrCodeOrgLimitReached             = "ORG_LIMIT_REACHED"
+	ErrCodeTargetOrgLimitReached       = "TARGET_ORG_LIMIT_REACHED"
+	ErrCodeProjectLimitReached         = "PROJECT_LIMIT_REACHED"
+	ErrCodeTestAlreadyRunning          = "TEST_ALREADY_RUNNING"
+	ErrCodeTestRunning                 = "TEST_RUNNING"
+	ErrCodeTestNotFinished             = "TEST_NOT_FINISHED"
+	ErrCodeVersionConflict             = "VERSION_CONFLICT"
+	ErrCodeOTPInvalid                  = "OTP_INVALID"
+	ErrCodeOTPExpired                  = "OTP_EXPIRED"
+	ErrCodeOTPAttemptsExceeded         = "OTP_ATTEMPTS_EXCEEDED"
+	ErrCodeInvalidPassword             = "INVALID_PASSWORD"
+	ErrCodeLastOwner                   = "LAST_OWNER"
+	ErrCodeConfirmationMismatch        = "CONFIRMATION_MISMATCH"
+	ErrCodeCannotModifyOwnRole         = "CANNOT_MODIFY_OWN_ROLE"
+	ErrCodeNotRunning                  = "NOT_RUNNING"
+	ErrCodeTargetNotVerified           = "TARGET_NOT_VERIFIED"
+	ErrCodeTargetBlocked               = "TARGET_BLOCKED"
+	ErrCodePlanLimitExceeded           = "PLAN_LIMIT_EXCEEDED"
+	ErrCodeAccountLocked               = "ACCOUNT_LOCKED"
+	ErrCodeRateLimited                 = "RATE_LIMITED"
+	ErrCodeIngestBackpressure          = "INGEST_BACKPRESSURE"
+	ErrCodeInternalError               = "INTERNAL_ERROR"
+	ErrCodeServiceUnavailable          = "SERVICE_UNAVAILABLE"
 )
 
 // AppError represents a structured, domain-aware application error.
@@ -199,6 +206,57 @@ func NewProjectNotFoundError() *AppError {
 
 func NewEndpointNotFoundError() *AppError {
 	return NewAppError(fiber.StatusNotFound, ErrCodeEndpointNotFound, "Endpoint not found", nil)
+}
+
+func NewAlertRuleNotFoundError() *AppError {
+	return NewAppError(fiber.StatusNotFound, ErrCodeNotFound, "Alert rule not found", nil)
+}
+
+func NewIncidentNotFoundError() *AppError {
+	return NewAppError(fiber.StatusNotFound, ErrCodeNotFound, "Incident not found", nil)
+}
+
+func NewChannelNotFoundError() *AppError {
+	return NewAppError(fiber.StatusNotFound, ErrCodeNotFound, "Notification channel not found", nil)
+}
+
+func NewVersionConflictError() *AppError {
+	return NewAppError(fiber.StatusConflict, ErrCodeVersionConflict, "Resource version conflict: resource has been modified by another operation", nil)
+}
+
+func NewAPIKeyNotFoundError() *AppError {
+	return NewAppError(fiber.StatusNotFound, ErrCodeAPIKeyNotFound, "API key not found", nil)
+}
+
+func NewAPIKeyRevokedError() *AppError {
+	return NewAppError(fiber.StatusUnauthorized, ErrCodeAPIKeyRevoked, "API key has been revoked", nil)
+}
+
+func NewWebhookNotFoundError() *AppError {
+	return NewAppError(fiber.StatusNotFound, ErrCodeWebhookNotFound, "Webhook not found", nil)
+}
+
+func NewDeliveryNotFoundError() *AppError {
+	return NewAppError(fiber.StatusNotFound, ErrCodeDeliveryNotFound, "Webhook delivery not found", nil)
+}
+
+func NewPlanLimitExceededError(message string) *AppError {
+	if message == "" {
+		message = "Organization plan limit exceeded"
+	}
+	return NewAppError(fiber.StatusForbidden, ErrCodePlanLimitExceeded, message, nil)
+}
+
+func NewDashboardNotFoundError() *AppError {
+	return NewAppError(fiber.StatusNotFound, ErrCodeDashboardNotFound, "Dashboard not found", nil)
+}
+
+func NewDefaultDashboardUndeletableError() *AppError {
+	return NewAppError(fiber.StatusForbidden, ErrCodeDefaultDashboardUndeletable, "The default project dashboard cannot be deleted", nil)
+}
+
+func NewTooManyWidgetsError() *AppError {
+	return NewAppError(fiber.StatusBadRequest, ErrCodeTooManyWidgets, "A dashboard can contain at most 30 widgets", nil)
 }
 
 func NewInvalidOpenAPISpecError(reason string) *AppError {

@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Prince-695/strim/backend/internal/audit"
 	"github.com/Prince-695/strim/backend/internal/cache"
 	"github.com/Prince-695/strim/backend/internal/config"
 	"github.com/Prince-695/strim/backend/internal/discovery"
@@ -19,6 +20,7 @@ import (
 	"github.com/Prince-695/strim/backend/internal/http/handlers"
 	"github.com/Prince-695/strim/backend/internal/http/middleware"
 	"github.com/Prince-695/strim/backend/internal/ingest"
+	"github.com/Prince-695/strim/backend/internal/notify"
 	"github.com/Prince-695/strim/backend/internal/platform/clock"
 	"github.com/Prince-695/strim/backend/internal/platform/ids"
 	"github.com/Prince-695/strim/backend/internal/platform/mailer"
@@ -77,7 +79,7 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 		logger,
 	)
 
-	sysHandler := handlers.NewSystemHandler(sysSvc)
+	sysHandler := handlers.NewSystemHandler(sysSvc, domain.BuildInfo{Version: "1.0.0", Commit: "test", BuiltAt: "2026-11-14T00:00:00Z"})
 	authHandler := handlers.NewAuthHandler(authSvc, cfg)
 
 	memberRepo := repository.NewInMemoryMemberRepository(userRepo)
@@ -122,6 +124,35 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 	diagnosticsSvc := service.NewDiagnosticsService(ingestStore, endpointRepo, loadTestRepo, projectRepo, clk)
 	diagnosticsHandler := handlers.NewDiagnosticsHandler(diagnosticsSvc, logger)
 
+	alertRepo := repository.NewInMemoryAlertRuleRepository()
+	incidentRepo := repository.NewInMemoryIncidentRepository()
+	channelRepo := repository.NewInMemoryNotificationChannelRepository()
+	dispatcher := notify.NewDispatcher(mockMailer, ssrfGuard, logger)
+	alertSvc := service.NewAlertService(alertRepo, projectRepo, endpointRepo, channelRepo, clk, idGen)
+	incidentSvc := service.NewIncidentService(incidentRepo, projectRepo, clk, idGen)
+	channelSvc := service.NewNotificationService(channelRepo, projectRepo, dispatcher, ssrfGuard, clk, idGen)
+	alertHandler := handlers.NewAlertHandler(alertSvc, logger)
+	incidentHandler := handlers.NewIncidentHandler(incidentSvc, logger)
+	channelHandler := handlers.NewChannelHandler(channelSvc, logger)
+
+	apiKeyRepo := repository.NewInMemoryAPIKeyRepository()
+	webhookRepo := repository.NewInMemoryWebhookRepository()
+	deliveryRepo := repository.NewInMemoryWebhookDeliveryRepository()
+	auditRepo := repository.NewInMemoryAuditLogRepository()
+	usageRepo := repository.NewInMemoryUsageRepository()
+	auditRec := audit.NewAsyncRecorder(auditRepo)
+	apiKeySvc := service.NewAPIKeyService(apiKeyRepo, projectRepo, auditRec)
+	webhookSvc := service.NewWebhookService(webhookRepo, deliveryRepo, projectRepo, ssrfGuard, nil, auditRec)
+	auditSvc := service.NewAuditService(auditRepo, orgRepo)
+	usageSvc := service.NewUsageService(usageRepo, projectRepo, orgRepo)
+	dashRepo := repository.NewInMemoryDashboardRepository()
+	dashSvc := service.NewDashboardService(dashRepo, projectRepo, auditRec)
+	apiKeyHandler := handlers.NewAPIKeyHandler(apiKeySvc, logger)
+	webhookHandler := handlers.NewWebhookHandler(webhookSvc, logger)
+	auditHandler := handlers.NewAuditHandler(auditSvc, logger)
+	usageHandler := handlers.NewUsageHandler(usageSvc, logger)
+	dashboardHandler := handlers.NewDashboardHandler(dashSvc, logger)
+
 	container := handlers.NewContainer(
 		sysHandler,
 		authHandler,
@@ -136,6 +167,14 @@ func newHTTPTestHarness(t *testing.T) *httpTestHarness {
 		loadTestHandler,
 		capacityHandler,
 		diagnosticsHandler,
+		alertHandler,
+		incidentHandler,
+		channelHandler,
+		dashboardHandler,
+		apiKeyHandler,
+		webhookHandler,
+		auditHandler,
+		usageHandler,
 	)
 
 	app := apphttp.NewRouter(cfg, container, logger, idGen)

@@ -51,8 +51,11 @@ func NewRouter(
 		return c.SendStatus(fiber.StatusOK)
 	})
 
-	// System Health Route
+	// System Health, Liveness, Readiness, and Prometheus Routes (Docs/API.md Section 18)
 	app.Get("/health", handlers.System.Health)
+	app.Get("/healthz", handlers.System.Healthz)
+	app.Get("/readyz", handlers.System.Readyz)
+	app.Get("/metrics", handlers.System.Metrics)
 
 	// Swagger Documentation (Protected by HTTP Basic Auth)
 	swaggerGroup := app.Group("/swagger")
@@ -61,6 +64,7 @@ func NewRouter(
 
 	// Route Group: /v1
 	v1 := app.Group("/v1")
+	v1.Get("/version", handlers.System.Version)
 
 	// Auth Middlewares
 	authRateLimit := middleware.RateLimit(5, 1*time.Minute)
@@ -113,6 +117,8 @@ func NewRouter(
 	tenant.Get("/", requireViewer, handlers.Org.GetOrg)
 	tenant.Put("/", requireAdmin, csrfGuard, handlers.Org.UpdateOrg)
 	tenant.Delete("/", requireOwner, csrfGuard, handlers.Org.DeleteOrg)
+	tenant.Get("/audit-logs", requireAdmin, handlers.Audit.ListAuditLogs)
+	tenant.Get("/usage", requireAdmin, handlers.Usage.GetUsage)
 
 	// Members Sub-Routes: /v1/organizations/:orgID/members
 	members := tenant.Group("/members")
@@ -174,6 +180,57 @@ func NewRouter(
 	diag.Get("/slow-endpoints", requireViewer, handlers.Diagnostics.GetSlowEndpoints)
 	diag.Get("/regressions", requireViewer, handlers.Diagnostics.GetRegressions)
 	diag.Get("/bottlenecks", requireViewer, handlers.Diagnostics.GetBottlenecks)
+
+	// Customizable Dashboards Sub-Routes: /v1/organizations/:orgID/projects/:projectID/dashboards
+	dashboards := projects.Group("/:projectID/dashboards")
+	dashboards.Post("/", requireMember, csrfGuard, handlers.Dashboard.CreateDashboard)
+	dashboards.Get("/", requireViewer, handlers.Dashboard.ListDashboards)
+	dashboards.Get("/:dashboardID", requireViewer, handlers.Dashboard.GetDashboard)
+	dashboards.Put("/:dashboardID", requireMember, csrfGuard, handlers.Dashboard.UpdateDashboard)
+	dashboards.Delete("/:dashboardID", requireMember, csrfGuard, handlers.Dashboard.DeleteDashboard)
+	dashboards.Post("/:dashboardID/clone", requireMember, csrfGuard, handlers.Dashboard.CloneDashboard)
+
+	// Alert Rules Sub-Routes: /v1/organizations/:orgID/projects/:projectID/alert-rules
+	alertRules := projects.Group("/:projectID/alert-rules")
+	alertRules.Post("/", requireMember, csrfGuard, handlers.Alert.CreateRule)
+	alertRules.Get("/", requireViewer, handlers.Alert.ListRules)
+	alertRules.Get("/:ruleID", requireViewer, handlers.Alert.GetRule)
+	alertRules.Put("/:ruleID", requireMember, csrfGuard, handlers.Alert.UpdateRule)
+	alertRules.Delete("/:ruleID", requireMember, csrfGuard, handlers.Alert.DeleteRule)
+	alertRules.Post("/:ruleID/mute", requireMember, csrfGuard, handlers.Alert.MuteRule)
+
+	// Incidents Sub-Routes: /v1/organizations/:orgID/projects/:projectID/incidents
+	incidents := projects.Group("/:projectID/incidents")
+	incidents.Get("/", requireViewer, handlers.Incident.ListIncidents)
+	incidents.Get("/:incidentID", requireViewer, handlers.Incident.GetIncident)
+	incidents.Post("/:incidentID/acknowledge", requireMember, csrfGuard, handlers.Incident.AcknowledgeIncident)
+	incidents.Post("/:incidentID/resolve", requireMember, csrfGuard, handlers.Incident.ResolveIncident)
+	incidents.Post("/:incidentID/comments", requireMember, csrfGuard, handlers.Incident.AddComment)
+
+	// Notification Channels Sub-Routes: /v1/organizations/:orgID/projects/:projectID/notification-channels
+	channels := projects.Group("/:projectID/notification-channels")
+	channels.Post("/", requireAdmin, csrfGuard, handlers.Channel.CreateChannel)
+	channels.Get("/", requireViewer, handlers.Channel.ListChannels)
+	channels.Get("/:channelID", requireViewer, handlers.Channel.GetChannel)
+	channels.Put("/:channelID", requireAdmin, csrfGuard, handlers.Channel.UpdateChannel)
+	channels.Delete("/:channelID", requireAdmin, csrfGuard, handlers.Channel.DeleteChannel)
+	channels.Post("/:channelID/test", requireAdmin, csrfGuard, handlers.Channel.TestChannel)
+
+	// API Keys Sub-Routes: /v1/organizations/:orgID/projects/:projectID/api-keys
+	apiKeys := projects.Group("/:projectID/api-keys")
+	apiKeys.Post("/", requireAdmin, csrfGuard, handlers.APIKey.CreateKey)
+	apiKeys.Get("/", requireAdmin, handlers.APIKey.ListKeys)
+	apiKeys.Post("/:keyID/rotate", requireAdmin, csrfGuard, handlers.APIKey.RotateKey)
+	apiKeys.Delete("/:keyID", requireAdmin, csrfGuard, handlers.APIKey.RevokeKey)
+
+	// Webhooks Sub-Routes: /v1/organizations/:orgID/projects/:projectID/webhooks
+	webhooks := projects.Group("/:projectID/webhooks")
+	webhooks.Post("/", requireAdmin, csrfGuard, handlers.Webhook.CreateWebhook)
+	webhooks.Get("/", requireAdmin, handlers.Webhook.ListWebhooks)
+	webhooks.Put("/:webhookID", requireAdmin, csrfGuard, handlers.Webhook.UpdateWebhook)
+	webhooks.Delete("/:webhookID", requireAdmin, csrfGuard, handlers.Webhook.DeleteWebhook)
+	webhooks.Get("/:webhookID/deliveries", requireAdmin, handlers.Webhook.ListDeliveries)
+	webhooks.Post("/:webhookID/deliveries/:deliveryID/redeliver", requireAdmin, csrfGuard, handlers.Webhook.Redeliver)
 
 	// Ingestion Subgroup: /v1/ingest (CI scanner & traffic ingest)
 	ingest := v1.Group("/ingest")

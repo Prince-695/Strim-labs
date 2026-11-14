@@ -9,14 +9,18 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Prince-695/strim/backend/internal/alerts"
+	"github.com/Prince-695/strim/backend/internal/audit"
 	"github.com/Prince-695/strim/backend/internal/cache"
 	"github.com/Prince-695/strim/backend/internal/config"
 	"github.com/Prince-695/strim/backend/internal/discovery"
 	"github.com/Prince-695/strim/backend/internal/domain"
+	"github.com/Prince-695/strim/backend/internal/events"
 	"github.com/Prince-695/strim/backend/internal/http"
 	"github.com/Prince-695/strim/backend/internal/http/handlers"
 	"github.com/Prince-695/strim/backend/internal/ingest"
 	"github.com/Prince-695/strim/backend/internal/loadengine"
+	"github.com/Prince-695/strim/backend/internal/notify"
 	"github.com/Prince-695/strim/backend/internal/platform/clock"
 	"github.com/Prince-695/strim/backend/internal/platform/database"
 	"github.com/Prince-695/strim/backend/internal/platform/ids"
@@ -32,6 +36,7 @@ import (
 var (
 	Version = "1.0.0"
 	Commit  = "dev"
+	BuiltAt = ""
 )
 
 // @title STRIM Labs API
@@ -103,6 +108,17 @@ func main() {
 				&domain.LoadTestTimeseries{},
 				&domain.Job{},
 				&domain.CapacityReport{},
+				&domain.AlertRule{},
+				&domain.Incident{},
+				&domain.IncidentEvent{},
+				&domain.NotificationChannel{},
+				&domain.NotificationLog{},
+				&domain.APIKey{},
+				&domain.Webhook{},
+				&domain.WebhookDelivery{},
+				&domain.AuditLog{},
+				&domain.DailyUsageCounter{},
+				&domain.Dashboard{},
 			); err != nil {
 				fmt.Printf("\033[38;2;239;68;68m[DATABASE]\033[0m \033[31m✗ Auto-migration failed: %v\033[0m\n", err)
 			} else {
@@ -123,6 +139,15 @@ func main() {
 	loadTestRepo := repository.NewLoadTestRepository(db)
 	jobRepo := repository.NewJobRepository(db)
 	capacityRepo := repository.NewCapacityRepository(db)
+	alertRepo := repository.NewAlertRuleRepository(db)
+	incidentRepo := repository.NewIncidentRepository(db)
+	channelRepo := repository.NewNotificationChannelRepository(db)
+	apiKeyRepo := repository.NewAPIKeyRepository(db)
+	webhookRepo := repository.NewWebhookRepository(db)
+	deliveryRepo := repository.NewWebhookDeliveryRepository(db)
+	auditRepo := repository.NewAuditLogRepository(db)
+	usageRepo := repository.NewUsageRepository(db)
+	dashboardRepo := repository.NewDashboardRepository(db)
 
 	tokenCache := cache.NewMemoryCache()
 	tenantCache := cache.NewTenantCache(tokenCache)
@@ -133,6 +158,12 @@ func main() {
 	httpFetcher := service.NewSSRFSafeHTTPFetcher(ssrfGuard)
 	verifEngine := service.NewVerificationEngine(nil, httpFetcher)
 	openapiParser := discovery.NewOpenAPIParser(ssrfGuard)
+
+	eventBus := events.NewInProcessBus(1000, 4)
+	defer eventBus.Close()
+	webhookDispatcher := events.NewWebhookDispatcher(webhookRepo, deliveryRepo, ssrfGuard, nil)
+	webhookDispatcher.RegisterSubscriber(eventBus)
+	auditRec := audit.NewAsyncRecorder(auditRepo)
 
 	var mailerClient mailer.Mailer
 	if cfg.SMTPHost != "" && cfg.SMTPUser != "" {
@@ -187,7 +218,12 @@ func main() {
 	sseHub := sse.NewHub()
 
 	// 9. Dependency Injection: HTTP Handlers
-	systemHandler := handlers.NewSystemHandler(systemSvc)
+	buildInfo := domain.BuildInfo{
+		Version: Version,
+		Commit:  Commit,
+		BuiltAt: BuiltAt,
+	}
+	systemHandler := handlers.NewSystemHandler(systemSvc, buildInfo)
 	authHandler := handlers.NewAuthHandler(authSvc, cfg)
 	userHandler := handlers.NewUserHandler(userSvc)
 	orgHandler := handlers.NewOrgHandler(orgSvc)
@@ -212,6 +248,51 @@ func main() {
 	diagnosticsSvc := service.NewDiagnosticsService(ingestStore, endpointRepo, loadTestRepo, projectRepo, clk)
 	diagnosticsHandler := handlers.NewDiagnosticsHandler(diagnosticsSvc, appLogger)
 
+	// 12. Alerting, Incidents, and Notification Channels Engine
+	dispatcher := notify.NewDispatcher(mailerClient, ssrfGuard, appLogger)
+	alertEvaluator := alerts.NewEvaluator(
+		alertRepo,
+		incidentRepo,
+		channelRepo,
+		endpointRepo,
+		ingestStore,
+		dispatcher,
+		clk,
+		idGen,
+		appLogger,
+	)
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for range ticker.C {
+			_ = alertEvaluator.EvaluateAll(context.Background())
+		}
+	}()
+
+	alertSvc := service.NewAlertService(alertRepo, projectRepo, endpointRepo, channelRepo, clk, idGen)
+	incidentSvc := service.NewIncidentService(incidentRepo, projectRepo, clk, idGen)
+	channelSvc := service.NewNotificationService(channelRepo, projectRepo, dispatcher, ssrfGuard, clk, idGen)
+
+	alertHandler := handlers.NewAlertHandler(alertSvc, appLogger)
+	incidentHandler := handlers.NewIncidentHandler(incidentSvc, appLogger)
+	channelHandler := handlers.NewChannelHandler(channelSvc, appLogger)
+
+	// 13. API Keys, Webhooks, Audit Logs, and Usage Engine
+	apiKeySvc := service.NewAPIKeyService(apiKeyRepo, projectRepo, auditRec)
+	webhookSvc := service.NewWebhookService(webhookRepo, deliveryRepo, projectRepo, ssrfGuard, webhookDispatcher, auditRec)
+	auditSvc := service.NewAuditService(auditRepo, orgRepo)
+	usageSvc := service.NewUsageService(usageRepo, projectRepo, orgRepo)
+	dashboardSvc := service.NewDashboardService(dashboardRepo, projectRepo, auditRec)
+
+	ingestHandler.SetServices(apiKeySvc, usageSvc)
+	discoveryHandler.SetAPIKeyService(apiKeySvc)
+
+	apiKeyHandler := handlers.NewAPIKeyHandler(apiKeySvc, appLogger)
+	webhookHandler := handlers.NewWebhookHandler(webhookSvc, appLogger)
+	auditHandler := handlers.NewAuditHandler(auditSvc, appLogger)
+	usageHandler := handlers.NewUsageHandler(usageSvc, appLogger)
+	dashboardHandler := handlers.NewDashboardHandler(dashboardSvc, appLogger)
+
 	handlerContainer := handlers.NewContainer(
 		systemHandler,
 		authHandler,
@@ -226,6 +307,14 @@ func main() {
 		loadTestHandler,
 		capacityHandler,
 		diagnosticsHandler,
+		alertHandler,
+		incidentHandler,
+		channelHandler,
+		dashboardHandler,
+		apiKeyHandler,
+		webhookHandler,
+		auditHandler,
+		usageHandler,
 	)
 
 	// 10. Build Router & Middlewares

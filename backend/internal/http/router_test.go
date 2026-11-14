@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Prince-695/strim/backend/internal/audit"
 	"github.com/Prince-695/strim/backend/internal/cache"
 	"github.com/Prince-695/strim/backend/internal/config"
 	"github.com/Prince-695/strim/backend/internal/discovery"
@@ -18,6 +19,7 @@ import (
 	apphttp "github.com/Prince-695/strim/backend/internal/http"
 	"github.com/Prince-695/strim/backend/internal/http/handlers"
 	"github.com/Prince-695/strim/backend/internal/ingest"
+	"github.com/Prince-695/strim/backend/internal/notify"
 	"github.com/Prince-695/strim/backend/internal/platform/clock"
 	"github.com/Prince-695/strim/backend/internal/platform/ids"
 	"github.com/Prince-695/strim/backend/internal/platform/mailer"
@@ -60,7 +62,7 @@ func setupTestApp(t *testing.T, repoErr error) *fiber.App {
 
 	repo := &mockSystemRepo{err: repoErr}
 	sysSvc := service.NewSystemService(repo, logger)
-	sysHandler := handlers.NewSystemHandler(sysSvc)
+	sysHandler := handlers.NewSystemHandler(sysSvc, domain.BuildInfo{Version: "1.0.0", Commit: "test", BuiltAt: "2026-11-14T00:00:00Z"})
 
 	userRepo := repository.NewInMemoryUserRepository()
 	otpRepo := repository.NewInMemoryOTPRepository()
@@ -113,6 +115,35 @@ func setupTestApp(t *testing.T, repoErr error) *fiber.App {
 	diagnosticsSvc := service.NewDiagnosticsService(ingestStore, endpointRepo, loadTestRepo, projectRepo, clk)
 	diagnosticsHandler := handlers.NewDiagnosticsHandler(diagnosticsSvc, logger)
 
+	alertRepo := repository.NewInMemoryAlertRuleRepository()
+	incidentRepo := repository.NewInMemoryIncidentRepository()
+	channelRepo := repository.NewInMemoryNotificationChannelRepository()
+	dispatcher := notify.NewDispatcher(mockMailer, ssrfGuard, logger)
+	alertSvc := service.NewAlertService(alertRepo, projectRepo, endpointRepo, channelRepo, clk, idGen)
+	incidentSvc := service.NewIncidentService(incidentRepo, projectRepo, clk, idGen)
+	channelSvc := service.NewNotificationService(channelRepo, projectRepo, dispatcher, ssrfGuard, clk, idGen)
+	alertHandler := handlers.NewAlertHandler(alertSvc, logger)
+	incidentHandler := handlers.NewIncidentHandler(incidentSvc, logger)
+	channelHandler := handlers.NewChannelHandler(channelSvc, logger)
+
+	apiKeyRepo := repository.NewInMemoryAPIKeyRepository()
+	webhookRepo := repository.NewInMemoryWebhookRepository()
+	deliveryRepo := repository.NewInMemoryWebhookDeliveryRepository()
+	auditRepo := repository.NewInMemoryAuditLogRepository()
+	usageRepo := repository.NewInMemoryUsageRepository()
+	auditRec := audit.NewAsyncRecorder(auditRepo)
+	apiKeySvc := service.NewAPIKeyService(apiKeyRepo, projectRepo, auditRec)
+	webhookSvc := service.NewWebhookService(webhookRepo, deliveryRepo, projectRepo, ssrfGuard, nil, auditRec)
+	auditSvc := service.NewAuditService(auditRepo, orgRepo)
+	usageSvc := service.NewUsageService(usageRepo, projectRepo, orgRepo)
+	dashRepo := repository.NewInMemoryDashboardRepository()
+	dashSvc := service.NewDashboardService(dashRepo, projectRepo, auditRec)
+	apiKeyHandler := handlers.NewAPIKeyHandler(apiKeySvc, logger)
+	webhookHandler := handlers.NewWebhookHandler(webhookSvc, logger)
+	auditHandler := handlers.NewAuditHandler(auditSvc, logger)
+	usageHandler := handlers.NewUsageHandler(usageSvc, logger)
+	dashboardHandler := handlers.NewDashboardHandler(dashSvc, logger)
+
 	container := handlers.NewContainer(
 		sysHandler,
 		authHandler,
@@ -127,6 +158,14 @@ func setupTestApp(t *testing.T, repoErr error) *fiber.App {
 		loadTestHandler,
 		capacityHandler,
 		diagnosticsHandler,
+		alertHandler,
+		incidentHandler,
+		channelHandler,
+		dashboardHandler,
+		apiKeyHandler,
+		webhookHandler,
+		auditHandler,
+		usageHandler,
 	)
 
 	return apphttp.NewRouter(cfg, container, logger, idGen)
@@ -201,4 +240,85 @@ func TestSwaggerBasicAuth(t *testing.T) {
 	respAuth, err := app.Test(reqWithAuth)
 	require.NoError(t, err)
 	assert.Equal(t, fiber.StatusOK, respAuth.StatusCode)
+}
+
+func TestHealthzEndpoint(t *testing.T) {
+	app := setupTestApp(t, nil)
+
+	req := httptest.NewRequest("GET", "/healthz", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+
+	var body domain.Response
+	err = json.NewDecoder(resp.Body).Decode(&body)
+	require.NoError(t, err)
+	assert.True(t, body.Success)
+
+	dataMap := body.Data.(map[string]interface{})
+	assert.Equal(t, "ok", dataMap["status"])
+	assert.NotEmpty(t, dataMap["time"])
+}
+
+func TestReadyzEndpoint_Healthy(t *testing.T) {
+	app := setupTestApp(t, nil)
+
+	req := httptest.NewRequest("GET", "/readyz", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+
+	var body domain.Response
+	err = json.NewDecoder(resp.Body).Decode(&body)
+	require.NoError(t, err)
+	assert.True(t, body.Success)
+
+	dataMap := body.Data.(map[string]interface{})
+	assert.Equal(t, "healthy", dataMap["status"])
+	assert.Equal(t, "connected", dataMap["database"])
+}
+
+func TestReadyzEndpoint_Degraded(t *testing.T) {
+	app := setupTestApp(t, errors.New("db down"))
+
+	req := httptest.NewRequest("GET", "/readyz", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusServiceUnavailable, resp.StatusCode)
+}
+
+func TestVersionEndpoint(t *testing.T) {
+	app := setupTestApp(t, nil)
+
+	req := httptest.NewRequest("GET", "/v1/version", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+
+	var body domain.Response
+	err = json.NewDecoder(resp.Body).Decode(&body)
+	require.NoError(t, err)
+	assert.True(t, body.Success)
+
+	dataMap := body.Data.(map[string]interface{})
+	assert.Equal(t, "1.0.0", dataMap["version"])
+	assert.Equal(t, "test", dataMap["commit"])
+	assert.Equal(t, "2026-11-14T00:00:00Z", dataMap["built_at"])
+}
+
+func TestMetricsEndpoint(t *testing.T) {
+	app := setupTestApp(t, nil)
+
+	req := httptest.NewRequest("GET", "/metrics", nil)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	assert.Equal(t, fiber.StatusOK, resp.StatusCode)
+	assert.Contains(t, resp.Header.Get("Content-Type"), "text/plain")
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	metricsOutput := string(bodyBytes)
+	assert.Contains(t, metricsOutput, "strim_process_uptime_seconds")
+	assert.Contains(t, metricsOutput, "strim_go_goroutines")
+	assert.Contains(t, metricsOutput, "strim_go_memstats_alloc_bytes")
 }

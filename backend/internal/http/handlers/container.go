@@ -15,6 +15,14 @@ type Container struct {
 	LoadTest    *LoadTestHandler
 	Capacity    *CapacityHandler
 	Diagnostics *DiagnosticsHandler
+	Alert       *AlertHandler
+	Incident    *IncidentHandler
+	Channel     *ChannelHandler
+	Dashboard   *DashboardHandler
+	APIKey      *APIKeyHandler
+	Webhook     *WebhookHandler
+	Audit       *AuditHandler
+	Usage       *UsageHandler
 }
 
 // NewContainer initializes a new Container with all handlers.
@@ -32,6 +40,14 @@ func NewContainer(
 	loadTest *LoadTestHandler,
 	capacity *CapacityHandler,
 	diagnostics *DiagnosticsHandler,
+	alert *AlertHandler,
+	incident *IncidentHandler,
+	channel *ChannelHandler,
+	dashboard *DashboardHandler,
+	apiKey *APIKeyHandler,
+	webhook *WebhookHandler,
+	audit *AuditHandler,
+	usage *UsageHandler,
 ) *Container {
 	return &Container{
 		System:      system,
@@ -47,5 +63,13 @@ func NewContainer(
 		LoadTest:    loadTest,
 		Capacity:    capacity,
 		Diagnostics: diagnostics,
+		Alert:       alert,
+		Incident:    incident,
+		Channel:     channel,
+		Dashboard:   dashboard,
+		APIKey:      apiKey,
+		Webhook:     webhook,
+		Audit:       audit,
+		Usage:       usage,
 	}
 }
