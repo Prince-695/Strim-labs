@@ -33,6 +33,9 @@ func NewCapacityRepository(db *database.DB) *GormCapacityRepository {
 
 // Save inserts or updates a capacity report, keyed by load_test_id.
 func (r *GormCapacityRepository) Save(ctx context.Context, report *domain.CapacityReport) error {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return errors.New("database not available")
+	}
 	return r.db.WithContext(ctx).Clauses(clause.OnConflict{
 		Columns:   []clause.Column{{Name: "load_test_id"}},
 		UpdateAll: true,
@@ -41,6 +44,9 @@ func (r *GormCapacityRepository) Save(ctx context.Context, report *domain.Capaci
 
 // FindByLoadTestID retrieves the capacity report for a given load test.
 func (r *GormCapacityRepository) FindByLoadTestID(ctx context.Context, loadTestID string) (*domain.CapacityReport, error) {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return nil, errors.New("database not available")
+	}
 	var report domain.CapacityReport
 	err := r.db.WithContext(ctx).Where("load_test_id = ?", loadTestID).First(&report).Error
 	if err != nil {
@@ -54,6 +60,9 @@ func (r *GormCapacityRepository) FindByLoadTestID(ctx context.Context, loadTestI
 
 // FindByProjectID lists all capacity reports for a project ordered by creation time descending.
 func (r *GormCapacityRepository) FindByProjectID(ctx context.Context, projectID string) ([]*domain.CapacityReport, error) {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return nil, errors.New("database not available")
+	}
 	var reports []*domain.CapacityReport
 	err := r.db.WithContext(ctx).
 		Where("project_id = ?", projectID).
@@ -67,6 +76,9 @@ func (r *GormCapacityRepository) FindByProjectID(ctx context.Context, projectID 
 
 // DeleteByLoadTestID removes the capacity report for a load test.
 func (r *GormCapacityRepository) DeleteByLoadTestID(ctx context.Context, loadTestID string) error {
+	if r == nil || r.db == nil || r.db.DB == nil {
+		return errors.New("database not available")
+	}
 	return r.db.WithContext(ctx).
 		Where("load_test_id = ?", loadTestID).
 		Delete(&domain.CapacityReport{}).Error

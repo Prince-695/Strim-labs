@@ -137,3 +137,48 @@ func TestInMemoryJobRepository(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, domain.JobStatusCompleted, claimed.Status)
 }
+
+func TestGormRepositories_NilDBSafety(t *testing.T) {
+	ctx := context.Background()
+
+	// 1. GormJobRepository with nil DB must return error, never panic
+	gormJobRepo := repository.NewJobRepository(nil)
+	claimed, err := gormJobRepo.ClaimJob(ctx, "worker-test")
+	assert.Error(t, err)
+	assert.Nil(t, claimed)
+	assert.EqualError(t, err, "database not available")
+
+	err = gormJobRepo.EnqueueJob(ctx, &domain.Job{ID: "j1"})
+	assert.Error(t, err)
+
+	err = gormJobRepo.HeartbeatJob(ctx, "j1", "w1")
+	assert.Error(t, err)
+
+	err = gormJobRepo.CompleteJob(ctx, "j1")
+	assert.Error(t, err)
+
+	err = gormJobRepo.FailJob(ctx, "j1", "err")
+	assert.Error(t, err)
+
+	reclaimed, err := gormJobRepo.ReclaimStaleJobs(ctx, time.Minute)
+	assert.Error(t, err)
+	assert.Equal(t, int64(0), reclaimed)
+
+	// 2. GormLoadTestRepository with nil DB must return error, never panic
+	gormLTRepo := repository.NewLoadTestRepository(nil)
+	err = gormLTRepo.Create(ctx, &domain.LoadTest{ID: "t1"})
+	assert.Error(t, err)
+
+	found, err := gormLTRepo.FindByID(ctx, "t1")
+	assert.Error(t, err)
+	assert.Nil(t, found)
+
+	// 3. GormCapacityRepository with nil DB must return error, never panic
+	gormCapRepo := repository.NewCapacityRepository(nil)
+	err = gormCapRepo.Save(ctx, &domain.CapacityReport{LoadTestID: "t1"})
+	assert.Error(t, err)
+
+	capFound, err := gormCapRepo.FindByLoadTestID(ctx, "t1")
+	assert.Error(t, err)
+	assert.Nil(t, capFound)
+}

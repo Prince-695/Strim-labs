@@ -77,6 +77,12 @@ func NewWorker(
 
 // Start runs the worker polling loop until the context is canceled.
 func (w *Worker) Start(ctx context.Context) {
+	if w.jobRepo == nil {
+		w.logger.Warn("Load test worker started without job repository; worker loop idle", slog.String("worker_id", w.workerID))
+		<-ctx.Done()
+		return
+	}
+
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 

@@ -163,3 +163,46 @@ func TestWorker_ProcessJob_Success(t *testing.T) {
 	assert.Equal(t, "test-1", capReport.LoadTestID)
 	assert.Equal(t, "proj-1", capReport.ProjectID)
 }
+
+func TestWorker_Start_NilDBSafety(t *testing.T) {
+	// 1. Worker with GormJobRepository having nil DB
+	gormJobRepo := repository.NewJobRepository(nil)
+	worker := loadengine.NewWorker(
+		"worker-nil-test",
+		gormJobRepo,
+		repository.NewInMemoryLoadTestRepository(),
+		repository.NewInMemoryProjectRepository(),
+		repository.NewInMemoryCapacityRepository(),
+		nil,
+		nil,
+		"secret",
+		nil,
+	)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 700*time.Millisecond)
+	defer cancel()
+
+	assert.NotPanics(t, func() {
+		worker.Start(ctx)
+	})
+
+	// 2. Worker with nil jobRepo
+	workerNil := loadengine.NewWorker(
+		"worker-nil-2",
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		"secret",
+		nil,
+	)
+
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel2()
+
+	assert.NotPanics(t, func() {
+		workerNil.Start(ctx2)
+	})
+}
