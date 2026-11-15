@@ -69,17 +69,17 @@ export function LandingNavbar() {
           <Button
             variant="ghost"
             size="sm"
-            render={<Link href="/dashboard" />}
+            render={<Link href="/login" />}
             className="text-xs font-medium text-foreground-muted hover:text-foreground"
           >
-            Console
+            Sign In
           </Button>
           <Button
             size="sm"
-            render={<Link href="/dashboard" />}
+            render={<Link href="/signup" />}
             className="gap-1.5 bg-brand text-white hover:bg-brand-hover shadow-xs font-medium text-xs"
           >
-            <span>Launch App</span>
+            <span>Get Started</span>
             <ArrowRight className="size-3.5" />
           </Button>
         </div>

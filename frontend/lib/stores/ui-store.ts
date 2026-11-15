@@ -7,7 +7,9 @@ interface UIState {
   sidebarCollapsed: boolean
   mobileNavOpen: boolean
   setOrgId: (id: string | null) => void
+  setCurrentOrgId: (id: string | null) => void
   setProjectId: (id: string | null) => void
+  setCurrentProjectId: (id: string | null) => void
   toggleSidebar: () => void
   setSidebarCollapsed: (collapsed: boolean) => void
   setMobileNavOpen: (open: boolean) => void
@@ -22,7 +24,9 @@ export const useUIStore = create<UIState>()(
       mobileNavOpen: false,
 
       setOrgId: (currentOrgId) => set({ currentOrgId }),
+      setCurrentOrgId: (currentOrgId) => set({ currentOrgId }),
       setProjectId: (currentProjectId) => set({ currentProjectId }),
+      setCurrentProjectId: (currentProjectId) => set({ currentProjectId }),
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
       setMobileNavOpen: (mobileNavOpen) => set({ mobileNavOpen }),

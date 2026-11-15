@@ -135,7 +135,7 @@ export function ProjectSwitcher() {
         </DropdownMenuGroup>
         <DropdownMenuSeparator className="bg-border-subtle my-1" />
         <DropdownMenuItem
-          onClick={() => router.push("/app/projects")}
+          onClick={() => router.push("/onboarding/project")}
           className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-sand hover:bg-surface-hover hover:text-sand"
         >
           <Plus className="size-3.5" />
