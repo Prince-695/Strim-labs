@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"net/smtp"
 	"sync"
+
+	"github.com/Prince-695/strim/backend/internal/templates"
 )
 
 // Mailer defines transactional email sending capabilities.
@@ -15,15 +17,17 @@ type Mailer interface {
 	SendVerificationOTP(ctx context.Context, toEmail, firstName, otp string) error
 	SendPasswordResetOTP(ctx context.Context, toEmail, firstName, otp string) error
 	SendAlertNotification(ctx context.Context, toEmail, subject, body string) error
+	SendWelcomeEmail(ctx context.Context, toEmail, firstName string) error
 }
 
 // SMTPConfig holds connection details for sending email over SMTP.
 type SMTPConfig struct {
-	Host     string
-	Port     int
-	User     string
-	Password string
-	From     string
+	Host      string
+	Port      int
+	User      string
+	Password  string
+	From      string
+	WebOrigin string
 }
 
 // SMTPMailer delivers transactional emails via an external SMTP server.
@@ -32,8 +36,11 @@ type SMTPMailer struct {
 	logger *slog.Logger
 }
 
-// NewSMTPMailer returns a production-ready Mailer targeting an external SMTP server (e.g. Gmail port 465 SSL/TLS).
+// NewSMTPMailer returns a production-ready Mailer targeting an external SMTP server (e.g. Brevo/Gmail port 465 SSL/TLS).
 func NewSMTPMailer(cfg SMTPConfig, logger *slog.Logger) *SMTPMailer {
+	if logger == nil {
+		logger = slog.Default()
+	}
 	return &SMTPMailer{
 		cfg:    cfg,
 		logger: logger,
@@ -102,17 +109,20 @@ func (s *SMTPMailer) sendMail(toEmail, subject, htmlBody string) error {
 
 func (s *SMTPMailer) SendVerificationOTP(ctx context.Context, toEmail, firstName, otp string) error {
 	subject := "Verify your STRIM Labs account"
-	body := fmt.Sprintf(`
-		<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px;">
-			<h2 style="color: #6366f1; margin-top: 0;">Welcome to STRIM Labs</h2>
-			<p>Hello %s,</p>
-			<p>Thank you for signing up. Please use the following 6-digit verification code to verify your account:</p>
-			<div style="background: #f3f4f6; padding: 18px; border-radius: 8px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #1f2937; margin: 24px 0;">
-				%s
-			</div>
-			<p style="color: #6b7280; font-size: 14px;">This code is valid for 10 minutes. If you did not create an account, please disregard this email.</p>
-		</div>
-	`, html.EscapeString(firstName), html.EscapeString(otp))
+	body, err := templates.RenderVerificationOTP(templates.VerificationData{
+		FirstName:     firstName,
+		OTP:           otp,
+		ExpiryMinutes: 10,
+	})
+	if err != nil {
+		s.logger.ErrorContext(ctx, "Failed to render verification OTP template, using fallback", slog.Any("error", err))
+		body = fmt.Sprintf(`
+			<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+				<h2>Welcome to STRIM Labs</h2>
+				<p>Hello %s,</p>
+				<p>Your verification code is: <strong>%s</strong> (Valid for 10 minutes)</p>
+			</div>`, html.EscapeString(firstName), html.EscapeString(otp))
+	}
 
 	if err := s.sendMail(toEmail, subject, body); err != nil {
 		s.logger.ErrorContext(ctx, "Failed to deliver verification email", slog.String("to", toEmail), slog.Any("error", err))
@@ -124,17 +134,20 @@ func (s *SMTPMailer) SendVerificationOTP(ctx context.Context, toEmail, firstName
 
 func (s *SMTPMailer) SendPasswordResetOTP(ctx context.Context, toEmail, firstName, otp string) error {
 	subject := "Reset your STRIM Labs password"
-	body := fmt.Sprintf(`
-		<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px;">
-			<h2 style="color: #6366f1; margin-top: 0;">Reset Your Password</h2>
-			<p>Hello %s,</p>
-			<p>We received a request to reset your password. Use the following 6-digit verification code to proceed:</p>
-			<div style="background: #f3f4f6; padding: 18px; border-radius: 8px; text-align: center; font-size: 32px; font-weight: bold; letter-spacing: 6px; color: #1f2937; margin: 24px 0;">
-				%s
-			</div>
-			<p style="color: #6b7280; font-size: 14px;">This code is valid for 10 minutes. If you did not request a password reset, please secure your account immediately.</p>
-		</div>
-	`, html.EscapeString(firstName), html.EscapeString(otp))
+	body, err := templates.RenderPasswordResetOTP(templates.PasswordResetData{
+		FirstName:     firstName,
+		OTP:           otp,
+		ExpiryMinutes: 10,
+	})
+	if err != nil {
+		s.logger.ErrorContext(ctx, "Failed to render password reset template, using fallback", slog.Any("error", err))
+		body = fmt.Sprintf(`
+			<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+				<h2>Reset Your Password</h2>
+				<p>Hello %s,</p>
+				<p>Your password reset code is: <strong>%s</strong> (Valid for 10 minutes)</p>
+			</div>`, html.EscapeString(firstName), html.EscapeString(otp))
+	}
 
 	if err := s.sendMail(toEmail, subject, body); err != nil {
 		s.logger.ErrorContext(ctx, "Failed to deliver password reset email", slog.String("to", toEmail), slog.Any("error", err))
@@ -145,19 +158,52 @@ func (s *SMTPMailer) SendPasswordResetOTP(ctx context.Context, toEmail, firstNam
 }
 
 func (s *SMTPMailer) SendAlertNotification(ctx context.Context, toEmail, subject, body string) error {
-	htmlBody := fmt.Sprintf(`
-		<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; color: #1f2937;">
-			<h2 style="color: #4f46e5; margin-top: 0;">STRIM Labs Alert Notification</h2>
-			<div style="background: #f9fafb; padding: 16px; border-radius: 8px; border-left: 4px solid #4f46e5; margin: 16px 0; font-family: monospace; white-space: pre-wrap;">%s</div>
-			<p style="color: #6b7280; font-size: 13px;">This is an automated notification from your STRIM Labs monitoring system.</p>
-		</div>
-	`, html.EscapeString(body))
+	dashboardURL := s.cfg.WebOrigin
+	if dashboardURL == "" {
+		dashboardURL = "https://strim-labs.com"
+	}
+
+	htmlBody, err := templates.ParseAndRenderAlert(subject, body, dashboardURL)
+	if err != nil {
+		s.logger.ErrorContext(ctx, "Failed to render alert email template, using fallback", slog.Any("error", err))
+		htmlBody = fmt.Sprintf(`
+			<div style="font-family: monospace; padding: 20px; white-space: pre-wrap;">%s</div>
+		`, html.EscapeString(body))
+	}
 
 	if err := s.sendMail(toEmail, subject, htmlBody); err != nil {
 		s.logger.ErrorContext(ctx, "Failed to deliver alert email", slog.String("to", toEmail), slog.Any("error", err))
 		return err
 	}
 	s.logger.InfoContext(ctx, "Alert email successfully delivered", slog.String("to", toEmail), slog.String("subject", subject))
+	return nil
+}
+
+func (s *SMTPMailer) SendWelcomeEmail(ctx context.Context, toEmail, firstName string) error {
+	subject := "Welcome to STRIM Labs! 🚀"
+	dashboardURL := s.cfg.WebOrigin
+	if dashboardURL == "" {
+		dashboardURL = "https://strim-labs.com"
+	}
+
+	body, err := templates.RenderWelcome(templates.WelcomeData{
+		FirstName:    firstName,
+		DashboardURL: dashboardURL,
+	})
+	if err != nil {
+		s.logger.ErrorContext(ctx, "Failed to render welcome email template, using fallback", slog.Any("error", err))
+		body = fmt.Sprintf(`
+			<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+				<h2>Welcome to STRIM Labs, %s!</h2>
+				<p>Your account is ready. Access your dashboard at <a href="%s">%s</a></p>
+			</div>`, html.EscapeString(firstName), html.EscapeString(dashboardURL), html.EscapeString(dashboardURL))
+	}
+
+	if err := s.sendMail(toEmail, subject, body); err != nil {
+		s.logger.ErrorContext(ctx, "Failed to deliver welcome email", slog.String("to", toEmail), slog.Any("error", err))
+		return err
+	}
+	s.logger.InfoContext(ctx, "Welcome email successfully sent", slog.String("to", toEmail))
 	return nil
 }
 
@@ -168,6 +214,9 @@ type ConsoleMailer struct {
 
 // NewConsoleMailer returns a Mailer implementation for local development and environments without external SMTP.
 func NewConsoleMailer(logger *slog.Logger) *ConsoleMailer {
+	if logger == nil {
+		logger = slog.Default()
+	}
 	return &ConsoleMailer{logger: logger}
 }
 
@@ -194,6 +243,14 @@ func (c *ConsoleMailer) SendAlertNotification(ctx context.Context, toEmail, subj
 		slog.String("to", toEmail),
 		slog.String("subject", subject),
 		slog.String("purpose", "alert_notification"),
+	)
+	return nil
+}
+
+func (c *ConsoleMailer) SendWelcomeEmail(ctx context.Context, toEmail, firstName string) error {
+	c.logger.InfoContext(ctx, fmt.Sprintf("[MAILER WELCOME] Welcome email dispatched for %s (%s)", firstName, toEmail),
+		slog.String("to", toEmail),
+		slog.String("purpose", "welcome_onboarding"),
 	)
 	return nil
 }
@@ -252,6 +309,18 @@ func (m *MockMailer) SendAlertNotification(ctx context.Context, toEmail, subject
 		Subject: subject,
 		Body:    body,
 		Purpose: "alert_notification",
+	})
+	return nil
+}
+
+func (m *MockMailer) SendWelcomeEmail(ctx context.Context, toEmail, firstName string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.emails = append(m.emails, SentEmail{
+		ToEmail:   toEmail,
+		FirstName: firstName,
+		Subject:   "Welcome to STRIM Labs! 🚀",
+		Purpose:   "welcome_onboarding",
 	})
 	return nil
 }

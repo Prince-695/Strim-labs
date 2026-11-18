@@ -14,8 +14,8 @@ type User struct {
 	FirstName       string         `gorm:"type:varchar(100);not null" json:"first_name"`
 	LastName        string         `gorm:"type:varchar(100);not null" json:"last_name"`
 	Username        *string        `gorm:"type:varchar(50);uniqueIndex" json:"username,omitempty"`
-	OAuthProvider   *string        `gorm:"type:varchar(50);index:idx_user_oauth" json:"oauth_provider,omitempty"`
-	OAuthProviderID *string        `gorm:"type:varchar(255);index:idx_user_oauth" json:"oauth_provider_id,omitempty"`
+	OAuthProvider   *string        `gorm:"column:o_auth_provider;type:varchar(50);index:idx_user_oauth" json:"oauth_provider,omitempty"`
+	OAuthProviderID *string        `gorm:"column:o_auth_provider_id;type:varchar(255);index:idx_user_oauth" json:"oauth_provider_id,omitempty"`
 	IsVerified      bool           `gorm:"default:false;not null" json:"is_verified"`
 	CreatedAt       time.Time      `gorm:"not null;autoCreateTime" json:"created_at"`
 	UpdatedAt       time.Time      `gorm:"not null;autoUpdateTime" json:"updated_at"`

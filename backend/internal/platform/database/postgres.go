@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -81,41 +82,29 @@ func (s *SlogGormLogger) Trace(ctx context.Context, begin time.Time, fc func() (
 	sqlStr, rows := fc()
 
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-		if s.dbRun {
-			fmt.Printf("%s[DATABASE ERROR]%s %s%s (rows: %d, duration: %v) error: %v%s\n", ansiRed, ansiReset, ansiRed, sqlStr, rows, elapsed, err, ansiReset)
-		} else {
-			s.logger.ErrorContext(ctx, "database query error",
-				slog.String("sql", sqlStr),
-				slog.Int64("rows", rows),
-				slog.Duration("duration", elapsed),
-				slog.Any("error", err),
-			)
-		}
+		s.logger.ErrorContext(ctx, "database query error",
+			slog.String("sql", sqlStr),
+			slog.Int64("rows", rows),
+			slog.Duration("duration", elapsed),
+			slog.Any("error", err),
+		)
 		return
 	}
 
 	if s.slowThreshold > 0 && elapsed > s.slowThreshold {
-		if s.dbRun {
-			fmt.Printf("%s[DATABASE SLOW]%s %s%s (rows: %d, duration: %v)%s\n", ansiYellow, ansiReset, ansiPurpleDim, sqlStr, rows, elapsed, ansiReset)
-		} else {
-			s.logger.WarnContext(ctx, "slow database query",
-				slog.String("sql", sqlStr),
-				slog.Int64("rows", rows),
-				slog.Duration("duration", elapsed),
-			)
-		}
-		return
-	}
-
-	if s.dbRun {
-		fmt.Printf("%s[DATABASE SQL]%s %s%s%s %s(rows: %d, duration: %v)%s\n", ansiPurpleBold, ansiReset, ansiPurpleDim, sqlStr, ansiReset, ansiGray, rows, elapsed, ansiReset)
-	} else {
-		s.logger.DebugContext(ctx, "database query trace",
+		s.logger.WarnContext(ctx, "slow database query",
 			slog.String("sql", sqlStr),
 			slog.Int64("rows", rows),
 			slog.Duration("duration", elapsed),
 		)
+		return
 	}
+
+	s.logger.DebugContext(ctx, "database query trace",
+		slog.String("sql", sqlStr),
+		slog.Int64("rows", rows),
+		slog.Duration("duration", elapsed),
+	)
 }
 
 // New connects to PostgreSQL using GORM, applies connection pooling, and sets up logging.
@@ -126,11 +115,18 @@ func New(cfg *config.Config, l *slog.Logger) (*DB, error) {
 		)
 	}
 
-	gormLog := NewSlogGormLogger(l, 200*time.Millisecond, cfg.DBRun)
+	slowThreshold := 2500 * time.Millisecond
+	if envThreshold := os.Getenv("DB_SLOW_THRESHOLD_MS"); envThreshold != "" {
+		if ms, err := strconv.Atoi(strings.TrimSpace(envThreshold)); err == nil && ms > 0 {
+			slowThreshold = time.Duration(ms) * time.Millisecond
+		}
+	}
+
+	gormLog := NewSlogGormLogger(l, slowThreshold, cfg.DBRun)
 
 	gormConfig := &gorm.Config{
 		Logger:                                   gormLog,
-		PrepareStmt:                              true,
+		PrepareStmt:                              false, // Set to false to avoid "FATAL: prepared statement name is already in use" with connection poolers
 		SkipDefaultTransaction:                   true,
 		DisableForeignKeyConstraintWhenMigrating: false,
 	}

@@ -27,7 +27,14 @@ func SecurityHeaders(cfg *config.Config) fiber.Handler {
 
 // CORSConfig builds a Fiber CORS middleware configured with the project's allowed origins.
 func CORSConfig(cfg *config.Config) fiber.Handler {
-	origins := strings.Join(cfg.AllowedOrigins, ", ")
+	cleanedOrigins := make([]string, 0, len(cfg.AllowedOrigins))
+	for _, o := range cfg.AllowedOrigins {
+		cleaned := strings.TrimRight(strings.TrimSpace(o), "/")
+		if cleaned != "" {
+			cleanedOrigins = append(cleanedOrigins, cleaned)
+		}
+	}
+	origins := strings.Join(cleanedOrigins, ",")
 	if origins == "" {
 		origins = "http://localhost:3000"
 	}
@@ -35,9 +42,9 @@ func CORSConfig(cfg *config.Config) fiber.Handler {
 	return cors.New(cors.Config{
 		AllowOrigins:     origins,
 		AllowMethods:     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-Request-ID,X-API-Key,Idempotency-Key",
+		AllowHeaders:     "Origin,Content-Type,Accept,Authorization,X-Request-ID,X-API-Key,Idempotency-Key,X-Refresh-Token",
 		AllowCredentials: true,
-		ExposeHeaders:    "X-Request-ID,X-RateLimit-Limit,X-RateLimit-Remaining,Retry-After",
+		ExposeHeaders:    "X-Request-ID,X-RateLimit-Limit,X-RateLimit-Remaining,Retry-After,X-Access-Token",
 		MaxAge:           86400, // 24 hours preflight cache
 	})
 }

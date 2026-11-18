@@ -36,6 +36,7 @@ type loadTestService struct {
 	ssrfGuard    *netguard.SSRFGuard
 	cryptoKey    string
 	clk          clock.Clock
+	endpointRepo repository.EndpointRepository
 }
 
 // NewLoadTestService instantiates a LoadTestService.
@@ -47,9 +48,14 @@ func NewLoadTestService(
 	ssrfGuard *netguard.SSRFGuard,
 	cryptoKey string,
 	clk clock.Clock,
+	endpointRepo ...repository.EndpointRepository,
 ) LoadTestService {
 	if clk == nil {
 		clk = clock.NewRealClock()
+	}
+	var epRepo repository.EndpointRepository
+	if len(endpointRepo) > 0 {
+		epRepo = endpointRepo[0]
 	}
 	return &loadTestService{
 		loadTestRepo: loadTestRepo,
@@ -59,6 +65,7 @@ func NewLoadTestService(
 		ssrfGuard:    ssrfGuard,
 		cryptoKey:    cryptoKey,
 		clk:          clk,
+		endpointRepo: epRepo,
 	}
 }
 
@@ -109,9 +116,61 @@ func (s *loadTestService) CreateLoadTest(
 		return nil, domain.NewAppError(422, domain.ErrCodePlanLimitExceeded, "Duration exceeds plan cap (1,800 seconds / 30 minutes)", nil).
 			WithDetails(map[string]interface{}{"field": "duration_seconds", "cap": 1800})
 	}
-	if len(req.Targets) > 20 {
-		return nil, domain.NewAppError(422, domain.ErrCodePlanLimitExceeded, "Targets exceed plan cap (max 20 endpoints)", nil).
-			WithDetails(map[string]interface{}{"field": "targets", "cap": 20})
+
+	// 5. Target Resolution: Support Full-Server Mode via AllEndpoints or empty targets
+	if req.AllEndpoints || len(req.Targets) == 0 {
+		if s.endpointRepo == nil {
+			return nil, domain.NewAppError(422, domain.ErrCodeBadRequest, "Endpoint registry repository is not configured for full server testing", nil)
+		}
+		endpoints, _, listErr := s.endpointRepo.List(ctx, projectID, domain.ListEndpointsQuery{Limit: 100})
+		if listErr != nil {
+			return nil, listErr
+		}
+		if len(endpoints) == 0 {
+			return nil, domain.NewAppError(422, domain.ErrCodeBadRequest, "No discovered endpoints found for this project. Please discover or register endpoints before running a full server load test", nil)
+		}
+
+		var autoTargets []domain.TargetItemRequest
+		for _, ep := range endpoints {
+			if ep.Status != domain.EndpointStatusActive {
+				continue
+			}
+			method := strings.ToUpper(ep.Method)
+			if req.SafeOnly && method != "GET" && method != "HEAD" && method != "OPTIONS" {
+				continue
+			}
+			// Intelligent traffic weights
+			weight := 1
+			switch method {
+			case "GET", "HEAD":
+				weight = 10
+			case "POST":
+				weight = 2
+			case "PUT", "PATCH":
+				weight = 1
+			case "DELETE":
+				weight = 1
+			}
+			autoTargets = append(autoTargets, domain.TargetItemRequest{
+				EndpointID: ep.ID,
+				Method:     method,
+				Path:       ep.PathTemplate,
+				Weight:     weight,
+			})
+		}
+
+		if len(autoTargets) == 0 {
+			return nil, domain.NewAppError(422, domain.ErrCodeBadRequest, "No eligible endpoints found matching criteria (e.g. safe-only filter excluded all discovered routes)", nil)
+		}
+		req.Targets = autoTargets
+	}
+
+	if len(req.Targets) == 0 {
+		return nil, domain.NewAppError(422, domain.ErrCodeBadRequest, "At least 1 target endpoint is required", nil)
+	}
+	if len(req.Targets) > 100 {
+		return nil, domain.NewAppError(422, domain.ErrCodePlanLimitExceeded, "Targets exceed plan cap (max 100 endpoints)", nil).
+			WithDetails(map[string]interface{}{"field": "targets", "cap": 100})
 	}
 
 	// Validate target paths

@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -406,69 +408,109 @@ func (h *AuthHandler) GoogleCallback(c *fiber.Ctx) error {
 	targetOrigin := h.cfg.WebOrigin
 
 	if stateCookie == "" || stateCookie != stateParam || code == "" {
-		return c.Redirect(fmt.Sprintf("%s/oauth/callback?status=error&code=STATE_MISMATCH", targetOrigin), http.StatusFound)
+		return c.Redirect(fmt.Sprintf("%s/auth/callback?status=error&code=STATE_MISMATCH", targetOrigin), http.StatusFound)
 	}
 
 	// Clean state cookie
 	c.Cookie(&fiber.Cookie{
-		Name:   "oauth_state",
-		Value:  "",
-		Path:   "/v1/auth",
-		MaxAge: -1,
+		Name:     "oauth_state",
+		Value:    "",
+		Path:     "/v1/auth",
+		MaxAge:   -1,
+		HTTPOnly: true,
 	})
 
-	return c.Redirect(fmt.Sprintf("%s/oauth/callback?status=success", targetOrigin), http.StatusFound)
+	if h.cfg.GoogleClientID == "" || h.cfg.GoogleClientSecret == "" {
+		return c.Redirect(fmt.Sprintf("%s/auth/callback?status=error&code=OAUTH_NOT_CONFIGURED", targetOrigin), http.StatusFound)
+	}
+
+	oauthConfig := &oauth2.Config{
+		ClientID:     h.cfg.GoogleClientID,
+		ClientSecret: h.cfg.GoogleClientSecret,
+		RedirectURL:  h.cfg.GoogleRedirectURI,
+		Scopes:       []string{"https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"},
+		Endpoint:     google.Endpoint,
+	}
+
+	token, err := oauthConfig.Exchange(c.Context(), code)
+	if err != nil {
+		return c.Redirect(fmt.Sprintf("%s/auth/callback?status=error&code=EXCHANGE_FAILED", targetOrigin), http.StatusFound)
+	}
+
+	client := oauthConfig.Client(c.Context(), token)
+	resp, err := client.Get("https://www.googleapis.com/oauth2/v2/userinfo")
+	if err != nil {
+		return c.Redirect(fmt.Sprintf("%s/auth/callback?status=error&code=USERINFO_FAILED", targetOrigin), http.StatusFound)
+	}
+	defer resp.Body.Close()
+
+	var googleUser struct {
+		Sub           string `json:"sub"`
+		ID            string `json:"id"`
+		Email         string `json:"email"`
+		VerifiedEmail bool   `json:"verified_email"`
+		GivenName     string `json:"given_name"`
+		FamilyName    string `json:"family_name"`
+		Name          string `json:"name"`
+		Picture       string `json:"picture"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&googleUser); err != nil {
+		fmt.Printf("[GOOGLE OAUTH ERROR] Failed to decode userinfo: %v\n", err)
+		return c.Redirect(fmt.Sprintf("%s/auth/callback?status=error&code=DECODE_FAILED", targetOrigin), http.StatusFound)
+	}
+
+	userID := strings.TrimSpace(googleUser.ID)
+	if userID == "" {
+		userID = strings.TrimSpace(googleUser.Sub)
+	}
+
+	firstName := strings.TrimSpace(googleUser.GivenName)
+	lastName := strings.TrimSpace(googleUser.FamilyName)
+	if firstName == "" && googleUser.Name != "" {
+		parts := strings.SplitN(strings.TrimSpace(googleUser.Name), " ", 2)
+		firstName = parts[0]
+		if len(parts) > 1 {
+			lastName = parts[1]
+		}
+	}
+	if firstName == "" {
+		firstName = "Google"
+	}
+	if lastName == "" {
+		lastName = "User"
+	}
+
+	userAgent := c.Get("User-Agent")
+	clientIP := c.IP()
+
+	_, accessToken, refreshToken, err := h.authSvc.HandleOAuthLogin(
+		c.Context(),
+		"google",
+		userID,
+		googleUser.Email,
+		firstName,
+		lastName,
+		userAgent,
+		clientIP,
+	)
+	if err != nil {
+		fmt.Printf("[GOOGLE OAUTH ERROR] HandleOAuthLogin failed: %+v\n", err)
+		detail := url.QueryEscape(err.Error())
+		return c.Redirect(fmt.Sprintf("%s/auth/callback?status=error&code=LOGIN_FAILED&detail=%s", targetOrigin, detail), http.StatusFound)
+	}
+
+	setAuthCookies(c, h.cfg, accessToken, refreshToken)
+
+	return c.Redirect(fmt.Sprintf("%s/auth/callback?status=success&token=%s", targetOrigin, accessToken), http.StatusFound)
 }
 
 // Helpers
 func setAuthCookies(c *fiber.Ctx, cfg *config.Config, accessToken, refreshToken string) {
-	isSecure := cfg.AppEnv == "production" || cfg.AppEnv == "prod"
-
-	c.Cookie(&fiber.Cookie{
-		Name:     "access_token",
-		Value:    accessToken,
-		Path:     "/",
-		MaxAge:   int(cfg.AccessTokenExpiry.Seconds()),
-		Secure:   isSecure,
-		HTTPOnly: true,
-		SameSite: "Lax",
-	})
-
-	if refreshToken != "" {
-		c.Cookie(&fiber.Cookie{
-			Name:     "refresh_token",
-			Value:    refreshToken,
-			Path:     "/v1/auth",
-			MaxAge:   int(cfg.RefreshTokenExpiry.Seconds()),
-			Secure:   isSecure,
-			HTTPOnly: true,
-			SameSite: "Lax",
-		})
-	}
+	middleware.SetAuthCookies(c, cfg, accessToken, refreshToken)
 }
 
 func clearAuthCookies(c *fiber.Ctx, cfg *config.Config) {
-	isSecure := cfg.AppEnv == "production" || cfg.AppEnv == "prod"
-
-	c.Cookie(&fiber.Cookie{
-		Name:     "access_token",
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		Secure:   isSecure,
-		HTTPOnly: true,
-		SameSite: "Lax",
-	})
-
-	c.Cookie(&fiber.Cookie{
-		Name:     "refresh_token",
-		Value:    "",
-		Path:     "/v1/auth",
-		MaxAge:   -1,
-		Secure:   isSecure,
-		HTTPOnly: true,
-		SameSite: "Lax",
-	})
+	middleware.ClearAuthCookies(c, cfg)
 }
 
 func formatValidationErrors(err error) []fiber.Map {

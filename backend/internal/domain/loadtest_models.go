@@ -144,6 +144,17 @@ type LoadTestLatencySummary struct {
 	Avg float64 `json:"avg"`
 }
 
+// BottleneckInsight captures the first or primary route bottleneck encountered during testing.
+type BottleneckInsight struct {
+	Method        string  `json:"method"`
+	Path          string  `json:"path"`
+	BrokeAtSecond int     `json:"broke_at_second"`
+	BrokeAtRPS    float64 `json:"broke_at_rps"`
+	P95LatencyMS  float64 `json:"p95_latency_ms"`
+	ErrorRate     float64 `json:"error_rate"`
+	Reason        string  `json:"reason"`
+}
+
 // LoadTestSummary aggregates the final results across an entire test run.
 type LoadTestSummary struct {
 	TotalRequests   int64                  `json:"total_requests"`
@@ -157,6 +168,7 @@ type LoadTestSummary struct {
 	StatusCodes     map[string]int64       `json:"status_codes"`
 	BytesReceived   int64                  `json:"bytes_received"`
 	DurationSeconds int                    `json:"duration_seconds"`
+	FirstBottleneck *BottleneckInsight     `json:"first_bottleneck,omitempty"`
 }
 
 // PerEndpointResult represents the breakdown for a single target endpoint.
@@ -187,7 +199,7 @@ type LoadTestResults struct {
 	PerEndpoint         JSONMap   `gorm:"type:text" json:"per_endpoint"`
 	LatencyDistribution JSONMap   `gorm:"type:text" json:"latency_distribution"`
 	Flags               JSONMap   `gorm:"type:text" json:"flags"`
-	Histogram           []byte    `gorm:"type:blob" json:"-"`
+	Histogram           []byte    `gorm:"type:bytea" json:"-"`
 	CreatedAt           time.Time `gorm:"not null" json:"created_at"`
 }
 

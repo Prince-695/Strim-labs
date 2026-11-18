@@ -70,6 +70,7 @@ func main() {
 	idGen := ids.NewUUIDv7Generator()
 
 	// 4. Initialize Database Connection (GORM PostgreSQL Pool)
+	var migrationErr error
 	db, err := database.New(cfg, appLogger)
 	if err != nil {
 		appLogger.Warn("Database connection failed on startup (health endpoint will report degraded)",
@@ -82,15 +83,26 @@ func main() {
 			}
 		}()
 
-		// Schema synchronization controlled by DB_RUN
-		if cfg.DBRun {
-			fmt.Printf("\033[38;2;168;85;247m[DATABASE]\033[0m \033[38;2;192;132;252m⚡ DB_RUN=true: Synchronizing database schema and running auto-migrations...\033[0m\n")
-			// Drop deprecated tables if present (stateless JWT dual-token architecture & renamed tables)
-			_ = db.Exec("DROP TABLE IF EXISTS o_auth_accounts CASCADE").Error
-			_ = db.Exec("DROP TABLE IF EXISTS refresh_tokens CASCADE").Error
-			_ = db.Exec("DROP TABLE IF EXISTS otp_codes CASCADE").Error
+		// Schema synchronization controlled by DB_RUN (or auto-bootstrap if uninitialized or schema discrepancy detected)
+		needsBootstrap := false
+		if !cfg.DBRun {
+			hasJobTable := db.Migrator().HasTable(&domain.Job{})
+			hasProjectDeletedAt := db.Migrator().HasColumn(&domain.Project{}, "deleted_at")
+			hasOrgDeletedAt := db.Migrator().HasColumn(&domain.Organization{}, "deleted_at")
+			hasUserDeletedAt := db.Migrator().HasColumn(&domain.User{}, "deleted_at")
 
-			if err := db.AutoMigrate(
+			if !hasJobTable || !hasProjectDeletedAt || !hasOrgDeletedAt || !hasUserDeletedAt {
+				needsBootstrap = true
+				fmt.Printf("\033[38;2;168;85;247m[DATABASE]\033[0m \033[38;2;192;132;252m⚡ Database schema discrepancy detected (missing tables or columns). Auto-migrating schema...\033[0m\n")
+			}
+		}
+
+		if cfg.DBRun || needsBootstrap {
+			if cfg.DBRun && !needsBootstrap {
+				fmt.Printf("\033[38;2;168;85;247m[DATABASE]\033[0m \033[38;2;192;132;252m⚡ DB_RUN=true: Synchronizing database schema and running auto-migrations...\033[0m\n")
+			}
+
+			migrationErr = db.AutoMigrate(
 				&domain.User{},
 				&domain.OTP{},
 				&domain.Organization{},
@@ -119,10 +131,12 @@ func main() {
 				&domain.AuditLog{},
 				&domain.DailyUsageCounter{},
 				&domain.Dashboard{},
-			); err != nil {
-				fmt.Printf("\033[38;2;239;68;68m[DATABASE]\033[0m \033[31m✗ Auto-migration failed: %v\033[0m\n", err)
+			)
+			if migrationErr != nil {
+				appLogger.Error("Database auto-migration failed", slog.Any("error", migrationErr))
+				fmt.Printf("\033[38;2;239;68;68m[DATABASE]\033[0m \033[31m✗ Auto-migration failed: %v\033[0m\n", migrationErr)
 			} else {
-				fmt.Printf("\033[38;2;168;85;247m[DATABASE]\033[0m \033[38;2;192;132;252m✓ Schema migration complete: tables synchronized successfully (users, otp, organizations, org_members, projects, project_verifications, api_endpoints, endpoint_sources, discovery_runs, request_events_raw, request_rollup_1m, request_rollup_1h)\033[0m\n")
+				fmt.Printf("\033[38;2;168;85;247m[DATABASE]\033[0m \033[38;2;192;132;252m✓ Schema migration complete: tables synchronized successfully\033[0m\n")
 			}
 		}
 	}
@@ -222,11 +236,12 @@ func main() {
 	var mailerClient mailer.Mailer
 	if cfg.SMTPHost != "" && cfg.SMTPUser != "" {
 		mailerClient = mailer.NewSMTPMailer(mailer.SMTPConfig{
-			Host:     cfg.SMTPHost,
-			Port:     cfg.SMTPPort,
-			User:     cfg.SMTPUser,
-			Password: cfg.SMTPPass,
-			From:     cfg.MailFrom,
+			Host:      cfg.SMTPHost,
+			Port:      cfg.SMTPPort,
+			User:      cfg.SMTPUser,
+			Password:  cfg.SMTPPass,
+			From:      cfg.MailFrom,
+			WebOrigin: cfg.WebOrigin,
 		}, appLogger)
 	} else {
 		mailerClient = mailer.NewConsoleMailer(appLogger)
@@ -291,7 +306,7 @@ func main() {
 	// 9. Load Testing Engine & Distributed Execution
 	loadWorker := loadengine.NewWorker("", jobRepo, loadTestRepo, projectRepo, capacityRepo, nil, sseHub, cfg.JWTSecret, appLogger)
 	go loadWorker.Start(context.Background())
-	loadTestSvc := service.NewLoadTestService(loadTestRepo, projectRepo, jobRepo, loadWorker, ssrfGuard, cfg.JWTSecret, clk)
+	loadTestSvc := service.NewLoadTestService(loadTestRepo, projectRepo, jobRepo, loadWorker, ssrfGuard, cfg.JWTSecret, clk, endpointRepo)
 	loadTestHandler := handlers.NewLoadTestHandler(loadTestSvc, sseHub, appLogger)
 
 	// 10. Capacity Analysis and Comparison Engine
@@ -380,6 +395,9 @@ func main() {
 	if db == nil {
 		serverStatus = "DEGRADED"
 		statusDetails = "Database unreachable"
+	} else if migrationErr != nil {
+		serverStatus = "DEGRADED"
+		statusDetails = fmt.Sprintf("Migration error: %v", migrationErr)
 	} else if cfg.DBRun {
 		statusDetails = "Database connected (sync enabled)"
 	}

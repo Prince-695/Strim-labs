@@ -415,6 +415,8 @@ func CentralErrorHandler(logger *slog.Logger) fiber.ErrorHandler {
 			slog.Any("error", err),
 		)
 
-		return SendError(c, fiber.StatusInternalServerError, ErrCodeInternalError, "An internal server error occurred", nil)
+		return SendError(c, fiber.StatusInternalServerError, ErrCodeInternalError, "An internal server error occurred", fiber.Map{
+			"error": err.Error(),
+		})
 	}
 }

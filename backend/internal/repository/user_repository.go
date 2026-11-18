@@ -118,7 +118,7 @@ func (r *GormUserRepository) SetUsername(ctx context.Context, userID, username s
 
 func (r *GormUserRepository) FindByOAuth(ctx context.Context, provider, providerUserID string) (*domain.User, error) {
 	var user domain.User
-	if err := r.db.WithContext(ctx).First(&user, "oauth_provider = ? AND oauth_provider_id = ?", provider, providerUserID).Error; err != nil {
+	if err := r.db.WithContext(ctx).First(&user, "o_auth_provider = ? AND o_auth_provider_id = ?", provider, providerUserID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrUserNotFound
 		}
@@ -131,9 +131,9 @@ func (r *GormUserRepository) LinkOAuth(ctx context.Context, userID, provider, pr
 	return r.db.WithContext(ctx).Model(&domain.User{}).
 		Where("id = ?", userID).
 		Updates(map[string]interface{}{
-			"oauth_provider":    provider,
-			"oauth_provider_id": providerUserID,
-			"is_verified":       true,
-			"updated_at":        time.Now().UTC(),
+			"o_auth_provider":    provider,
+			"o_auth_provider_id": providerUserID,
+			"is_verified":        true,
+			"updated_at":         time.Now().UTC(),
 		}).Error
 }

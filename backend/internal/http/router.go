@@ -68,7 +68,7 @@ func NewRouter(
 
 	// Auth Middlewares
 	authRateLimit := middleware.RateLimit(5, 1*time.Minute)
-	requireAuth := middleware.RequireAuth(handlers.Auth.AuthService(), cfg.JWTSecret)
+	requireAuth := middleware.RequireAuth(handlers.Auth.AuthService(), cfg)
 	csrfGuard := middleware.CSRFProtection(cfg)
 
 	// Subgroup: /v1/auth
