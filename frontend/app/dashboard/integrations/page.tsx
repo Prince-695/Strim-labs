@@ -21,21 +21,47 @@ import {
 
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card"
 import { PageHeader } from "@/components/shell/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/ui/empty-state"
 import { CornerCrosshairs } from "@/components/landing/corner-crosshairs"
-import { webhookApi, type WebhookItem, type CreateWebhookPayload } from "@/lib/webhook-api"
+import {
+  webhookApi,
+  type WebhookItem,
+  type CreateWebhookPayload,
+} from "@/lib/webhook-api"
 import { projectApi } from "@/lib/project-api"
 import { useUIStore } from "@/lib/stores/ui-store"
 import { TelemetryMiddlewareModal } from "@/components/integrations/telemetry-middleware-modal"
 
 const AVAILABLE_EVENTS = [
-  { id: "test.started", label: "Test Started", desc: "Triggered when a new load test execution begins" },
-  { id: "test.completed", label: "Test Completed", desc: "Triggered when a load test finishes successfully" },
-  { id: "test.failed", label: "Test Failed", desc: "Triggered if a load test crashes or encounters execution errors" },
-  { id: "threshold.breached", label: "SLO Breached", desc: "Triggered when P95 latency or error rate exceeds threshold" },
+  {
+    id: "test.started",
+    label: "Test Started",
+    desc: "Triggered when a new load test execution begins",
+  },
+  {
+    id: "test.completed",
+    label: "Test Completed",
+    desc: "Triggered when a load test finishes successfully",
+  },
+  {
+    id: "test.failed",
+    label: "Test Failed",
+    desc: "Triggered if a load test crashes or encounters execution errors",
+  },
+  {
+    id: "threshold.breached",
+    label: "SLO Breached",
+    desc: "Triggered when P95 latency or error rate exceeds threshold",
+  },
 ]
 
 export default function IntegrationsPage() {
@@ -60,7 +86,8 @@ export default function IntegrationsPage() {
   })
 
   const projects = projectsRes?.data || []
-  const activeProjectId = currentProjectId || (projects.length > 0 ? projects[0].id : "")
+  const activeProjectId =
+    currentProjectId || (projects.length > 0 ? projects[0].id : "")
   const activeProject = projects.find((p) => p.id === activeProjectId)
 
   // Auto-select first project
@@ -82,14 +109,18 @@ export default function IntegrationsPage() {
     mutationFn: (payload: CreateWebhookPayload) =>
       webhookApi.create(currentOrgId!, activeProjectId, payload),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["webhooks_list", currentOrgId, activeProjectId] })
+      queryClient.invalidateQueries({
+        queryKey: ["webhooks_list", currentOrgId, activeProjectId],
+      })
       setIsAddModalOpen(false)
       setWebhookUrl("")
       setWebhookSecret("")
       setFormError(null)
     },
     onError: (err: unknown) => {
-      setFormError(err instanceof Error ? err.message : "Failed to create webhook.")
+      setFormError(
+        err instanceof Error ? err.message : "Failed to create webhook."
+      )
     },
   })
 
@@ -98,7 +129,9 @@ export default function IntegrationsPage() {
     mutationFn: (webhookId: string) =>
       webhookApi.delete(currentOrgId!, activeProjectId, webhookId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["webhooks_list", currentOrgId, activeProjectId] })
+      queryClient.invalidateQueries({
+        queryKey: ["webhooks_list", currentOrgId, activeProjectId],
+      })
     },
   })
 
@@ -106,7 +139,9 @@ export default function IntegrationsPage() {
 
   const handleToggleEvent = (eventId: string) => {
     setSelectedEvents((prev) =>
-      prev.includes(eventId) ? prev.filter((e) => e !== eventId) : [...prev, eventId]
+      prev.includes(eventId)
+        ? prev.filter((e) => e !== eventId)
+        : [...prev, eventId]
     )
   }
 
@@ -138,7 +173,7 @@ export default function IntegrationsPage() {
               variant="outline"
               size="sm"
               onClick={() => setIsTelemetryModalOpen(true)}
-              className="gap-1.5 text-xs font-mono border-border-subtle hover:bg-surface-raised text-sand"
+              className="gap-1.5 border-border-subtle font-mono text-xs text-sand hover:bg-surface-raised"
             >
               <Code2 className="size-3.5 text-brand" />
               <span>Telemetry Snippets</span>
@@ -147,7 +182,8 @@ export default function IntegrationsPage() {
               href="/dashboard/settings/api-keys"
               className={buttonVariants({
                 variant: "outline",
-                className: "gap-1.5 text-xs font-mono border-border-subtle hover:bg-surface-raised",
+                className:
+                  "gap-1.5 border-border-subtle font-mono text-xs hover:bg-surface-raised",
               })}
             >
               <Key className="size-3.5" />
@@ -158,7 +194,7 @@ export default function IntegrationsPage() {
                 setFormError(null)
                 setIsAddModalOpen(true)
               }}
-              className="gap-1.5 bg-brand text-white hover:bg-brand-hover text-xs font-mono"
+              className="gap-1.5 bg-brand font-mono text-xs text-white hover:bg-brand-hover"
             >
               <Plus className="size-3.5" />
               <span>Add Webhook</span>
@@ -168,16 +204,18 @@ export default function IntegrationsPage() {
       />
 
       {/* Target Project Selector */}
-      <Card className="border-border bg-surface relative overflow-hidden">
+      <Card className="relative overflow-hidden border-border bg-surface">
         <CornerCrosshairs />
-        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <CardContent className="flex flex-col justify-between gap-4 p-4 sm:flex-row sm:items-center">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="font-mono text-xs text-foreground-subtle uppercase">Target Project:</span>
+            <span className="font-mono text-xs text-foreground-subtle uppercase">
+              Target Project:
+            </span>
             {projects.length > 0 ? (
               <select
                 value={activeProjectId}
                 onChange={(e) => setProjectId(e.target.value)}
-                className="rounded-md border border-border-subtle bg-surface-raised px-3 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:border-brand"
+                className="rounded-md border border-border-subtle bg-surface-raised px-3 py-1.5 font-mono text-xs text-foreground focus:border-brand focus:outline-none"
               >
                 {projects.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -186,44 +224,52 @@ export default function IntegrationsPage() {
                 ))}
               </select>
             ) : (
-              <span className="font-mono text-xs text-foreground-muted">No projects found</span>
+              <span className="font-mono text-xs text-foreground-muted">
+                No projects found
+              </span>
             )}
 
             {activeProject && (
               <span className="font-mono text-xs text-foreground-muted">
-                Base URL: <strong className="text-foreground">{activeProject.base_url}</strong>
+                Base URL:{" "}
+                <strong className="text-foreground">
+                  {activeProject.base_url}
+                </strong>
               </span>
             )}
           </div>
 
           <div className="font-mono text-xs text-foreground-subtle">
-            {webhooks.length} configured {webhooks.length === 1 ? "webhook" : "webhooks"}
+            {webhooks.length} configured{" "}
+            {webhooks.length === 1 ? "webhook" : "webhooks"}
           </div>
         </CardContent>
       </Card>
 
       {/* Feature 4: Add Live Traffic Telemetry Card */}
-      <Card className="border-border bg-surface p-5 shadow-xs relative overflow-hidden font-mono text-xs">
+      <Card className="relative overflow-hidden border-border bg-surface p-5 font-mono text-xs shadow-xs">
         <CornerCrosshairs />
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="space-y-1.5 max-w-2xl">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div className="max-w-2xl space-y-1.5">
             <div className="flex items-center gap-2">
               <Code2 className="size-4 text-brand" />
-              <h3 className="font-heading font-bold text-sm text-foreground">
+              <h3 className="font-heading text-sm font-bold text-foreground">
                 Add Live Traffic Telemetry
               </h3>
-              <span className="rounded bg-brand/15 border border-brand/30 px-2 py-0.5 text-[10px] text-brand font-bold uppercase">
+              <span className="rounded border border-brand/30 bg-brand/15 px-2 py-0.5 text-[10px] font-bold text-brand uppercase">
                 SDK & cURL Ingestion
               </span>
             </div>
-            <p className="text-foreground-muted leading-relaxed">
-              Inject live production traffic, status code distributions, and p95 tail latencies directly into Strim Labs using our lightweight Node.js, Python, or cURL middleware snippets.
+            <p className="leading-relaxed text-foreground-muted">
+              Inject live production traffic, status code distributions, and p95
+              tail latencies directly into Strim Labs using our lightweight
+              Node.js, Python, or cURL middleware snippets.
             </p>
           </div>
 
           <Button
             onClick={() => setIsTelemetryModalOpen(true)}
-            className="bg-brand text-white hover:bg-brand-hover text-xs font-mono font-medium gap-1.5 shrink-0 shadow-md"
+            className="shrink-0 gap-1.5 bg-brand font-mono text-xs font-medium text-white shadow-md hover:bg-brand-hover"
           >
             <Code2 className="size-3.5" />
             <span>Add Live Traffic Telemetry</span>
@@ -234,18 +280,19 @@ export default function IntegrationsPage() {
       {/* Main Grid: Webhooks List + Ecosystem Cards */}
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Webhooks Column */}
-        <div className="lg:col-span-2 space-y-4">
-          <Card className="border-border bg-surface shadow-xs relative overflow-hidden">
+        <div className="space-y-4 lg:col-span-2">
+          <Card className="relative overflow-hidden border-border bg-surface shadow-xs">
             <CornerCrosshairs />
             <CardHeader className="border-b border-border-subtle pb-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-sm font-semibold font-heading text-foreground flex items-center gap-2">
+                  <CardTitle className="flex items-center gap-2 font-heading text-sm font-semibold text-foreground">
                     <Webhook className="size-4 text-brand" />
                     <span>Outbound Webhooks</span>
                   </CardTitle>
-                  <CardDescription className="text-xs text-foreground-muted font-mono">
-                    Receive real-time HTTP POST notifications when load tests finish or breach latency thresholds.
+                  <CardDescription className="font-mono text-xs text-foreground-muted">
+                    Receive real-time HTTP POST notifications when load tests
+                    finish or breach latency thresholds.
                   </CardDescription>
                 </div>
               </div>
@@ -253,7 +300,7 @@ export default function IntegrationsPage() {
 
             <CardContent className="p-0 font-mono text-xs">
               {isLoading ? (
-                <div className="p-6 space-y-4">
+                <div className="space-y-4 p-6">
                   <Skeleton className="h-12 w-full" />
                   <Skeleton className="h-12 w-full" />
                 </div>
@@ -266,7 +313,7 @@ export default function IntegrationsPage() {
                     action={
                       <Button
                         onClick={() => setIsAddModalOpen(true)}
-                        className="bg-brand text-white hover:bg-brand-hover text-xs font-mono gap-1.5"
+                        className="gap-1.5 bg-brand font-mono text-xs text-white hover:bg-brand-hover"
                       >
                         <Plus className="size-3.5" />
                         <span>Add Webhook Endpoint</span>
@@ -279,12 +326,12 @@ export default function IntegrationsPage() {
                   {webhooks.map((hook: WebhookItem) => (
                     <div
                       key={hook.id}
-                      className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-surface-raised/20 transition-colors"
+                      className="flex flex-col justify-between gap-3 p-4 transition-colors hover:bg-surface-raised/20 sm:flex-row sm:items-center"
                     >
-                      <div className="space-y-1.5 min-w-0">
+                      <div className="min-w-0 space-y-1.5">
                         <div className="flex items-center gap-2">
                           <span className="size-2 rounded-full bg-success" />
-                          <span className="font-semibold text-foreground truncate max-w-md">
+                          <span className="max-w-md truncate font-semibold text-foreground">
                             {hook.url}
                           </span>
                         </div>
@@ -292,7 +339,7 @@ export default function IntegrationsPage() {
                           {hook.events.map((ev) => (
                             <span
                               key={ev}
-                              className="rounded bg-surface-raised px-1.5 py-0.5 text-[10px] text-foreground-subtle border border-border-subtle"
+                              className="rounded border border-border-subtle bg-surface-raised px-1.5 py-0.5 text-[10px] text-foreground-subtle"
                             >
                               {ev}
                             </span>
@@ -300,13 +347,13 @@ export default function IntegrationsPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                      <div className="flex shrink-0 items-center gap-2 self-end sm:self-center">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => deleteMutation.mutate(hook.id)}
                           disabled={deleteMutation.isPending}
-                          className="h-8 text-foreground-subtle hover:text-danger hover:bg-danger/10"
+                          className="h-8 text-foreground-subtle hover:bg-danger/10 hover:text-danger"
                         >
                           <Trash2 className="size-3.5" />
                         </Button>
@@ -322,42 +369,44 @@ export default function IntegrationsPage() {
         {/* Ecosystem Integrations */}
         <div className="space-y-4">
           <Card className="border-border bg-surface shadow-xs">
-            <CardHeader className="pb-3 border-b border-border-subtle">
-              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-sand">
+            <CardHeader className="border-b border-border-subtle pb-3">
+              <CardTitle className="text-xs font-semibold tracking-wider text-sand uppercase">
                 Ecosystem Connectors
               </CardTitle>
             </CardHeader>
-            <CardContent className="pt-4 space-y-4 font-mono text-xs">
+            <CardContent className="space-y-4 pt-4 font-mono text-xs">
               {/* Slack */}
-              <div className="rounded-lg border border-border-subtle bg-surface-raised/50 p-3.5 space-y-2">
+              <div className="space-y-2 rounded-lg border border-border-subtle bg-surface-raised/50 p-3.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-semibold text-foreground">
                     <Bell className="size-4 text-purple-400" />
                     <span>Slack Alerts</span>
                   </div>
-                  <span className="text-[10px] uppercase text-sand bg-surface border border-border-subtle px-1.5 py-0.5 rounded">
+                  <span className="rounded border border-border-subtle bg-surface px-1.5 py-0.5 text-[10px] text-sand uppercase">
                     Webhook
                   </span>
                 </div>
-                <p className="text-[11px] text-foreground-muted leading-relaxed">
-                  Paste an Incoming Webhook URL into the webhook manager to receive channel pings on SLO breaches.
+                <p className="text-[11px] leading-relaxed text-foreground-muted">
+                  Paste an Incoming Webhook URL into the webhook manager to
+                  receive channel pings on SLO breaches.
                 </p>
               </div>
 
               {/* API Keys */}
-              <div className="rounded-lg border border-border-subtle bg-surface-raised/50 p-3.5 space-y-2">
+              <div className="space-y-2 rounded-lg border border-border-subtle bg-surface-raised/50 p-3.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-semibold text-foreground">
                     <Key className="size-4 text-brand" />
                     <span>CI/CD Pipeline Keys</span>
                   </div>
                 </div>
-                <p className="text-[11px] text-foreground-muted leading-relaxed">
-                  Trigger automated load test runs directly from GitHub Actions or GitLab CI using API tokens.
+                <p className="text-[11px] leading-relaxed text-foreground-muted">
+                  Trigger automated load test runs directly from GitHub Actions
+                  or GitLab CI using API tokens.
                 </p>
                 <Link
                   href="/dashboard/settings/api-keys"
-                  className="inline-flex items-center gap-1 text-[11px] text-brand hover:underline pt-1"
+                  className="inline-flex items-center gap-1 pt-1 text-[11px] text-brand hover:underline"
                 >
                   <span>Manage tokens</span>
                   <ExternalLink className="size-3" />
@@ -365,23 +414,24 @@ export default function IntegrationsPage() {
               </div>
 
               {/* Telemetry Middleware Connector */}
-              <div className="rounded-lg border border-border-subtle bg-surface-raised/50 p-3.5 space-y-2">
+              <div className="space-y-2 rounded-lg border border-border-subtle bg-surface-raised/50 p-3.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2 font-semibold text-foreground">
                     <Code2 className="size-4 text-brand" />
                     <span>Telemetry SDK</span>
                   </div>
-                  <span className="text-[10px] uppercase text-brand bg-brand/10 border border-brand/20 px-1.5 py-0.5 rounded">
+                  <span className="rounded border border-brand/20 bg-brand/10 px-1.5 py-0.5 text-[10px] text-brand uppercase">
                     Node / Python
                   </span>
                 </div>
-                <p className="text-[11px] text-foreground-muted leading-relaxed">
-                  Embed middleware into your Express or FastAPI backend to capture live production traffic.
+                <p className="text-[11px] leading-relaxed text-foreground-muted">
+                  Embed middleware into your Express or FastAPI backend to
+                  capture live production traffic.
                 </p>
                 <button
                   type="button"
                   onClick={() => setIsTelemetryModalOpen(true)}
-                  className="inline-flex items-center gap-1 text-[11px] text-brand hover:underline pt-1 font-medium"
+                  className="inline-flex items-center gap-1 pt-1 text-[11px] font-medium text-brand hover:underline"
                 >
                   <span>View integration snippets</span>
                   <ExternalLink className="size-3" />
@@ -401,11 +451,11 @@ export default function IntegrationsPage() {
 
       {/* Add Webhook Modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
           <Card className="w-full max-w-lg border-border bg-surface shadow-2xl">
             <CardHeader className="border-b border-border-subtle pb-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold font-heading text-foreground">
+                <CardTitle className="font-heading text-base font-semibold text-foreground">
                   Register New Webhook
                 </CardTitle>
                 <button
@@ -415,16 +465,17 @@ export default function IntegrationsPage() {
                   ✕
                 </button>
               </div>
-              <CardDescription className="text-xs text-foreground-muted font-mono">
-                Strim Labs will dispatch JSON payloads to this HTTP POST endpoint.
+              <CardDescription className="font-mono text-xs text-foreground-muted">
+                Strim Labs will dispatch JSON payloads to this HTTP POST
+                endpoint.
               </CardDescription>
             </CardHeader>
 
             <form onSubmit={handleCreateWebhook}>
-              <CardContent className="pt-6 space-y-4 font-mono text-xs">
+              <CardContent className="space-y-4 pt-6 font-mono text-xs">
                 {formError && (
                   <div className="flex items-start gap-2.5 rounded-lg border border-danger/40 bg-danger/10 p-3 text-danger">
-                    <AlertCircle className="size-4 shrink-0 mt-0.5" />
+                    <AlertCircle className="mt-0.5 size-4 shrink-0" />
                     <span>{formError}</span>
                   </div>
                 )}
@@ -435,26 +486,31 @@ export default function IntegrationsPage() {
                     placeholder="https://api.yourdomain.com/webhooks/strim"
                     value={webhookUrl}
                     onChange={(e) => setWebhookUrl(e.target.value)}
-                    className="bg-surface-raised border-border-subtle text-xs font-mono"
+                    className="border-border-subtle bg-surface-raised font-mono text-xs"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-foreground-muted">Signing Secret (Optional)</label>
+                  <label className="text-foreground-muted">
+                    Signing Secret (Optional)
+                  </label>
                   <Input
                     type="password"
                     placeholder="whsec_..."
                     value={webhookSecret}
                     onChange={(e) => setWebhookSecret(e.target.value)}
-                    className="bg-surface-raised border-border-subtle text-xs font-mono"
+                    className="border-border-subtle bg-surface-raised font-mono text-xs"
                   />
-                  <span className="text-[10px] text-foreground-subtle block">
-                    Used to verify HMAC-SHA256 signatures in the X-Strim-Signature header.
+                  <span className="block text-[10px] text-foreground-subtle">
+                    Used to verify HMAC-SHA256 signatures in the
+                    X-Strim-Signature header.
                   </span>
                 </div>
 
                 <div className="space-y-2 pt-2">
-                  <label className="text-foreground-muted block">Event Subscriptions</label>
+                  <label className="block text-foreground-muted">
+                    Event Subscriptions
+                  </label>
                   <div className="space-y-2">
                     {AVAILABLE_EVENTS.map((ev) => {
                       const isChecked = selectedEvents.includes(ev.id)
@@ -462,7 +518,7 @@ export default function IntegrationsPage() {
                         <div
                           key={ev.id}
                           onClick={() => handleToggleEvent(ev.id)}
-                          className={`flex items-start gap-2.5 p-2.5 rounded-lg border cursor-pointer transition-colors ${
+                          className={`flex cursor-pointer items-start gap-2.5 rounded-lg border p-2.5 transition-colors ${
                             isChecked
                               ? "border-brand/40 bg-brand/5"
                               : "border-border-subtle bg-surface-raised/40 hover:border-border"
@@ -475,8 +531,10 @@ export default function IntegrationsPage() {
                             className="mt-0.5 accent-brand"
                           />
                           <div>
-                            <span className="font-semibold text-foreground block">{ev.label}</span>
-                            <span className="text-[11px] text-foreground-subtle leading-normal">
+                            <span className="block font-semibold text-foreground">
+                              {ev.label}
+                            </span>
+                            <span className="text-[11px] leading-normal text-foreground-subtle">
                               {ev.desc}
                             </span>
                           </div>
@@ -486,7 +544,7 @@ export default function IntegrationsPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2.5 pt-3 border-t border-border-subtle">
+                <div className="flex justify-end gap-2.5 border-t border-border-subtle pt-3">
                   <Button
                     type="button"
                     variant="outline"
@@ -499,9 +557,11 @@ export default function IntegrationsPage() {
                   <Button
                     type="submit"
                     disabled={createMutation.isPending}
-                    className="bg-brand text-white hover:bg-brand-hover font-mono text-xs gap-1.5"
+                    className="gap-1.5 bg-brand font-mono text-xs text-white hover:bg-brand-hover"
                   >
-                    {createMutation.isPending && <Loader2 className="size-3.5 animate-spin" />}
+                    {createMutation.isPending && (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    )}
                     <span>Save Webhook</span>
                   </Button>
                 </div>

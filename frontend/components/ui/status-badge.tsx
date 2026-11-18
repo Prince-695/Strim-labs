@@ -82,7 +82,8 @@ export function StatusBadge({
       case "stale":
       default:
         return {
-          container: "bg-surface-raised text-foreground-muted border-border-subtle",
+          container:
+            "bg-surface-raised text-foreground-muted border-border-subtle",
           dot: "bg-foreground-subtle",
         }
     }
@@ -94,7 +95,7 @@ export function StatusBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border font-mono font-medium capitalize tracking-tight",
+        "inline-flex items-center gap-1.5 rounded-full border font-mono font-medium tracking-tight capitalize",
         size === "sm" ? "px-2 py-0.5 text-xs" : "px-2.5 py-1 text-xs",
         container,
         className

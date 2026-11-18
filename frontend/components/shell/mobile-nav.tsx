@@ -57,8 +57,16 @@ const navSections = [
     items: [
       { title: "Integrations", href: "/dashboard/integrations", icon: Blocks },
       { title: "API Keys", href: "/dashboard/settings/api-keys", icon: Key },
-      { title: "Organization", href: "/dashboard/settings/organization", icon: Building },
-      { title: "Account & Profile", href: "/dashboard/settings/profile", icon: Settings },
+      {
+        title: "Organization",
+        href: "/dashboard/settings/organization",
+        icon: Building,
+      },
+      {
+        title: "Account & Profile",
+        href: "/dashboard/settings/profile",
+        icon: Settings,
+      },
     ],
   },
 ]
@@ -85,7 +93,7 @@ export function MobileNav() {
       />
 
       {/* Drawer */}
-      <div className="relative flex w-full max-w-xs flex-1 flex-col bg-sidebar border-r border-sidebar-border shadow-2xl">
+      <div className="relative flex w-full max-w-xs flex-1 flex-col border-r border-sidebar-border bg-sidebar shadow-2xl">
         {/* Header */}
         <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-4">
           <Link
@@ -93,7 +101,7 @@ export function MobileNav() {
             onClick={() => setMobileNavOpen(false)}
             className="flex items-center gap-2.5"
           >
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface border border-border p-1 overflow-hidden">
+            <div className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-border bg-surface p-1">
               <Image
                 src="/logo.png"
                 alt="Strim Labs Logo"
@@ -107,7 +115,7 @@ export function MobileNav() {
               <span className="font-mono text-sm font-bold tracking-tight text-foreground">
                 STRIM
               </span>
-              <span className="text-[10px] font-mono tracking-widest text-sand uppercase">
+              <span className="font-mono text-[10px] tracking-widest text-sand uppercase">
                 LABS
               </span>
             </div>
@@ -128,10 +136,10 @@ export function MobileNav() {
         </div>
 
         {/* Navigation Sections */}
-        <div className="flex-1 overflow-y-auto px-3 py-4 space-y-6">
+        <div className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
           {navSections.map((section) => (
             <div key={section.title} className="space-y-1">
-              <h4 className="px-2 pb-1 font-mono text-[10px] font-semibold text-foreground-subtle uppercase tracking-wider">
+              <h4 className="px-2 pb-1 font-mono text-[10px] font-semibold tracking-wider text-foreground-subtle uppercase">
                 {section.title}
               </h4>
               <nav className="space-y-0.5">
@@ -139,7 +147,8 @@ export function MobileNav() {
                   const Icon = item.icon
                   const isActive =
                     pathname === item.href ||
-                    (item.href !== "/dashboard" && pathname.startsWith(item.href))
+                    (item.href !== "/dashboard" &&
+                      pathname.startsWith(item.href))
 
                   return (
                     <Link
@@ -149,7 +158,7 @@ export function MobileNav() {
                       className={cn(
                         "flex items-center gap-3 rounded-md px-2.5 py-2 text-xs font-medium transition-colors",
                         isActive
-                          ? "bg-brand-subtle text-foreground border border-brand/30 font-semibold [&_svg]:text-brand"
+                          ? "border border-brand/30 bg-brand-subtle font-semibold text-foreground [&_svg]:text-brand"
                           : "text-foreground-muted hover:bg-surface-raised hover:text-foreground [&_svg]:text-foreground-subtle"
                       )}
                     >
@@ -167,14 +176,16 @@ export function MobileNav() {
         <div className="border-t border-sidebar-border p-3">
           <div className="flex items-center justify-between rounded-lg border border-border-subtle bg-surface/50 p-2">
             <div className="flex items-center gap-2.5 truncate">
-              <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-surface-raised border border-border text-foreground-muted">
+              <div className="flex size-7 shrink-0 items-center justify-center rounded-full border border-border bg-surface-raised text-foreground-muted">
                 <UserIcon className="size-4" />
               </div>
               <div className="truncate leading-tight">
-                <p className="text-xs font-medium text-foreground truncate">
-                  {user?.first_name ? `${user.first_name} ${user.last_name || ""}` : "Developer"}
+                <p className="truncate text-xs font-medium text-foreground">
+                  {user?.first_name
+                    ? `${user.first_name} ${user.last_name || ""}`
+                    : "Developer"}
                 </p>
-                <p className="font-mono text-[10px] text-foreground-subtle truncate">
+                <p className="truncate font-mono text-[10px] text-foreground-subtle">
                   {user?.email || "api@strimlabs.dev"}
                 </p>
               </div>

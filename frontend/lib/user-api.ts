@@ -24,7 +24,9 @@ export const userApi = {
 
   // GET /v1/users/username?u=...
   checkUsername: async (username: string) => {
-    return api.get<CheckUsernameResponse>(`/users/username?u=${encodeURIComponent(username.trim().toLowerCase())}`)
+    return api.get<CheckUsernameResponse>(
+      `/users/username?u=${encodeURIComponent(username.trim().toLowerCase())}`
+    )
   },
 
   // POST /v1/users/username

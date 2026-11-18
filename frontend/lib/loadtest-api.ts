@@ -2,7 +2,8 @@ import { api } from "./api-client"
 
 export type LoadTestModel = "open" | "closed"
 export type LoadTestProfile = "sustained" | "ramp" | "spike" | "step"
-export type LoadTestStatus = "queued" | "running" | "completed" | "failed" | "stopped"
+export type LoadTestStatus =
+  "queued" | "running" | "completed" | "failed" | "stopped"
 
 export interface TargetItem {
   endpoint_id?: string
@@ -207,32 +208,51 @@ export interface CompareResponse {
 }
 
 export const loadtestApi = {
-  create: async (orgId: string, projectId: string, payload: CreateLoadTestPayload) => {
-    return api.post<LoadTestItem>(`/organizations/${orgId}/projects/${projectId}/load-tests`, payload)
+  create: async (
+    orgId: string,
+    projectId: string,
+    payload: CreateLoadTestPayload
+  ) => {
+    return api.post<LoadTestItem>(
+      `/organizations/${orgId}/projects/${projectId}/load-tests`,
+      payload
+    )
   },
 
   list: async (orgId: string, projectId: string) => {
-    return api.get<LoadTestItem[]>(`/organizations/${orgId}/projects/${projectId}/load-tests`)
+    return api.get<LoadTestItem[]>(
+      `/organizations/${orgId}/projects/${projectId}/load-tests`
+    )
   },
 
   get: async (orgId: string, projectId: string, testId: string) => {
-    return api.get<LoadTestItem>(`/organizations/${orgId}/projects/${projectId}/load-tests/${testId}`)
+    return api.get<LoadTestItem>(
+      `/organizations/${orgId}/projects/${projectId}/load-tests/${testId}`
+    )
   },
 
   stop: async (orgId: string, projectId: string, testId: string) => {
-    return api.post<{ message: string }>(`/organizations/${orgId}/projects/${projectId}/load-tests/${testId}/stop`)
+    return api.post<{ message: string }>(
+      `/organizations/${orgId}/projects/${projectId}/load-tests/${testId}/stop`
+    )
   },
 
   rerun: async (orgId: string, projectId: string, testId: string) => {
-    return api.post<LoadTestItem>(`/organizations/${orgId}/projects/${projectId}/load-tests/${testId}/rerun`)
+    return api.post<LoadTestItem>(
+      `/organizations/${orgId}/projects/${projectId}/load-tests/${testId}/rerun`
+    )
   },
 
   delete: async (orgId: string, projectId: string, testId: string) => {
-    return api.delete<{ message: string }>(`/organizations/${orgId}/projects/${projectId}/load-tests/${testId}`)
+    return api.delete<{ message: string }>(
+      `/organizations/${orgId}/projects/${projectId}/load-tests/${testId}`
+    )
   },
 
   getResults: async (orgId: string, projectId: string, testId: string) => {
-    return api.get<LoadTestResultsResponse>(`/organizations/${orgId}/projects/${projectId}/load-tests/${testId}/results`)
+    return api.get<LoadTestResultsResponse>(
+      `/organizations/${orgId}/projects/${projectId}/load-tests/${testId}/results`
+    )
   },
 
   getTimeseries: async (orgId: string, projectId: string, testId: string) => {
@@ -242,7 +262,9 @@ export const loadtestApi = {
   },
 
   getCapacity: async (orgId: string, projectId: string, testId: string) => {
-    return api.get<CapacityReport>(`/organizations/${orgId}/projects/${projectId}/load-tests/${testId}/capacity`)
+    return api.get<CapacityReport>(
+      `/organizations/${orgId}/projects/${projectId}/load-tests/${testId}/capacity`
+    )
   },
 
   recomputeCapacity: async (
@@ -257,7 +279,14 @@ export const loadtestApi = {
     )
   },
 
-  compare: async (orgId: string, projectId: string, payload: { test_ids: string[]; baseline_id?: string }) => {
-    return api.post<CompareResponse>(`/organizations/${orgId}/projects/${projectId}/load-tests/compare`, payload)
+  compare: async (
+    orgId: string,
+    projectId: string,
+    payload: { test_ids: string[]; baseline_id?: string }
+  ) => {
+    return api.post<CompareResponse>(
+      `/organizations/${orgId}/projects/${projectId}/load-tests/compare`,
+      payload
+    )
   },
 }

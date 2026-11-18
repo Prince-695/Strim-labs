@@ -3,7 +3,14 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { ChevronsUpDown, Plus, FolderKanban, Check, ShieldCheck, ShieldAlert } from "lucide-react"
+import {
+  ChevronsUpDown,
+  Plus,
+  FolderKanban,
+  Check,
+  ShieldCheck,
+  ShieldAlert,
+} from "lucide-react"
 import { api, type ApiResponse } from "@/lib/api-client"
 import { useUIStore } from "@/lib/stores/ui-store"
 import {
@@ -32,9 +39,12 @@ export interface Project {
 
 export function ProjectSwitcher() {
   const router = useRouter()
-  const { currentOrgId, currentProjectId, setProjectId, setCreateProjectOpen } = useUIStore()
+  const { currentOrgId, currentProjectId, setProjectId, setCreateProjectOpen } =
+    useUIStore()
 
-  const { data: projectsResponse, isLoading } = useQuery<ApiResponse<Project[]>>({
+  const { data: projectsResponse, isLoading } = useQuery<
+    ApiResponse<Project[]>
+  >({
     queryKey: ["projects", currentOrgId],
     queryFn: async (): Promise<ApiResponse<Project[]>> => {
       if (!currentOrgId) {
@@ -45,8 +55,12 @@ export function ProjectSwitcher() {
     enabled: Boolean(currentOrgId),
   })
 
-  const projects = React.useMemo(() => projectsResponse?.data || [], [projectsResponse?.data])
-  const activeProject = projects.find((p) => p.id === currentProjectId) || projects[0]
+  const projects = React.useMemo(
+    () => projectsResponse?.data || [],
+    [projectsResponse?.data]
+  )
+  const activeProject =
+    projects.find((p) => p.id === currentProjectId) || projects[0]
 
   // Automatically select the first project if none is active
   React.useEffect(() => {
@@ -75,12 +89,17 @@ export function ProjectSwitcher() {
         <div className="flex items-center gap-2 truncate">
           <FolderKanban className="size-3.5 shrink-0 text-brand" />
           <span className="truncate font-medium text-foreground">
-            {isLoading ? "Loading..." : activeProject ? activeProject.name : "Select Project"}
+            {isLoading
+              ? "Loading..."
+              : activeProject
+                ? activeProject.name
+                : "Select Project"}
           </span>
           {activeProject && (
             <span
-              className={`rounded px-1.5 py-0.2 font-mono text-[10px] uppercase tracking-wide border ${
-                envColorMap[activeProject.environment] || "text-foreground-muted"
+              className={`py-0.2 rounded border px-1.5 font-mono text-[10px] tracking-wide uppercase ${
+                envColorMap[activeProject.environment] ||
+                "text-foreground-muted"
               }`}
             >
               {activeProject.environment.slice(0, 4)}
@@ -95,7 +114,7 @@ export function ProjectSwitcher() {
         className="w-72 border-border bg-surface-raised p-1 shadow-xl"
       >
         <DropdownMenuGroup>
-          <DropdownMenuLabel className="px-2 py-1.5 font-mono text-[11px] text-foreground-muted uppercase tracking-wider">
+          <DropdownMenuLabel className="px-2 py-1.5 font-mono text-[11px] tracking-wider text-foreground-muted uppercase">
             Projects & Target APIs
           </DropdownMenuLabel>
           {projects.map((project) => {
@@ -110,30 +129,35 @@ export function ProjectSwitcher() {
               >
                 <div className="flex flex-col truncate pr-2">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-foreground truncate">{project.name}</span>
+                    <span className="truncate font-medium text-foreground">
+                      {project.name}
+                    </span>
                     <span
-                      className={`rounded px-1 text-[9px] font-mono uppercase border ${
-                        envColorMap[project.environment] || "text-foreground-muted"
+                      className={`rounded border px-1 font-mono text-[9px] uppercase ${
+                        envColorMap[project.environment] ||
+                        "text-foreground-muted"
                       }`}
                     >
                       {project.environment}
                     </span>
                   </div>
-                  <div className="flex items-center gap-1.5 mt-0.5 text-[10px] text-foreground-subtle font-mono truncate">
+                  <div className="mt-0.5 flex items-center gap-1.5 truncate font-mono text-[10px] text-foreground-subtle">
                     {isVerified ? (
-                      <ShieldCheck className="size-3 text-success shrink-0" />
+                      <ShieldCheck className="size-3 shrink-0 text-success" />
                     ) : (
-                      <ShieldAlert className="size-3 text-sand shrink-0" />
+                      <ShieldAlert className="size-3 shrink-0 text-sand" />
                     )}
                     <span className="truncate">{project.base_url}</span>
                   </div>
                 </div>
-                {isSelected && <Check className="size-3.5 text-brand shrink-0" />}
+                {isSelected && (
+                  <Check className="size-3.5 shrink-0 text-brand" />
+                )}
               </DropdownMenuItem>
             )
           })}
         </DropdownMenuGroup>
-        <DropdownMenuSeparator className="bg-border-subtle my-1" />
+        <DropdownMenuSeparator className="my-1 bg-border-subtle" />
         <DropdownMenuItem
           onClick={() => setCreateProjectOpen(true)}
           className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-sand hover:bg-surface-hover hover:text-sand"

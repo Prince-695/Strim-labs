@@ -67,24 +67,29 @@ func main() {
   }
 
   return (
-    <section id="quickstart" className="scroll-mt-20 border-t border-border bg-background px-4 py-24 sm:px-6 lg:px-8">
+    <section
+      id="quickstart"
+      className="scroll-mt-20 border-t border-border bg-background px-4 py-24 sm:px-6 lg:px-8"
+    >
       <div className="mx-auto max-w-5xl">
         {/* Section Header */}
-        <div className="flex flex-col items-start gap-3 mb-10">
-          <div className="flex items-center gap-2 font-mono text-xs text-foreground-subtle uppercase tracking-wider">
+        <div className="mb-10 flex flex-col items-start gap-3">
+          <div className="flex items-center gap-2 font-mono text-xs tracking-wider text-foreground-subtle uppercase">
             <span className="text-brand">[06]</span>
             <span>QUICKSTART</span>
           </div>
-          <h2 className="font-mono text-2xl sm:text-3xl font-light text-foreground">
+          <h2 className="font-mono text-2xl font-light text-foreground sm:text-3xl">
             Start testing in 60 seconds.
           </h2>
           <p className="font-sans text-sm text-sand">
-            No complex setups or heavy dependencies. Install with a single command, run with Docker, or add automated performance checks directly to your CI/CD pipeline.
+            No complex setups or heavy dependencies. Install with a single
+            command, run with Docker, or add automated performance checks
+            directly to your CI/CD pipeline.
           </p>
         </div>
 
         {/* Multi-Tab Terminal Card */}
-        <div className="rounded-xl border border-border-subtle bg-surface-raised overflow-hidden shadow-2xl">
+        <div className="overflow-hidden rounded-xl border border-border-subtle bg-surface-raised shadow-2xl">
           {/* Terminal Tabs Bar */}
           <div className="flex items-center justify-between border-b border-border-subtle bg-background px-4 py-2">
             <div className="flex items-center gap-1 font-mono text-xs">
@@ -92,7 +97,7 @@ func main() {
                 onClick={() => setActiveTab("shell")}
                 className={`rounded px-3 py-1.5 transition-colors ${
                   activeTab === "shell"
-                    ? "bg-surface-hover text-foreground border border-border"
+                    ? "border border-border bg-surface-hover text-foreground"
                     : "text-foreground-muted hover:text-foreground"
                 }`}
               >
@@ -102,7 +107,7 @@ func main() {
                 onClick={() => setActiveTab("docker")}
                 className={`rounded px-3 py-1.5 transition-colors ${
                   activeTab === "docker"
-                    ? "bg-surface-hover text-foreground border border-border"
+                    ? "border border-border bg-surface-hover text-foreground"
                     : "text-foreground-muted hover:text-foreground"
                 }`}
               >
@@ -112,7 +117,7 @@ func main() {
                 onClick={() => setActiveTab("ci")}
                 className={`rounded px-3 py-1.5 transition-colors ${
                   activeTab === "ci"
-                    ? "bg-surface-hover text-foreground border border-border"
+                    ? "border border-border bg-surface-hover text-foreground"
                     : "text-foreground-muted hover:text-foreground"
                 }`}
               >
@@ -122,7 +127,7 @@ func main() {
                 onClick={() => setActiveTab("gosdk")}
                 className={`rounded px-3 py-1.5 transition-colors ${
                   activeTab === "gosdk"
-                    ? "bg-surface-hover text-foreground border border-border"
+                    ? "border border-border bg-surface-hover text-foreground"
                     : "text-foreground-muted hover:text-foreground"
                 }`}
               >
@@ -132,7 +137,7 @@ func main() {
 
             <button
               onClick={copySnippet}
-              className="flex items-center gap-1.5 rounded border border-border-subtle bg-surface-raised px-2.5 py-1 font-mono text-xs text-sand hover:border-border transition-colors"
+              className="flex items-center gap-1.5 rounded border border-border-subtle bg-surface-raised px-2.5 py-1 font-mono text-xs text-sand transition-colors hover:border-border"
             >
               {copied ? (
                 <>
@@ -149,14 +154,14 @@ func main() {
           </div>
 
           {/* Terminal Body */}
-          <div className="p-5 font-mono text-xs text-sand overflow-x-auto bg-surface-sunken">
+          <div className="overflow-x-auto bg-surface-sunken p-5 font-mono text-xs text-sand">
             <pre className="leading-relaxed">
               <code>{SNIPPETS[activeTab]}</code>
             </pre>
           </div>
 
           {/* Terminal Footer Info */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-border bg-surface px-4 py-2.5 font-mono text-[11px] text-foreground-subtle gap-2">
+          <div className="flex flex-col justify-between gap-2 border-t border-border bg-surface px-4 py-2.5 font-mono text-[11px] text-foreground-subtle sm:flex-row sm:items-center">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="size-3.5 text-success" />
               <span>Free and open source under Apache 2.0</span>

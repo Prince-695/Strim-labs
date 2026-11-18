@@ -1,8 +1,20 @@
 "use client"
 
 import * as React from "react"
-import { Activity, AlertTriangle, ShieldCheck, Server, AlertCircle } from "lucide-react"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import {
+  Activity,
+  AlertTriangle,
+  ShieldCheck,
+  Server,
+  AlertCircle,
+} from "lucide-react"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card"
 import { CornerCrosshairs } from "@/components/landing/corner-crosshairs"
 import type { LiveEndpointHealth } from "@/lib/loadtest-api"
 
@@ -62,49 +74,64 @@ export function LiveEndpointHealthMatrix({
   const hasData = endpointHealth.length > 0
 
   return (
-    <Card className="border-border bg-surface shadow-2xl relative overflow-hidden flex flex-col">
+    <Card className="relative flex flex-col overflow-hidden border-border bg-surface shadow-2xl">
       <CornerCrosshairs />
       <CardHeader className="border-b border-border-subtle pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-semibold font-heading text-foreground flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 font-heading text-sm font-semibold text-foreground">
             <Server className="size-4 text-brand" />
             <span>Real-Time Per-API Health Matrix</span>
           </CardTitle>
           <span className="font-mono text-[11px] text-foreground-subtle">
-            {endpointHealth.length} {endpointHealth.length === 1 ? "route under test" : "routes under test"}
+            {endpointHealth.length}{" "}
+            {endpointHealth.length === 1
+              ? "route under test"
+              : "routes under test"}
           </span>
         </div>
-        <CardDescription className="text-xs text-foreground-muted font-mono">
-          Live throughput, tail latency, error rate, and saturation breaking points per attacked route.
+        <CardDescription className="font-mono text-xs text-foreground-muted">
+          Live throughput, tail latency, error rate, and saturation breaking
+          points per attacked route.
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="p-0 flex-1 font-mono text-xs">
+      <CardContent className="flex-1 p-0 font-mono text-xs">
         {!hasData ? (
-          <div className="p-8 text-center space-y-2 text-foreground-subtle flex flex-col items-center justify-center h-full min-h-[300px]">
-            <Activity className="size-6 text-foreground-muted animate-pulse" />
-            <p className="text-xs text-foreground font-medium">
+          <div className="flex h-full min-h-[300px] flex-col items-center justify-center space-y-2 p-8 text-center text-foreground-subtle">
+            <Activity className="size-6 animate-pulse text-foreground-muted" />
+            <p className="text-xs font-medium text-foreground">
               {isRunning
                 ? "Collecting per-endpoint breakdown from runner stream..."
                 : "No per-endpoint breakdown available."}
             </p>
             {defaultTarget && (
               <p className="text-[11px] text-foreground-muted">
-                Targeted route: <strong className="text-sand">{defaultTarget.method} {defaultTarget.path}</strong>
+                Targeted route:{" "}
+                <strong className="text-sand">
+                  {defaultTarget.method} {defaultTarget.path}
+                </strong>
               </p>
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto h-[380px] overflow-y-auto">
+          <div className="h-[380px] overflow-x-auto overflow-y-auto">
             <table className="w-full text-left font-mono text-xs">
-              <thead className="sticky top-0 z-10 bg-surface border-b border-border-subtle">
+              <thead className="sticky top-0 z-10 border-b border-border-subtle bg-surface">
                 <tr className="text-[11px] text-foreground-subtle uppercase">
-                  <th className="py-2.5 px-3.5 font-semibold">Method</th>
-                  <th className="py-2.5 px-3.5 font-semibold">Path</th>
-                  <th className="py-2.5 px-3.5 font-semibold text-right">RPS</th>
-                  <th className="py-2.5 px-3.5 font-semibold text-right">p95 Latency</th>
-                  <th className="py-2.5 px-3.5 font-semibold text-right">Error %</th>
-                  <th className="py-2.5 px-3.5 font-semibold text-right">Status</th>
+                  <th className="px-3.5 py-2.5 font-semibold">Method</th>
+                  <th className="px-3.5 py-2.5 font-semibold">Path</th>
+                  <th className="px-3.5 py-2.5 text-right font-semibold">
+                    RPS
+                  </th>
+                  <th className="px-3.5 py-2.5 text-right font-semibold">
+                    p95 Latency
+                  </th>
+                  <th className="px-3.5 py-2.5 text-right font-semibold">
+                    Error %
+                  </th>
+                  <th className="px-3.5 py-2.5 text-right font-semibold">
+                    Status
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-subtle">
@@ -115,61 +142,70 @@ export function LiveEndpointHealthMatrix({
                   return (
                     <tr
                       key={`${ep.method}-${ep.path}-${idx}`}
-                      className="hover:bg-surface-raised/40 transition-colors"
+                      className="transition-colors hover:bg-surface-raised/40"
                     >
                       {/* Method */}
-                      <td className="py-2.5 px-3.5 whitespace-nowrap">
+                      <td className="px-3.5 py-2.5 whitespace-nowrap">
                         <span
-                          className={`rounded px-1.5 py-0.5 text-[10px] font-bold uppercase border ${methodStyle}`}
+                          className={`rounded border px-1.5 py-0.5 text-[10px] font-bold uppercase ${methodStyle}`}
                         >
                           {ep.method}
                         </span>
                       </td>
 
                       {/* Path & Breaking Warning */}
-                      <td className="py-2.5 px-3.5 max-w-[220px]">
+                      <td className="max-w-[220px] px-3.5 py-2.5">
                         <div className="space-y-1">
-                          <span className="text-foreground font-medium truncate block" title={ep.path}>
+                          <span
+                            className="block truncate font-medium text-foreground"
+                            title={ep.path}
+                          >
                             {ep.path}
                           </span>
-                          {ep.first_broke_at_rps && ep.first_broke_at_rps > 0 ? (
+                          {ep.first_broke_at_rps &&
+                          ep.first_broke_at_rps > 0 ? (
                             <span className="inline-flex items-center gap-1 rounded border border-danger/40 bg-danger/15 px-1.5 py-0.5 text-[10px] font-bold text-danger">
                               <AlertTriangle className="size-2.5 shrink-0" />
-                              <span>Cracked at {ep.first_broke_at_rps.toFixed(0)} RPS</span>
+                              <span>
+                                Cracked at {ep.first_broke_at_rps.toFixed(0)}{" "}
+                                RPS
+                              </span>
                             </span>
                           ) : null}
                         </div>
                       </td>
 
                       {/* Current RPS */}
-                      <td className="py-2.5 px-3.5 text-right font-semibold text-foreground whitespace-nowrap">
+                      <td className="px-3.5 py-2.5 text-right font-semibold whitespace-nowrap text-foreground">
                         {ep.current_rps ? ep.current_rps.toFixed(1) : "0.0"}
                       </td>
 
                       {/* p95 Latency */}
-                      <td className="py-2.5 px-3.5 text-right whitespace-nowrap">
+                      <td className="px-3.5 py-2.5 text-right whitespace-nowrap">
                         <span
                           className={`font-semibold ${
                             ep.p95_latency_ms > 1000
                               ? "text-danger"
                               : ep.p95_latency_ms > 400
-                              ? "text-warning"
-                              : "text-sand"
+                                ? "text-warning"
+                                : "text-sand"
                           }`}
                         >
-                          {ep.p95_latency_ms ? `${ep.p95_latency_ms.toFixed(1)}ms` : "—"}
+                          {ep.p95_latency_ms
+                            ? `${ep.p95_latency_ms.toFixed(1)}ms`
+                            : "—"}
                         </span>
                       </td>
 
                       {/* Error % */}
-                      <td className="py-2.5 px-3.5 text-right whitespace-nowrap">
+                      <td className="px-3.5 py-2.5 text-right whitespace-nowrap">
                         <span
                           className={`font-semibold ${
                             ep.error_rate > 0.05
                               ? "text-danger"
                               : ep.error_rate > 0
-                              ? "text-warning"
-                              : "text-success"
+                                ? "text-warning"
+                                : "text-success"
                           }`}
                         >
                           {(ep.error_rate * 100).toFixed(1)}%
@@ -177,9 +213,9 @@ export function LiveEndpointHealthMatrix({
                       </td>
 
                       {/* Status Badge */}
-                      <td className="py-2.5 px-3.5 text-right whitespace-nowrap">
+                      <td className="px-3.5 py-2.5 text-right whitespace-nowrap">
                         <span
-                          className={`rounded border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${healthBadge.className}`}
+                          className={`rounded border px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase ${healthBadge.className}`}
                         >
                           {healthBadge.label}
                         </span>

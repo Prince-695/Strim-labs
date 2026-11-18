@@ -37,7 +37,9 @@ export function UserMenuDropdown() {
 
   const displayName = user?.first_name
     ? `${user.first_name} ${user.last_name || ""}`.trim()
-    : user?.username ? `@${user.username}` : "Developer Account"
+    : user?.username
+      ? `@${user.username}`
+      : "Developer Account"
 
   return (
     <DropdownMenu>
@@ -46,11 +48,11 @@ export function UserMenuDropdown() {
           <button
             type="button"
             aria-label="User navigation menu"
-            className="flex items-center gap-1.5 rounded-full p-1 hover:bg-surface-raised transition-all focus:outline-none focus:ring-1 focus:ring-brand"
+            className="flex items-center gap-1.5 rounded-full p-1 transition-all hover:bg-surface-raised focus:ring-1 focus:ring-brand focus:outline-none"
           />
         }
       >
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-raised border border-border text-foreground text-xs font-mono font-bold shadow-xs">
+        <div className="flex size-8 shrink-0 items-center justify-center rounded-full border border-border bg-surface-raised font-mono text-xs font-bold text-foreground shadow-xs">
           {initials}
         </div>
         <ChevronDown className="size-3 text-foreground-subtle" />
@@ -59,14 +61,14 @@ export function UserMenuDropdown() {
       <DropdownMenuContent
         align="end"
         sideOffset={6}
-        className="w-56 border border-border bg-surface p-1 shadow-2xl font-mono text-xs rounded-xl"
+        className="w-56 rounded-xl border border-border bg-surface p-1 font-mono text-xs shadow-2xl"
       >
         {/* User Identity Header */}
-        <div className="px-3 py-2 border-b border-border-subtle">
-          <p className="text-xs font-bold text-foreground font-heading truncate">
+        <div className="border-b border-border-subtle px-3 py-2">
+          <p className="truncate font-heading text-xs font-bold text-foreground">
             {displayName}
           </p>
-          <p className="text-[10px] text-foreground-subtle truncate mt-0.5">
+          <p className="mt-0.5 truncate text-[10px] text-foreground-subtle">
             {user?.email || (user?.username ? `@${user.username}` : "")}
           </p>
         </div>
@@ -75,7 +77,7 @@ export function UserMenuDropdown() {
         <DropdownMenuGroup className="py-1">
           <DropdownMenuItem
             onClick={() => router.push("/dashboard/settings/profile")}
-            className="flex items-center gap-2.5 px-3 py-2 cursor-pointer text-xs rounded-lg hover:bg-surface-raised hover:text-foreground text-foreground-muted transition-colors"
+            className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-foreground-muted transition-colors hover:bg-surface-raised hover:text-foreground"
           >
             <User className="size-4 text-foreground-subtle" />
             <span>Profile Settings</span>
@@ -83,20 +85,20 @@ export function UserMenuDropdown() {
 
           <DropdownMenuItem
             onClick={() => router.push("/dashboard/settings/organization")}
-            className="flex items-center gap-2.5 px-3 py-2 cursor-pointer text-xs rounded-lg hover:bg-surface-raised hover:text-foreground text-foreground-muted transition-colors"
+            className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-foreground-muted transition-colors hover:bg-surface-raised hover:text-foreground"
           >
             <Building className="size-4 text-foreground-subtle" />
             <span>Org Settings</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
 
-        <DropdownMenuSeparator className="bg-border-subtle my-1" />
+        <DropdownMenuSeparator className="my-1 bg-border-subtle" />
 
         {/* Sign Out */}
         <DropdownMenuGroup>
           <DropdownMenuItem
             onClick={logout}
-            className="flex items-center gap-2.5 px-3 py-2 cursor-pointer text-xs rounded-lg hover:bg-danger/10 hover:text-danger text-danger/90 transition-colors"
+            className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-danger/90 transition-colors hover:bg-danger/10 hover:text-danger"
           >
             <LogOut className="size-4 text-danger" />
             <span className="font-semibold">Sign Out</span>

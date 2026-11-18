@@ -30,10 +30,12 @@ export const useUIStore = create<UIState>()(
       setCurrentOrgId: (currentOrgId) => set({ currentOrgId }),
       setProjectId: (currentProjectId) => set({ currentProjectId }),
       setCurrentProjectId: (currentProjectId) => set({ currentProjectId }),
-      toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+      toggleSidebar: () =>
+        set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
       setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
       setMobileNavOpen: (mobileNavOpen) => set({ mobileNavOpen }),
-      setCreateProjectOpen: (isCreateProjectOpen) => set({ isCreateProjectOpen }),
+      setCreateProjectOpen: (isCreateProjectOpen) =>
+        set({ isCreateProjectOpen }),
     }),
     {
       name: "strim_ui_preferences",

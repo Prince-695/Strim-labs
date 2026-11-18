@@ -77,7 +77,7 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        "sticky top-0 z-40 hidden h-screen max-h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar transition-all duration-200 md:flex overflow-hidden",
+        "sticky top-0 z-40 hidden h-screen max-h-screen shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar transition-all duration-200 md:flex",
         sidebarCollapsed ? "w-[68px]" : "w-[250px]"
       )}
     >
@@ -94,7 +94,7 @@ export function AppSidebar() {
           title={sidebarCollapsed ? "Strim Labs" : undefined}
         >
           {/* Logo Glyph */}
-          <div className="size-8 shrink-0 flex items-center justify-center">
+          <div className="flex size-8 shrink-0 items-center justify-center">
             <Image
               src="/logo.png"
               alt="Strim Labs Logo"
@@ -122,11 +122,11 @@ export function AppSidebar() {
       )}
 
       {/* Navigation Links (Scrollable only if items overflow height) */}
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-2 py-3 space-y-6">
+      <div className="min-h-0 flex-1 space-y-6 overflow-x-hidden overflow-y-auto px-2 py-3">
         {navSections.map((section) => (
           <div key={section.title} className="space-y-1">
             {!sidebarCollapsed && (
-              <h4 className="px-2 pb-1 font-mono text-[10px] font-semibold text-foreground-subtle uppercase tracking-wider">
+              <h4 className="px-2 pb-1 font-mono text-[10px] font-semibold tracking-wider text-foreground-subtle uppercase">
                 {section.title}
               </h4>
             )}
@@ -145,7 +145,7 @@ export function AppSidebar() {
                     className={cn(
                       "flex items-center gap-3 rounded-md px-2.5 py-1.5 text-xs font-medium transition-colors",
                       isActive
-                        ? "bg-brand-subtle text-foreground border border-brand/30 shadow-xs font-semibold [&_svg]:text-brand"
+                        ? "border border-brand/30 bg-brand-subtle font-semibold text-foreground shadow-xs [&_svg]:text-brand"
                         : "text-foreground-muted hover:bg-surface-raised hover:text-foreground [&_svg]:text-foreground-subtle hover:[&_svg]:text-foreground",
                       sidebarCollapsed && "justify-center px-0 py-2"
                     )}
@@ -155,7 +155,7 @@ export function AppSidebar() {
                       <span className="truncate">{item.title}</span>
                     )}
                     {!sidebarCollapsed && item.badge && (
-                      <span className="ml-auto rounded bg-brand/20 px-1.5 py-0.2 font-mono text-[10px] text-brand">
+                      <span className="py-0.2 ml-auto rounded bg-brand/20 px-1.5 font-mono text-[10px] text-brand">
                         {item.badge}
                       </span>
                     )}
@@ -168,13 +168,13 @@ export function AppSidebar() {
       </div>
 
       {/* Sidebar Footer: Fixed Sign Out Button at Bottom */}
-      <div className="shrink-0 mt-auto border-t border-sidebar-border p-2 bg-sidebar">
+      <div className="mt-auto shrink-0 border-t border-sidebar-border bg-sidebar p-2">
         {!sidebarCollapsed ? (
           <Button
             variant="ghost"
             size="sm"
             onClick={logout}
-            className="w-full text-foreground-subtle hover:text-danger hover:bg-danger/10 text-xs font-mono justify-start gap-2.5 px-3 transition-colors"
+            className="w-full justify-start gap-2.5 px-3 font-mono text-xs text-foreground-subtle transition-colors hover:bg-danger/10 hover:text-danger"
           >
             <LogOut className="size-4 text-danger" />
             <span>Sign Out</span>
@@ -185,7 +185,7 @@ export function AppSidebar() {
             size="icon"
             onClick={logout}
             title="Sign Out"
-            className="size-9 mx-auto flex text-foreground-subtle hover:text-danger hover:bg-danger/10 transition-colors"
+            className="mx-auto flex size-9 text-foreground-subtle transition-colors hover:bg-danger/10 hover:text-danger"
           >
             <LogOut className="size-4 text-danger" />
           </Button>

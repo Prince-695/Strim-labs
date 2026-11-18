@@ -13,7 +13,7 @@ import { Footer } from "@/components/landing/footer"
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-brand/30 selection:text-foreground">
+    <div className="flex min-h-screen flex-col bg-background text-foreground selection:bg-brand/30 selection:text-foreground">
       <Navbar />
       <main className="flex-1">
         <Hero />

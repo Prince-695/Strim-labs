@@ -2,7 +2,13 @@
 
 import * as React from "react"
 import { Activity, Clock } from "lucide-react"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { CornerCrosshairs } from "@/components/landing/corner-crosshairs"
 import type { TimeseriesPoint } from "@/lib/metrics-api"
@@ -29,7 +35,10 @@ export function TimeseriesChart({
   // Filter valid numeric points
   const validPoints = React.useMemo(() => {
     return points
-      .filter((p) => p.value !== null && p.value !== undefined && !isNaN(Number(p.value)))
+      .filter(
+        (p) =>
+          p.value !== null && p.value !== undefined && !isNaN(Number(p.value))
+      )
       .map((p) => ({
         timestamp: p.timestamp,
         value: Number(p.value),
@@ -46,10 +55,10 @@ export function TimeseriesChart({
     color === "amber"
       ? "var(--color-amber-500, #f59e0b)"
       : color === "emerald"
-      ? "var(--color-emerald-500, #10b981)"
-      : color === "purple"
-      ? "var(--color-purple-500, #a855f7)"
-      : "var(--brand, #c9510c)"
+        ? "var(--color-emerald-500, #10b981)"
+        : color === "purple"
+          ? "var(--color-purple-500, #a855f7)"
+          : "var(--brand, #c9510c)"
 
   const values = validPoints.map((p) => p.value)
   const maxValue = values.length > 0 ? Math.max(1, ...values) * 1.15 : 10
@@ -58,11 +67,23 @@ export function TimeseriesChart({
   const pathD = React.useMemo(() => {
     if (validPoints.length === 0) return ""
     return validPoints.reduce((acc, pt, idx) => {
-      const x = padding.left + (idx / Math.max(1, validPoints.length - 1)) * chartWidth
-      const y = padding.top + chartHeight - ((pt.value - minValue) / (maxValue - minValue)) * chartHeight
+      const x =
+        padding.left + (idx / Math.max(1, validPoints.length - 1)) * chartWidth
+      const y =
+        padding.top +
+        chartHeight -
+        ((pt.value - minValue) / (maxValue - minValue)) * chartHeight
       return `${acc} ${idx === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`
     }, "")
-  }, [validPoints, maxValue, minValue, chartWidth, chartHeight, padding.left, padding.top])
+  }, [
+    validPoints,
+    maxValue,
+    minValue,
+    chartWidth,
+    chartHeight,
+    padding.left,
+    padding.top,
+  ])
 
   const areaD = React.useMemo(() => {
     if (validPoints.length === 0 || !pathD) return ""
@@ -70,7 +91,14 @@ export function TimeseriesChart({
     const lastX = padding.left + chartWidth
     const baseY = padding.top + chartHeight
     return `${pathD} L ${lastX.toFixed(1)} ${baseY.toFixed(1)} L ${firstX.toFixed(1)} ${baseY.toFixed(1)} Z`
-  }, [pathD, chartWidth, chartHeight, padding.left, padding.top, validPoints.length])
+  }, [
+    pathD,
+    chartWidth,
+    chartHeight,
+    padding.left,
+    padding.top,
+    validPoints.length,
+  ])
 
   // Timestamps format helper
   const formatTime = (tsStr?: string) => {
@@ -86,24 +114,27 @@ export function TimeseriesChart({
     }
   }
 
-  const startTimeStr = validPoints[0]?.timestamp ? formatTime(validPoints[0].timestamp) : "T - " + selectedRange
+  const startTimeStr = validPoints[0]?.timestamp
+    ? formatTime(validPoints[0].timestamp)
+    : "T - " + selectedRange
   const endTimeStr = validPoints[validPoints.length - 1]?.timestamp
     ? formatTime(validPoints[validPoints.length - 1].timestamp)
     : "Now"
 
   const latestVal = values.length > 0 ? values[values.length - 1] : null
-  const avgVal = values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : null
+  const avgVal =
+    values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : null
 
   return (
-    <Card className="border-border bg-surface shadow-xs relative overflow-hidden flex flex-col font-mono">
+    <Card className="relative flex flex-col overflow-hidden border-border bg-surface font-mono shadow-xs">
       <CornerCrosshairs />
-      <CardHeader className="pb-3 border-b border-border-subtle flex flex-row items-start justify-between">
+      <CardHeader className="flex flex-row items-start justify-between border-b border-border-subtle pb-3">
         <div>
-          <CardTitle className="text-sm font-semibold font-heading text-foreground flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 font-heading text-sm font-semibold text-foreground">
             <Activity className="size-4 text-brand" />
             <span>{title}</span>
           </CardTitle>
-          <CardDescription className="text-xs text-foreground-muted font-mono mt-0.5">
+          <CardDescription className="mt-0.5 font-mono text-xs text-foreground-muted">
             {description}
           </CardDescription>
         </div>
@@ -111,7 +142,10 @@ export function TimeseriesChart({
         {latestVal !== null && (
           <div className="text-right">
             <span className="text-lg font-bold text-foreground">
-              {latestVal.toFixed(1)} <span className="text-xs font-normal text-foreground-muted">{unit}</span>
+              {latestVal.toFixed(1)}{" "}
+              <span className="text-xs font-normal text-foreground-muted">
+                {unit}
+              </span>
             </span>
             {avgVal !== null && (
               <span className="block text-[10px] text-foreground-subtle">
@@ -122,26 +156,46 @@ export function TimeseriesChart({
         )}
       </CardHeader>
 
-      <CardContent className="pt-4 flex-1">
+      <CardContent className="flex-1 pt-4">
         {isLoading ? (
-          <div className="h-[180px] flex items-center justify-center">
+          <div className="flex h-[180px] items-center justify-center">
             <Skeleton className="h-full w-full rounded-lg" />
           </div>
         ) : validPoints.length === 0 ? (
-          <div className="h-[180px] flex flex-col items-center justify-center text-center p-4 border border-dashed border-border-subtle rounded-lg text-foreground-muted text-xs">
-            <Clock className="size-6 text-foreground-subtle mb-1.5" />
-            <p className="text-foreground">No timeseries telemetry in this window</p>
-            <p className="text-[11px] text-foreground-subtle mt-0.5">
-              Traffic metrics will plot automatically as requests flow through the service.
+          <div className="flex h-[180px] flex-col items-center justify-center rounded-lg border border-dashed border-border-subtle p-4 text-center text-xs text-foreground-muted">
+            <Clock className="mb-1.5 size-6 text-foreground-subtle" />
+            <p className="text-foreground">
+              No timeseries telemetry in this window
+            </p>
+            <p className="mt-0.5 text-[11px] text-foreground-subtle">
+              Traffic metrics will plot automatically as requests flow through
+              the service.
             </p>
           </div>
         ) : (
           <div className="relative w-full">
-            <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-auto overflow-visible select-none">
+            <svg
+              viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+              className="h-auto w-full overflow-visible select-none"
+            >
               <defs>
-                <linearGradient id={`grad-${color}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={strokeColor} stopOpacity="0.25" />
-                  <stop offset="100%" stopColor={strokeColor} stopOpacity="0.0" />
+                <linearGradient
+                  id={`grad-${color}`}
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
+                  <stop
+                    offset="0%"
+                    stopColor={strokeColor}
+                    stopOpacity="0.25"
+                  />
+                  <stop
+                    offset="100%"
+                    stopColor={strokeColor}
+                    stopOpacity="0.0"
+                  />
                 </linearGradient>
               </defs>
 
@@ -191,9 +245,11 @@ export function TimeseriesChart({
             </svg>
 
             {/* Time Axis Bounds */}
-            <div className="flex justify-between items-center pt-2 font-mono text-[10px] text-foreground-subtle border-t border-border-subtle/50">
+            <div className="flex items-center justify-between border-t border-border-subtle/50 pt-2 font-mono text-[10px] text-foreground-subtle">
               <span>{startTimeStr}</span>
-              <span className="text-sand uppercase">{selectedRange} Window</span>
+              <span className="text-sand uppercase">
+                {selectedRange} Window
+              </span>
               <span>{endTimeStr}</span>
             </div>
           </div>

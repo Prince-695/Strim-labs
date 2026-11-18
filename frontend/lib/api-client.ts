@@ -22,7 +22,13 @@ export class ApiError extends Error {
   details?: unknown
   requestId?: string
 
-  constructor(status: number, message: string, code = "UNKNOWN_ERROR", details?: unknown, requestId?: string) {
+  constructor(
+    status: number,
+    message: string,
+    code = "UNKNOWN_ERROR",
+    details?: unknown,
+    requestId?: string
+  ) {
     super(message)
     this.name = "ApiError"
     this.status = status
@@ -46,7 +52,9 @@ export const tokenStorage = {
       return local
     }
     // Fallback to cookie if localStorage is empty
-    const match = document.cookie.match(new RegExp(`(^|;\\s*)${TOKEN_KEY}=([^;]+)`))
+    const match = document.cookie.match(
+      new RegExp(`(^|;\\s*)${TOKEN_KEY}=([^;]+)`)
+    )
     if (match) {
       const cookieVal = decodeURIComponent(match[2])
       localStorage.setItem(TOKEN_KEY, cookieVal)
@@ -68,18 +76,26 @@ export const tokenStorage = {
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ||
-  process.env.NEXT_API_BASE_URL || "http://localhost:8080/v1"
+  process.env.NEXT_API_BASE_URL ||
+  "http://localhost:8080/v1"
 
 interface RequestOptions extends Omit<RequestInit, "body"> {
   params?: Record<string, string | number | boolean | undefined | null>
   body?: unknown
 }
 
-async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<ApiResponse<T>> {
+async function request<T>(
+  endpoint: string,
+  options: RequestOptions = {}
+): Promise<ApiResponse<T>> {
   const { params, body, headers: customHeaders, ...customConfig } = options
 
   // Build full URL with query parameters
-  const url = new URL(endpoint.startsWith("http") ? endpoint : `${API_BASE_URL.replace(/\/+$/, "")}/${endpoint.replace(/^\/+/, "")}`)
+  const url = new URL(
+    endpoint.startsWith("http")
+      ? endpoint
+      : `${API_BASE_URL.replace(/\/+$/, "")}/${endpoint.replace(/^\/+/, "")}`
+  )
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       if (value !== undefined && value !== null && value !== "") {
@@ -102,12 +118,19 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
     ...customConfig,
     headers,
     credentials: "include",
-    body: body instanceof FormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
+    body:
+      body instanceof FormData
+        ? body
+        : body !== undefined
+          ? JSON.stringify(body)
+          : undefined,
   }
 
   try {
     const response = await fetch(url.toString(), config)
-    const isJson = response.headers.get("content-type")?.includes("application/json")
+    const isJson = response.headers
+      .get("content-type")
+      ?.includes("application/json")
     const payload = isJson ? await response.json() : null
 
     if (!response.ok) {
@@ -121,9 +144,18 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
           window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`
         }
       }
-      const message = payload?.error || payload?.message || `Request failed with status ${response.status}`
+      const message =
+        payload?.error ||
+        payload?.message ||
+        `Request failed with status ${response.status}`
       const code = payload?.error_code || "REQUEST_FAILED"
-      throw new ApiError(response.status, message, code, payload?.details, payload?.request_id)
+      throw new ApiError(
+        response.status,
+        message,
+        code,
+        payload?.details,
+        payload?.request_id
+      )
     }
 
     return payload as ApiResponse<T>
@@ -131,7 +163,8 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
     if (err instanceof ApiError) {
       throw err
     }
-    const message = err instanceof Error ? err.message : "Network error occurred"
+    const message =
+      err instanceof Error ? err.message : "Network error occurred"
     throw new ApiError(0, message, "NETWORK_ERROR")
   }
 }

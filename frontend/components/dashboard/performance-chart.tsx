@@ -35,9 +35,16 @@ const MIN_VALUE = 0
 export function PerformanceChart({ orgId, projectId }: PerformanceChartProps) {
   const [metric, setMetric] = React.useState<MetricType>("rps")
   const [range, setRange] = React.useState<RangeType>("1h")
-  const [hoveredPoint, setHoveredPoint] = React.useState<{ x: number; y: number; time: string; value: number } | null>(null)
+  const [hoveredPoint, setHoveredPoint] = React.useState<{
+    x: number
+    y: number
+    time: string
+    value: number
+  } | null>(null)
 
-  const { data: timeseriesResponse, isLoading } = useQuery<ApiResponse<TimeseriesResponse>>({
+  const { data: timeseriesResponse, isLoading } = useQuery<
+    ApiResponse<TimeseriesResponse>
+  >({
     queryKey: ["metrics_timeseries", orgId, projectId, metric, range],
     queryFn: async () => {
       return api.get<TimeseriesResponse>(
@@ -53,7 +60,10 @@ export function PerformanceChart({ orgId, projectId }: PerformanceChartProps) {
     return raw
       .map(([ts, val]) => ({
         timestamp: new Date(ts),
-        timeString: new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        timeString: new Date(ts).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
         value: val !== null ? val : 0,
         isNull: val === null,
       }))
@@ -72,7 +82,11 @@ export function PerformanceChart({ orgId, projectId }: PerformanceChartProps) {
   }, [])
 
   const getY = React.useCallback((val: number, max: number) => {
-    return PADDING.top + CHART_HEIGHT - ((val - MIN_VALUE) / (max - MIN_VALUE)) * CHART_HEIGHT
+    return (
+      PADDING.top +
+      CHART_HEIGHT -
+      ((val - MIN_VALUE) / (max - MIN_VALUE)) * CHART_HEIGHT
+    )
   }, [])
 
   // Build SVG path
@@ -94,22 +108,42 @@ export function PerformanceChart({ orgId, projectId }: PerformanceChartProps) {
   }, [pathD, points.length, getX])
 
   const metricMeta = {
-    rps: { label: "Throughput (RPS)", stroke: "var(--brand)", fill: "url(#gradient-blue)", unit: "RPS" },
-    p95: { label: "P95 Tail Latency", stroke: "var(--warning)", fill: "url(#gradient-amber)", unit: "ms" },
-    error_rate: { label: "Error Rate", stroke: "var(--danger)", fill: "url(#gradient-red)", unit: "%" },
-    requests: { label: "Total Requests", stroke: "var(--success)", fill: "url(#gradient-green)", unit: "reqs" },
+    rps: {
+      label: "Throughput (RPS)",
+      stroke: "var(--brand)",
+      fill: "url(#gradient-blue)",
+      unit: "RPS",
+    },
+    p95: {
+      label: "P95 Tail Latency",
+      stroke: "var(--warning)",
+      fill: "url(#gradient-amber)",
+      unit: "ms",
+    },
+    error_rate: {
+      label: "Error Rate",
+      stroke: "var(--danger)",
+      fill: "url(#gradient-red)",
+      unit: "%",
+    },
+    requests: {
+      label: "Total Requests",
+      stroke: "var(--success)",
+      fill: "url(#gradient-green)",
+      unit: "reqs",
+    },
   }[metric]
 
   return (
     <Card className="border-border bg-surface shadow-xs">
-      <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border-subtle">
+      <CardHeader className="flex flex-col justify-between gap-4 border-b border-border-subtle pb-4 sm:flex-row sm:items-center">
         <div className="flex items-center gap-2.5">
           <ChartIcon className="size-4 text-brand" />
           <div>
-            <CardTitle className="text-sm font-semibold font-heading text-foreground">
+            <CardTitle className="font-heading text-sm font-semibold text-foreground">
               Performance Trend
             </CardTitle>
-            <p className="text-xs text-foreground-muted font-mono">
+            <p className="font-mono text-xs text-foreground-muted">
               Observed {metricMeta.label} over {range}
             </p>
           </div>
@@ -122,7 +156,9 @@ export function PerformanceChart({ orgId, projectId }: PerformanceChartProps) {
             <button
               onClick={() => setMetric("rps")}
               className={`rounded px-2.5 py-1 transition-colors ${
-                metric === "rps" ? "bg-brand text-white font-medium" : "text-foreground-muted hover:text-foreground"
+                metric === "rps"
+                  ? "bg-brand font-medium text-white"
+                  : "text-foreground-muted hover:text-foreground"
               }`}
             >
               RPS
@@ -130,7 +166,9 @@ export function PerformanceChart({ orgId, projectId }: PerformanceChartProps) {
             <button
               onClick={() => setMetric("p95")}
               className={`rounded px-2.5 py-1 transition-colors ${
-                metric === "p95" ? "bg-warning text-black font-medium" : "text-foreground-muted hover:text-foreground"
+                metric === "p95"
+                  ? "bg-warning font-medium text-black"
+                  : "text-foreground-muted hover:text-foreground"
               }`}
             >
               P95
@@ -138,7 +176,9 @@ export function PerformanceChart({ orgId, projectId }: PerformanceChartProps) {
             <button
               onClick={() => setMetric("error_rate")}
               className={`rounded px-2.5 py-1 transition-colors ${
-                metric === "error_rate" ? "bg-danger text-white font-medium" : "text-foreground-muted hover:text-foreground"
+                metric === "error_rate"
+                  ? "bg-danger font-medium text-white"
+                  : "text-foreground-muted hover:text-foreground"
               }`}
             >
               Errors
@@ -152,7 +192,9 @@ export function PerformanceChart({ orgId, projectId }: PerformanceChartProps) {
                 key={r}
                 onClick={() => setRange(r)}
                 className={`rounded px-2 py-1 transition-colors ${
-                  range === r ? "bg-surface text-sand font-medium" : "text-foreground-subtle hover:text-foreground"
+                  range === r
+                    ? "bg-surface font-medium text-sand"
+                    : "text-foreground-subtle hover:text-foreground"
                 }`}
               >
                 {r}
@@ -164,40 +206,75 @@ export function PerformanceChart({ orgId, projectId }: PerformanceChartProps) {
 
       <CardContent className="pt-6">
         {isLoading ? (
-          <div className="h-[220px] flex items-center justify-center">
+          <div className="flex h-[220px] items-center justify-center">
             <Skeleton className="h-full w-full" />
           </div>
         ) : points.length === 0 ? (
-          <div className="h-[220px] flex flex-col items-center justify-center text-center p-6 border border-dashed border-border-subtle rounded-lg">
-            <Info className="size-6 text-foreground-subtle mb-2" />
-            <p className="text-sm font-medium text-foreground">No Timeseries Data</p>
-            <p className="text-xs text-foreground-muted mt-1 max-w-sm">
-              Telemetry has not been recorded for this project in the selected {range} window.
+          <div className="flex h-[220px] flex-col items-center justify-center rounded-lg border border-dashed border-border-subtle p-6 text-center">
+            <Info className="mb-2 size-6 text-foreground-subtle" />
+            <p className="text-sm font-medium text-foreground">
+              No Timeseries Data
+            </p>
+            <p className="mt-1 max-w-sm text-xs text-foreground-muted">
+              Telemetry has not been recorded for this project in the selected{" "}
+              {range} window.
             </p>
           </div>
         ) : (
           <div className="relative w-full overflow-hidden">
             <svg
               viewBox={`0 0 ${SVG_WIDTH} ${SVG_HEIGHT}`}
-              className="w-full h-auto overflow-visible select-none"
+              className="h-auto w-full overflow-visible select-none"
               onMouseLeave={() => setHoveredPoint(null)}
             >
               <defs>
                 <linearGradient id="gradient-blue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--brand)" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="var(--brand)" stopOpacity="0.0" />
+                  <stop
+                    offset="0%"
+                    stopColor="var(--brand)"
+                    stopOpacity="0.3"
+                  />
+                  <stop
+                    offset="100%"
+                    stopColor="var(--brand)"
+                    stopOpacity="0.0"
+                  />
                 </linearGradient>
                 <linearGradient id="gradient-amber" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--warning)" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="var(--warning)" stopOpacity="0.0" />
+                  <stop
+                    offset="0%"
+                    stopColor="var(--warning)"
+                    stopOpacity="0.3"
+                  />
+                  <stop
+                    offset="100%"
+                    stopColor="var(--warning)"
+                    stopOpacity="0.0"
+                  />
                 </linearGradient>
                 <linearGradient id="gradient-red" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--danger)" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="var(--danger)" stopOpacity="0.0" />
+                  <stop
+                    offset="0%"
+                    stopColor="var(--danger)"
+                    stopOpacity="0.3"
+                  />
+                  <stop
+                    offset="100%"
+                    stopColor="var(--danger)"
+                    stopOpacity="0.0"
+                  />
                 </linearGradient>
                 <linearGradient id="gradient-green" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--success)" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="var(--success)" stopOpacity="0.0" />
+                  <stop
+                    offset="0%"
+                    stopColor="var(--success)"
+                    stopOpacity="0.3"
+                  />
+                  <stop
+                    offset="100%"
+                    stopColor="var(--success)"
+                    stopOpacity="0.0"
+                  />
                 </linearGradient>
               </defs>
 
@@ -224,7 +301,9 @@ export function PerformanceChart({ orgId, projectId }: PerformanceChartProps) {
                       fontFamily="monospace"
                       textAnchor="end"
                     >
-                      {metric === "error_rate" ? `${(val * 100).toFixed(1)}%` : val.toFixed(0)}
+                      {metric === "error_rate"
+                        ? `${(val * 100).toFixed(1)}%`
+                        : val.toFixed(0)}
                     </text>
                   </g>
                 )
@@ -253,7 +332,11 @@ export function PerformanceChart({ orgId, projectId }: PerformanceChartProps) {
                     cx={x}
                     cy={y}
                     r={hoveredPoint?.time === point.timeString ? 5 : 3}
-                    fill={hoveredPoint?.time === point.timeString ? "var(--foreground)" : metricMeta.stroke}
+                    fill={
+                      hoveredPoint?.time === point.timeString
+                        ? "var(--foreground)"
+                        : metricMeta.stroke
+                    }
                     className="cursor-pointer transition-all"
                     onMouseEnter={() =>
                       setHoveredPoint({
@@ -296,19 +379,23 @@ export function PerformanceChart({ orgId, projectId }: PerformanceChartProps) {
             {/* Hover Tooltip Overlay */}
             {hoveredPoint && (
               <div
-                className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full rounded-md border border-border bg-surface-raised px-2.5 py-1.5 shadow-xl font-mono text-xs"
+                className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-full rounded-md border border-border bg-surface-raised px-2.5 py-1.5 font-mono text-xs shadow-xl"
                 style={{
                   left: `${(hoveredPoint.x / SVG_WIDTH) * 100}%`,
                   top: `${(hoveredPoint.y / SVG_HEIGHT) * 100}%`,
                   transform: "translate(-50%, -120%)",
                 }}
               >
-                <p className="text-[10px] text-foreground-subtle">{hoveredPoint.time}</p>
+                <p className="text-[10px] text-foreground-subtle">
+                  {hoveredPoint.time}
+                </p>
                 <p className="font-bold text-foreground">
                   {metric === "error_rate"
                     ? `${(hoveredPoint.value * 100).toFixed(2)}%`
                     : hoveredPoint.value.toFixed(1)}{" "}
-                  <span className="font-normal text-sand">{metricMeta.unit}</span>
+                  <span className="font-normal text-sand">
+                    {metricMeta.unit}
+                  </span>
                 </p>
               </div>
             )}

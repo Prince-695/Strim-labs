@@ -28,7 +28,7 @@ export function AppTopbar() {
           variant="ghost"
           size="icon-sm"
           onClick={() => setMobileNavOpen(true)}
-          className="md:hidden text-foreground-muted hover:text-foreground"
+          className="text-foreground-muted hover:text-foreground md:hidden"
           aria-label="Open navigation menu"
         >
           <Menu className="size-5" />
@@ -39,7 +39,7 @@ export function AppTopbar() {
           variant="ghost"
           size="icon-sm"
           onClick={toggleSidebar}
-          className="hidden md:flex text-foreground-subtle hover:text-foreground hover:bg-surface-raised transition-colors"
+          className="hidden text-foreground-subtle transition-colors hover:bg-surface-raised hover:text-foreground md:flex"
           title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
@@ -51,12 +51,17 @@ export function AppTopbar() {
         </Button>
 
         {/* Breadcrumb Context */}
-        <div className="hidden items-center gap-2 text-xs font-mono text-foreground-subtle lg:flex">
-          <Link href="/dashboard" className="hover:text-foreground transition-colors">
+        <div className="hidden items-center gap-2 font-mono text-xs text-foreground-subtle lg:flex">
+          <Link
+            href="/dashboard"
+            className="transition-colors hover:text-foreground"
+          >
             console
           </Link>
           <span>/</span>
-          <span className="font-medium text-foreground">{currentSection.toLowerCase()}</span>
+          <span className="font-medium text-foreground">
+            {currentSection.toLowerCase()}
+          </span>
         </div>
 
         {/* Divider */}

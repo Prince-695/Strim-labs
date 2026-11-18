@@ -40,23 +40,33 @@ export default function DedicatedProjectDashboard() {
   const projectId = (params?.id as string) || ""
 
   // Active Tab for verified cockpit
-  const [activeTab, setActiveTab] = React.useState<ProjectDashboardTab>("overview")
+  const [activeTab, setActiveTab] =
+    React.useState<ProjectDashboardTab>("overview")
 
   // Verification State
-  const [verifyStatus, setVerifyStatus] = React.useState<{ success: boolean; message: string } | null>(null)
+  const [verifyStatus, setVerifyStatus] = React.useState<{
+    success: boolean
+    message: string
+  } | null>(null)
 
   // Compare Runs Modal State
   const [isCompareOpen, setIsCompareOpen] = React.useState(false)
   const [baselineRunId, setBaselineRunId] = React.useState<string>("")
   const [candidateRunId, setCandidateRunId] = React.useState<string>("")
-  const [compareData, setCompareData] = React.useState<CompareResponse | null>(null)
+  const [compareData, setCompareData] = React.useState<CompareResponse | null>(
+    null
+  )
   const [isComparing, setIsComparing] = React.useState(false)
   const [compareError, setCompareError] = React.useState<string | null>(null)
 
   // Discovery Spec State
   const [discoverySpecUrl, setDiscoverySpecUrl] = React.useState("")
-  const [discoveryResult, setDiscoveryResult] = React.useState<string | null>(null)
-  const [discoveryError, setDiscoveryError] = React.useState<string | null>(null)
+  const [discoveryResult, setDiscoveryResult] = React.useState<string | null>(
+    null
+  )
+  const [discoveryError, setDiscoveryError] = React.useState<string | null>(
+    null
+  )
 
   // Delete State
   const [deleteConfirm, setDeleteConfirm] = React.useState("")
@@ -84,7 +94,10 @@ export default function DedicatedProjectDashboard() {
     queryKey: ["project_verification", currentOrgId, projectId],
     queryFn: async () => {
       try {
-        const existing = await projectApi.getVerificationStatus(currentOrgId!, projectId)
+        const existing = await projectApi.getVerificationStatus(
+          currentOrgId!,
+          projectId
+        )
         if (existing.data?.token) return existing
       } catch {}
       return projectApi.initiateVerification(currentOrgId!, projectId, "file")
@@ -105,7 +118,9 @@ export default function DedicatedProjectDashboard() {
   })
 
   const tests = testsRes?.data || []
-  const completedTests = tests.filter((t) => t.status === "completed" || t.status === "stopped")
+  const completedTests = tests.filter(
+    (t) => t.status === "completed" || t.status === "stopped"
+  )
 
   // 4. Fetch Endpoints List (only enabled once verified)
   const { data: endpointsRes, isLoading: isEndpointsLoading } = useQuery({
@@ -125,17 +140,26 @@ export default function DedicatedProjectDashboard() {
   })
 
   const statusCodes = statusCodesRes?.data
-  const codeClasses = statusCodes?.classes || { "2xx": 0, "3xx": 0, "4xx": 0, "5xx": 0 }
+  const codeClasses = statusCodes?.classes || {
+    "2xx": 0,
+    "3xx": 0,
+    "4xx": 0,
+    "5xx": 0,
+  }
   const totalCodes =
     (codeClasses["2xx"] || 0) +
     (codeClasses["3xx"] || 0) +
     (codeClasses["4xx"] || 0) +
     (codeClasses["5xx"] || 0)
 
-  const pct2xx = totalCodes > 0 ? ((codeClasses["2xx"] || 0) / totalCodes) * 100 : 100
-  const pct3xx = totalCodes > 0 ? ((codeClasses["3xx"] || 0) / totalCodes) * 100 : 0
-  const pct4xx = totalCodes > 0 ? ((codeClasses["4xx"] || 0) / totalCodes) * 100 : 0
-  const pct5xx = totalCodes > 0 ? ((codeClasses["5xx"] || 0) / totalCodes) * 100 : 0
+  const pct2xx =
+    totalCodes > 0 ? ((codeClasses["2xx"] || 0) / totalCodes) * 100 : 100
+  const pct3xx =
+    totalCodes > 0 ? ((codeClasses["3xx"] || 0) / totalCodes) * 100 : 0
+  const pct4xx =
+    totalCodes > 0 ? ((codeClasses["4xx"] || 0) / totalCodes) * 100 : 0
+  const pct5xx =
+    totalCodes > 0 ? ((codeClasses["5xx"] || 0) / totalCodes) * 100 : 0
 
   // 6. Verification Mutation
   const verifyMutation = useMutation({
@@ -144,61 +168,91 @@ export default function DedicatedProjectDashboard() {
       if (res.data?.status === "verified") {
         setVerifyStatus({
           success: true,
-          message: "Domain verified successfully! Project cockpit is now unlocked.",
+          message:
+            "Domain verified successfully! Project cockpit is now unlocked.",
         })
         // Optimistically update query data to unlock immediately
-        queryClient.setQueryData(["project_detail", currentOrgId, projectId], (old: { data?: typeof project } | undefined) => {
-          if (!old?.data) return old
-          return {
-            ...old,
-            data: {
-              ...old.data,
-              verification_status: "verified",
-            },
+        queryClient.setQueryData(
+          ["project_detail", currentOrgId, projectId],
+          (old: { data?: typeof project } | undefined) => {
+            if (!old?.data) return old
+            return {
+              ...old,
+              data: {
+                ...old.data,
+                verification_status: "verified",
+              },
+            }
           }
+        )
+        queryClient.invalidateQueries({
+          queryKey: ["project_detail", currentOrgId, projectId],
         })
-        queryClient.invalidateQueries({ queryKey: ["project_detail", currentOrgId, projectId] })
-        queryClient.invalidateQueries({ queryKey: ["projects_list", currentOrgId] })
-        queryClient.invalidateQueries({ queryKey: ["load_tests_list", currentOrgId, projectId] })
-        queryClient.invalidateQueries({ queryKey: ["endpoints_list", currentOrgId, projectId] })
-        queryClient.invalidateQueries({ queryKey: ["metrics_status_codes", currentOrgId, projectId] })
+        queryClient.invalidateQueries({
+          queryKey: ["projects_list", currentOrgId],
+        })
+        queryClient.invalidateQueries({
+          queryKey: ["load_tests_list", currentOrgId, projectId],
+        })
+        queryClient.invalidateQueries({
+          queryKey: ["endpoints_list", currentOrgId, projectId],
+        })
+        queryClient.invalidateQueries({
+          queryKey: ["metrics_status_codes", currentOrgId, projectId],
+        })
         setActiveTab("overview")
       } else {
         setVerifyStatus({
           success: false,
-          message: res.data?.reason || "Verification check failed. Ensure the verification token is deployed.",
+          message:
+            res.data?.reason ||
+            "Verification check failed. Ensure the verification token is deployed.",
         })
       }
     },
     onError: (err: unknown) => {
       setVerifyStatus({
         success: false,
-        message: err instanceof Error ? err.message : "Failed to run verification check.",
+        message:
+          err instanceof Error
+            ? err.message
+            : "Failed to run verification check.",
       })
     },
   })
 
   // 7. Discovery Mutation
   const discoveryMutation = useMutation({
-    mutationFn: (url: string) => endpointApi.importOpenAPI(currentOrgId!, projectId, { url }),
+    mutationFn: (url: string) =>
+      endpointApi.importOpenAPI(currentOrgId!, projectId, { url }),
     onSuccess: (res) => {
       setDiscoveryError(null)
       setDiscoveryResult(
         `Discovery finished: ${res.data?.found || 0} routes indexed, ${res.data?.created || 0} newly registered.`
       )
-      queryClient.invalidateQueries({ queryKey: ["endpoints_list", currentOrgId, projectId] })
-      queryClient.invalidateQueries({ queryKey: ["project_detail", currentOrgId, projectId] })
+      queryClient.invalidateQueries({
+        queryKey: ["endpoints_list", currentOrgId, projectId],
+      })
+      queryClient.invalidateQueries({
+        queryKey: ["project_detail", currentOrgId, projectId],
+      })
       setDiscoverySpecUrl("")
     },
     onError: (err: unknown) => {
-      setDiscoveryError(err instanceof Error ? err.message : "Failed to parse API specification.")
+      setDiscoveryError(
+        err instanceof Error
+          ? err.message
+          : "Failed to parse API specification."
+      )
     },
   })
 
   // 8. Run Comparison Handler
   const handleRunComparison = async () => {
     if (!baselineRunId || !candidateRunId) {
-      setCompareError("Please select both a baseline and a comparison test run.")
+      setCompareError(
+        "Please select both a baseline and a comparison test run."
+      )
       return
     }
     if (baselineRunId === candidateRunId) {
@@ -231,7 +285,12 @@ export default function DedicatedProjectDashboard() {
         const p95DeltaPct = p95A > 0 ? ((p95B - p95A) / p95A) * 100 : 0
         const errDeltaPct = errB - errA
 
-        const verdict = p95B < p95A && errB <= errA ? "improved" : p95B > p95A * 1.15 ? "regressed" : "unchanged"
+        const verdict =
+          p95B < p95A && errB <= errA
+            ? "improved"
+            : p95B > p95A * 1.15
+              ? "regressed"
+              : "unchanged"
 
         setCompareData({
           baseline_id: runA.id,
@@ -269,7 +328,9 @@ export default function DedicatedProjectDashboard() {
           },
         })
       } else {
-        setCompareError(err instanceof Error ? err.message : "Failed to run comparison.")
+        setCompareError(
+          err instanceof Error ? err.message : "Failed to run comparison."
+        )
       }
     } finally {
       setIsComparing(false)
@@ -287,10 +348,14 @@ export default function DedicatedProjectDashboard() {
       setIsDeleting(true)
       setDeleteError(null)
       await projectApi.delete(currentOrgId, projectId)
-      queryClient.invalidateQueries({ queryKey: ["projects_list", currentOrgId] })
+      queryClient.invalidateQueries({
+        queryKey: ["projects_list", currentOrgId],
+      })
       router.push("/dashboard/projects")
     } catch (err: unknown) {
-      setDeleteError(err instanceof Error ? err.message : "Failed to delete project.")
+      setDeleteError(
+        err instanceof Error ? err.message : "Failed to delete project."
+      )
     } finally {
       setIsDeleting(false)
     }
@@ -328,7 +393,7 @@ export default function DedicatedProjectDashboard() {
                   }
                   setIsCompareOpen(true)
                 }}
-                className="gap-1.5 font-mono text-xs border-border-subtle bg-surface-raised hover:bg-surface text-sand"
+                className="gap-1.5 border-border-subtle bg-surface-raised font-mono text-xs text-sand hover:bg-surface"
               >
                 <GitCompare className="size-3.5 text-brand" />
                 <span>Compare Runs</span>
@@ -338,7 +403,8 @@ export default function DedicatedProjectDashboard() {
                 href={`/dashboard/runner?project=${projectId}`}
                 className={buttonVariants({
                   size: "sm",
-                  className: "gap-1.5 bg-brand text-white hover:bg-brand-hover text-xs font-mono font-medium shadow-md",
+                  className:
+                    "gap-1.5 bg-brand font-mono text-xs font-medium text-white shadow-md hover:bg-brand-hover",
                 })}
               >
                 <Play className="size-3.5 fill-current" />
@@ -364,49 +430,63 @@ export default function DedicatedProjectDashboard() {
           </div>
         </div>
       ) : !project ? (
-        <Card className="p-8 text-center border-border bg-surface">
-          <p className="font-mono text-xs text-foreground-muted">Project not found or accessible.</p>
+        <Card className="border-border bg-surface p-8 text-center">
+          <p className="font-mono text-xs text-foreground-muted">
+            Project not found or accessible.
+          </p>
         </Card>
       ) : !isVerified ? (
         /* STRICT VERIFICATION GATE: If project is not verified, user cannot access project cockpit */
         <div className="space-y-6">
           {/* Access Locked Banner */}
-          <div className="relative rounded-xl border border-border bg-surface p-6 shadow-xs overflow-hidden">
+          <div className="relative overflow-hidden rounded-xl border border-border bg-surface p-6 shadow-xs">
             <CornerCrosshairs />
-            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-              <div className="space-y-2 max-w-2xl">
+            <div className="flex flex-col items-start justify-between gap-6 lg:flex-row lg:items-center">
+              <div className="max-w-2xl space-y-2">
                 <div className="flex items-center gap-2">
-                  <div className="size-8 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+                  <div className="flex size-8 items-center justify-center rounded-lg border border-amber-500/20 bg-amber-500/10 text-amber-400">
                     <ShieldAlert className="size-4" />
                   </div>
-                  <span className="font-mono text-xs text-amber-400 font-semibold uppercase tracking-wider">
+                  <span className="font-mono text-xs font-semibold tracking-wider text-amber-400 uppercase">
                     Access Gated • Domain Verification Required
                   </span>
                 </div>
-                <h2 className="text-xl font-bold font-heading text-foreground tracking-tight">
+                <h2 className="font-heading text-xl font-bold tracking-tight text-foreground">
                   Verify ownership of {project.base_url} to access Cockpit
                 </h2>
-                <p className="text-xs text-foreground-muted font-mono leading-relaxed">
-                  To protect target infrastructure and comply with traffic policies, you must verify domain authority for <strong className="text-foreground">{project.base_url}</strong> before accessing the project cockpit, telemetry feeds, API discovery, or launching distributed load tests.
+                <p className="font-mono text-xs leading-relaxed text-foreground-muted">
+                  To protect target infrastructure and comply with traffic
+                  policies, you must verify domain authority for{" "}
+                  <strong className="text-foreground">
+                    {project.base_url}
+                  </strong>{" "}
+                  before accessing the project cockpit, telemetry feeds, API
+                  discovery, or launching distributed load tests.
                 </p>
               </div>
 
               {/* 3-Step Verification Checklist */}
-              <div className="w-full lg:w-auto p-4 rounded-xl border border-border-subtle bg-surface-raised/40 space-y-2.5 font-mono text-xs min-w-[280px]">
-                <span className="text-foreground-subtle text-[11px] uppercase tracking-wider block font-semibold">
+              <div className="w-full min-w-[280px] space-y-2.5 rounded-xl border border-border-subtle bg-surface-raised/40 p-4 font-mono text-xs lg:w-auto">
+                <span className="block text-[11px] font-semibold tracking-wider text-foreground-subtle uppercase">
                   3-Step Verification
                 </span>
                 <div className="space-y-2 text-[11px]">
                   <div className="flex items-center gap-2 text-foreground">
-                    <span className="size-4 rounded-full bg-brand/20 text-brand text-[10px] flex items-center justify-center font-bold">1</span>
+                    <span className="flex size-4 items-center justify-center rounded-full bg-brand/20 text-[10px] font-bold text-brand">
+                      1
+                    </span>
                     <span>Select framework (Next.js, Node, etc.)</span>
                   </div>
                   <div className="flex items-center gap-2 text-foreground">
-                    <span className="size-4 rounded-full bg-brand/20 text-brand text-[10px] flex items-center justify-center font-bold">2</span>
+                    <span className="flex size-4 items-center justify-center rounded-full bg-brand/20 text-[10px] font-bold text-brand">
+                      2
+                    </span>
                     <span>Deploy verification token route</span>
                   </div>
                   <div className="flex items-center gap-2 text-foreground">
-                    <span className="size-4 rounded-full bg-brand/20 text-brand text-[10px] flex items-center justify-center font-bold">3</span>
+                    <span className="flex size-4 items-center justify-center rounded-full bg-brand/20 text-[10px] font-bold text-brand">
+                      3
+                    </span>
                     <span>Run check to unlock the cockpit</span>
                   </div>
                 </div>
@@ -427,11 +507,15 @@ export default function DedicatedProjectDashboard() {
           {/* Fallback Option: Project Deletion if entered wrong base_url */}
           <div className="rounded-xl border border-border-subtle bg-surface/50 p-4 font-mono text-xs">
             <details className="group">
-              <summary className="cursor-pointer text-foreground-subtle hover:text-foreground list-none flex items-center justify-between">
-                <span>Entered an incorrect base URL or wish to delete this project?</span>
-                <span className="text-xs text-brand group-open:rotate-180 transition-transform">▼</span>
+              <summary className="flex cursor-pointer list-none items-center justify-between text-foreground-subtle hover:text-foreground">
+                <span>
+                  Entered an incorrect base URL or wish to delete this project?
+                </span>
+                <span className="text-xs text-brand transition-transform group-open:rotate-180">
+                  ▼
+                </span>
               </summary>
-              <div className="pt-4 mt-3 border-t border-border-subtle">
+              <div className="mt-3 border-t border-border-subtle pt-4">
                 <ProjectDangerZone
                   projectSlug={project.slug}
                   deleteConfirm={deleteConfirm}

@@ -19,7 +19,13 @@ import {
 
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card"
 import { PageHeader } from "@/components/shell/page-header"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -46,7 +52,10 @@ export default function EndpointsCatalogPage() {
   const [selectedMethod, setSelectedMethod] = React.useState<string>("ALL")
   const [isOpenApiModalOpen, setIsOpenApiModalOpen] = React.useState(false)
   const [openApiUrl, setOpenApiUrl] = React.useState("")
-  const [importStatus, setImportStatus] = React.useState<{ success: boolean; message: string } | null>(null)
+  const [importStatus, setImportStatus] = React.useState<{
+    success: boolean
+    message: string
+  } | null>(null)
 
   // 1. Fetch Projects list
   const { data: projectsRes } = useQuery({
@@ -56,7 +65,8 @@ export default function EndpointsCatalogPage() {
   })
 
   const projects = projectsRes?.data || []
-  const activeProjectId = currentProjectId || (projects.length > 0 ? projects[0].id : "")
+  const activeProjectId =
+    currentProjectId || (projects.length > 0 ? projects[0].id : "")
   const activeProject = projects.find((p) => p.id === activeProjectId)
 
   // Auto-select first project if none selected
@@ -75,13 +85,16 @@ export default function EndpointsCatalogPage() {
 
   // 3. Import OpenAPI Mutation
   const importMutation = useMutation({
-    mutationFn: (url: string) => endpointApi.importOpenAPI(currentOrgId!, activeProjectId, { url }),
+    mutationFn: (url: string) =>
+      endpointApi.importOpenAPI(currentOrgId!, activeProjectId, { url }),
     onSuccess: (res) => {
       setImportStatus({
         success: true,
         message: `Imported successfully: ${res.data?.found || 0} found, ${res.data?.created || 0} created.`,
       })
-      queryClient.invalidateQueries({ queryKey: ["endpoints_list", currentOrgId, activeProjectId] })
+      queryClient.invalidateQueries({
+        queryKey: ["endpoints_list", currentOrgId, activeProjectId],
+      })
       setTimeout(() => {
         setIsOpenApiModalOpen(false)
         setImportStatus(null)
@@ -91,7 +104,10 @@ export default function EndpointsCatalogPage() {
     onError: (err: unknown) => {
       setImportStatus({
         success: false,
-        message: err instanceof Error ? err.message : "Failed to import OpenAPI specification.",
+        message:
+          err instanceof Error
+            ? err.message
+            : "Failed to import OpenAPI specification.",
       })
     },
   })
@@ -106,7 +122,8 @@ export default function EndpointsCatalogPage() {
       ep.service?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ep.tags?.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase()))
 
-    const matchesMethod = selectedMethod === "ALL" || ep.method.toUpperCase() === selectedMethod
+    const matchesMethod =
+      selectedMethod === "ALL" || ep.method.toUpperCase() === selectedMethod
     return matchesQuery && matchesMethod
   })
 
@@ -121,7 +138,8 @@ export default function EndpointsCatalogPage() {
               href="/dashboard/discovery"
               className={buttonVariants({
                 variant: "outline",
-                className: "gap-1.5 text-xs font-mono border-border-subtle hover:bg-surface-raised",
+                className:
+                  "gap-1.5 border-border-subtle font-mono text-xs hover:bg-surface-raised",
               })}
             >
               <Sparkles className="size-3.5 text-brand" />
@@ -129,7 +147,7 @@ export default function EndpointsCatalogPage() {
             </Link>
             <Button
               onClick={() => setIsOpenApiModalOpen(true)}
-              className="gap-1.5 bg-brand text-white hover:bg-brand-hover text-xs font-mono"
+              className="gap-1.5 bg-brand font-mono text-xs text-white hover:bg-brand-hover"
             >
               <Plus className="size-3.5" />
               <span>Import OpenAPI</span>
@@ -139,16 +157,18 @@ export default function EndpointsCatalogPage() {
       />
 
       {/* Project Selector Bar */}
-      <Card className="border-border bg-surface relative overflow-hidden">
+      <Card className="relative overflow-hidden border-border bg-surface">
         <CornerCrosshairs />
-        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <CardContent className="flex flex-col justify-between gap-4 p-4 sm:flex-row sm:items-center">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="font-mono text-xs text-foreground-subtle uppercase">Target Project:</span>
+            <span className="font-mono text-xs text-foreground-subtle uppercase">
+              Target Project:
+            </span>
             {projects.length > 0 ? (
               <select
                 value={activeProjectId}
                 onChange={(e) => setProjectId(e.target.value)}
-                className="rounded-md border border-border-subtle bg-surface-raised px-3 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:border-brand"
+                className="rounded-md border border-border-subtle bg-surface-raised px-3 py-1.5 font-mono text-xs text-foreground focus:border-brand focus:outline-none"
               >
                 {projects.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -157,48 +177,58 @@ export default function EndpointsCatalogPage() {
                 ))}
               </select>
             ) : (
-              <span className="font-mono text-xs text-foreground-muted">No projects found</span>
+              <span className="font-mono text-xs text-foreground-muted">
+                No projects found
+              </span>
             )}
 
             {activeProject && (
               <div className="flex items-center gap-2">
                 <span className="font-mono text-xs text-foreground-muted">
-                  Base URL: <strong className="text-foreground">{activeProject.base_url}</strong>
+                  Base URL:{" "}
+                  <strong className="text-foreground">
+                    {activeProject.base_url}
+                  </strong>
                 </span>
                 <StatusBadge
-                  status={activeProject.verification_status === "verified" ? "verified" : "unverified"}
+                  status={
+                    activeProject.verification_status === "verified"
+                      ? "verified"
+                      : "unverified"
+                  }
                 />
               </div>
             )}
           </div>
 
           <div className="font-mono text-xs text-foreground-subtle">
-            {allEndpoints.length} registered {allEndpoints.length === 1 ? "endpoint" : "endpoints"}
+            {allEndpoints.length} registered{" "}
+            {allEndpoints.length === 1 ? "endpoint" : "endpoints"}
           </div>
         </CardContent>
       </Card>
 
       {/* Search & Method Filter */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
         <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-2.5 size-4 text-foreground-subtle" />
+          <Search className="absolute top-2.5 left-3 size-4 text-foreground-subtle" />
           <Input
             placeholder="Search path, service, or tags..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 text-xs font-mono bg-surface-raised border-border-subtle"
+            className="border-border-subtle bg-surface-raised pl-9 font-mono text-xs"
           />
         </div>
 
         {/* Method Pills */}
-        <div className="inline-flex rounded-lg border border-border-subtle bg-surface-raised p-1 font-mono text-xs overflow-x-auto w-full sm:w-auto">
+        <div className="inline-flex w-full overflow-x-auto rounded-lg border border-border-subtle bg-surface-raised p-1 font-mono text-xs sm:w-auto">
           {["ALL", "GET", "POST", "PUT", "PATCH", "DELETE"].map((method) => (
             <button
               key={method}
               onClick={() => setSelectedMethod(method)}
               className={`rounded px-3 py-1 transition-colors ${
                 selectedMethod === method
-                  ? "bg-brand text-white font-medium"
+                  ? "bg-brand font-medium text-white"
                   : "text-foreground-muted hover:text-foreground"
               }`}
             >
@@ -209,11 +239,11 @@ export default function EndpointsCatalogPage() {
       </div>
 
       {/* Endpoints Table Card */}
-      <Card className="border-border bg-surface shadow-xs relative overflow-hidden">
+      <Card className="relative overflow-hidden border-border bg-surface shadow-xs">
         <CornerCrosshairs />
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="p-6 space-y-4">
+            <div className="space-y-4 p-6">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
@@ -226,14 +256,14 @@ export default function EndpointsCatalogPage() {
                 searchQuery || selectedMethod !== "ALL"
                   ? "No endpoints match the selected filter criteria."
                   : activeProject?.verification_status !== "verified"
-                  ? "Verify your project domain to register and explore endpoints."
-                  : "Import an OpenAPI/Swagger spec or run API Discovery to index your endpoints."
+                    ? "Verify your project domain to register and explore endpoints."
+                    : "Import an OpenAPI/Swagger spec or run API Discovery to index your endpoints."
               }
               action={
                 <div className="flex items-center gap-2">
                   <Button
                     onClick={() => setIsOpenApiModalOpen(true)}
-                    className="bg-brand text-white hover:bg-brand-hover text-xs font-mono gap-1.5"
+                    className="gap-1.5 bg-brand font-mono text-xs text-white hover:bg-brand-hover"
                   >
                     <Plus className="size-3.5" />
                     <span>Import OpenAPI Spec</span>
@@ -246,37 +276,53 @@ export default function EndpointsCatalogPage() {
               <table className="w-full text-left font-mono text-xs">
                 <thead>
                   <tr className="border-b border-border-subtle bg-surface-raised/40 text-[11px] text-foreground-subtle uppercase">
-                    <th className="py-3 px-4 font-semibold">Method & Path</th>
-                    <th className="py-3 px-4 font-semibold">Service / Tag</th>
-                    <th className="py-3 px-4 font-semibold text-right">Reqs (1h)</th>
-                    <th className="py-3 px-4 font-semibold text-right">P95 Latency</th>
-                    <th className="py-3 px-4 font-semibold text-right">Error Rate</th>
-                    <th className="py-3 px-4 font-semibold text-right">Actions</th>
+                    <th className="px-4 py-3 font-semibold">Method & Path</th>
+                    <th className="px-4 py-3 font-semibold">Service / Tag</th>
+                    <th className="px-4 py-3 text-right font-semibold">
+                      Reqs (1h)
+                    </th>
+                    <th className="px-4 py-3 text-right font-semibold">
+                      P95 Latency
+                    </th>
+                    <th className="px-4 py-3 text-right font-semibold">
+                      Error Rate
+                    </th>
+                    <th className="px-4 py-3 text-right font-semibold">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-subtle">
                   {filteredEndpoints.map((ep: EndpointItem) => (
-                    <tr key={ep.id} className="hover:bg-surface-raised/30 transition-colors">
+                    <tr
+                      key={ep.id}
+                      className="transition-colors hover:bg-surface-raised/30"
+                    >
                       {/* Method + Path */}
-                      <td className="py-3.5 px-4">
+                      <td className="px-4 py-3.5">
                         <div className="flex items-center gap-2.5">
                           <span
                             className={`rounded border px-2 py-0.5 text-[10px] font-bold ${
-                              HTTP_COLORS[ep.method] || "bg-surface text-foreground-muted border-border"
+                              HTTP_COLORS[ep.method] ||
+                              "border-border bg-surface text-foreground-muted"
                             }`}
                           >
                             {ep.method}
                           </span>
-                          <span className="font-semibold text-foreground">{ep.path_template}</span>
+                          <span className="font-semibold text-foreground">
+                            {ep.path_template}
+                          </span>
                         </div>
                       </td>
 
                       {/* Service / Tags */}
-                      <td className="py-3.5 px-4">
+                      <td className="px-4 py-3.5">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-foreground-muted">{ep.service || "default"}</span>
+                          <span className="text-foreground-muted">
+                            {ep.service || "default"}
+                          </span>
                           {ep.tags && ep.tags.length > 0 && (
-                            <span className="rounded bg-surface-raised px-1.5 py-0.5 text-[10px] text-foreground-subtle border border-border-subtle">
+                            <span className="rounded border border-border-subtle bg-surface-raised px-1.5 py-0.5 text-[10px] text-foreground-subtle">
                               {ep.tags[0]}
                             </span>
                           )}
@@ -284,20 +330,22 @@ export default function EndpointsCatalogPage() {
                       </td>
 
                       {/* Requests */}
-                      <td className="py-3.5 px-4 text-right text-foreground">
-                        {ep.stats_1h?.requests ? ep.stats_1h.requests.toLocaleString() : "—"}
+                      <td className="px-4 py-3.5 text-right text-foreground">
+                        {ep.stats_1h?.requests
+                          ? ep.stats_1h.requests.toLocaleString()
+                          : "—"}
                       </td>
 
                       {/* P95 Latency */}
-                      <td className="py-3.5 px-4 text-right">
+                      <td className="px-4 py-3.5 text-right">
                         {ep.stats_1h?.p95_ms ? (
                           <span
                             className={
                               ep.stats_1h.p95_ms > 400
-                                ? "text-danger font-semibold"
+                                ? "font-semibold text-danger"
                                 : ep.stats_1h.p95_ms > 200
-                                ? "text-warning"
-                                : "text-success"
+                                  ? "text-warning"
+                                  : "text-success"
                             }
                           >
                             {ep.stats_1h.p95_ms.toFixed(0)}ms
@@ -308,15 +356,15 @@ export default function EndpointsCatalogPage() {
                       </td>
 
                       {/* Error Rate */}
-                      <td className="py-3.5 px-4 text-right">
+                      <td className="px-4 py-3.5 text-right">
                         {ep.stats_1h?.error_rate !== undefined ? (
                           <span
                             className={
                               ep.stats_1h.error_rate > 0.05
-                                ? "text-danger font-semibold"
+                                ? "font-semibold text-danger"
                                 : ep.stats_1h.error_rate > 0.01
-                                ? "text-warning"
-                                : "text-foreground-muted"
+                                  ? "text-warning"
+                                  : "text-foreground-muted"
                             }
                           >
                             {(ep.stats_1h.error_rate * 100).toFixed(1)}%
@@ -327,7 +375,7 @@ export default function EndpointsCatalogPage() {
                       </td>
 
                       {/* Actions */}
-                      <td className="py-3.5 px-4 text-right">
+                      <td className="px-4 py-3.5 text-right">
                         <Link
                           href={`/dashboard/runner?project=${activeProjectId}&method=${ep.method}&path=${encodeURIComponent(
                             ep.path_template
@@ -335,7 +383,8 @@ export default function EndpointsCatalogPage() {
                           className={buttonVariants({
                             variant: "outline",
                             size: "sm",
-                            className: "h-7 gap-1 font-mono text-[11px] hover:text-brand hover:border-brand/40",
+                            className:
+                              "h-7 gap-1 font-mono text-[11px] hover:border-brand/40 hover:text-brand",
                           })}
                         >
                           <Rocket className="size-3" />
@@ -353,11 +402,11 @@ export default function EndpointsCatalogPage() {
 
       {/* OpenAPI Import Modal */}
       {isOpenApiModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
           <Card className="w-full max-w-lg border-border bg-surface shadow-2xl">
             <CardHeader className="border-b border-border-subtle pb-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base font-semibold font-heading text-foreground">
+                <CardTitle className="font-heading text-base font-semibold text-foreground">
                   Import OpenAPI Specification
                 </CardTitle>
                 <button
@@ -367,12 +416,13 @@ export default function EndpointsCatalogPage() {
                   ✕
                 </button>
               </div>
-              <CardDescription className="text-xs text-foreground-muted font-mono">
-                Provide a publicly accessible URL to an OpenAPI or Swagger JSON/YAML file.
+              <CardDescription className="font-mono text-xs text-foreground-muted">
+                Provide a publicly accessible URL to an OpenAPI or Swagger
+                JSON/YAML file.
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="pt-6 space-y-4 font-mono text-xs">
+            <CardContent className="space-y-4 pt-6 font-mono text-xs">
               {importStatus && (
                 <div
                   className={`flex items-start gap-2.5 rounded-lg border p-3 ${
@@ -382,22 +432,24 @@ export default function EndpointsCatalogPage() {
                   }`}
                 >
                   {importStatus.success ? (
-                    <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
                   ) : (
-                    <AlertCircle className="size-4 shrink-0 mt-0.5" />
+                    <AlertCircle className="mt-0.5 size-4 shrink-0" />
                   )}
                   <span>{importStatus.message}</span>
                 </div>
               )}
 
               <div className="space-y-1.5">
-                <label className="text-foreground-muted">Spec URL (JSON or YAML)</label>
+                <label className="text-foreground-muted">
+                  Spec URL (JSON or YAML)
+                </label>
                 <Input
                   placeholder="https://api.example.com/openapi.json"
                   value={openApiUrl}
                   onChange={(e) => setOpenApiUrl(e.target.value)}
                   disabled={importMutation.isPending}
-                  className="bg-surface-raised border-border-subtle text-xs font-mono"
+                  className="border-border-subtle bg-surface-raised font-mono text-xs"
                 />
               </div>
 
@@ -413,9 +465,11 @@ export default function EndpointsCatalogPage() {
                 <Button
                   onClick={() => importMutation.mutate(openApiUrl)}
                   disabled={!openApiUrl || importMutation.isPending}
-                  className="bg-brand text-white hover:bg-brand-hover font-mono text-xs gap-1.5"
+                  className="gap-1.5 bg-brand font-mono text-xs text-white hover:bg-brand-hover"
                 >
-                  {importMutation.isPending && <Loader2 className="size-3.5 animate-spin" />}
+                  {importMutation.isPending && (
+                    <Loader2 className="size-3.5 animate-spin" />
+                  )}
                   <span>Import Spec</span>
                 </Button>
               </div>

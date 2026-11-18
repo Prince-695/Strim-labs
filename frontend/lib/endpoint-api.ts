@@ -46,21 +46,45 @@ export interface DiscoveryRun {
 }
 
 export const endpointApi = {
-  list: async (orgId: string, projectId: string, params?: ListEndpointsParams) => {
-    return api.get<EndpointItem[]>(`/organizations/${orgId}/projects/${projectId}/endpoints`, {
-      params: params as Record<string, string | number | boolean>,
-    })
+  list: async (
+    orgId: string,
+    projectId: string,
+    params?: ListEndpointsParams
+  ) => {
+    return api.get<EndpointItem[]>(
+      `/organizations/${orgId}/projects/${projectId}/endpoints`,
+      {
+        params: params as Record<string, string | number | boolean>,
+      }
+    )
   },
 
   get: async (orgId: string, projectId: string, endpointId: string) => {
-    return api.get<EndpointItem>(`/organizations/${orgId}/projects/${projectId}/endpoints/${endpointId}`)
+    return api.get<EndpointItem>(
+      `/organizations/${orgId}/projects/${projectId}/endpoints/${endpointId}`
+    )
   },
 
-  importOpenAPI: async (orgId: string, projectId: string, payload: ImportOpenAPIPayload) => {
-    return api.post<DiscoveryRun>(`/organizations/${orgId}/projects/${projectId}/discovery/openapi`, payload)
+  importOpenAPI: async (
+    orgId: string,
+    projectId: string,
+    payload: ImportOpenAPIPayload
+  ) => {
+    return api.post<DiscoveryRun>(
+      `/organizations/${orgId}/projects/${projectId}/discovery/openapi`,
+      payload
+    )
   },
 
-  patch: async (orgId: string, projectId: string, endpointId: string, payload: { status?: string; tags?: string[]; note?: string }) => {
-    return api.patch<EndpointItem>(`/organizations/${orgId}/projects/${projectId}/endpoints/${endpointId}`, payload)
+  patch: async (
+    orgId: string,
+    projectId: string,
+    endpointId: string,
+    payload: { status?: string; tags?: string[]; note?: string }
+  ) => {
+    return api.patch<EndpointItem>(
+      `/organizations/${orgId}/projects/${projectId}/endpoints/${endpointId}`,
+      payload
+    )
   },
 }

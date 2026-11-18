@@ -38,7 +38,6 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   )
 }
 
-
 function AuthformContent({ type }: AuthformProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -107,7 +106,9 @@ function AuthformContent({ type }: AuthformProps) {
       if (err instanceof Error) {
         setErrorMessage(err.message)
       } else {
-        setErrorMessage(`An unexpected error occurred during ${isLogin ? "sign in" : "sign up"}.`)
+        setErrorMessage(
+          `An unexpected error occurred during ${isLogin ? "sign in" : "sign up"}.`
+        )
       }
     } finally {
       setIsSubmitting(false)
@@ -144,15 +145,14 @@ function AuthformContent({ type }: AuthformProps) {
   }
 
   return (
-    <div className="w-full max-w-sm sm:max-w-md relative rounded-xl border border-border bg-surface p-7 sm:p-9 shadow-xl shadow-black text-left">
+    <div className="relative w-full max-w-sm rounded-xl border border-border bg-surface p-7 text-left shadow-xl shadow-black sm:max-w-md sm:p-9">
       <CornerCrosshairs colorClass="text-sand/30" />
-
 
       {/* Brand Logo & Portal Header */}
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="flex size-8 items-center justify-center rounded-lg border border-border bg-surface-raised p-1 overflow-hidden group-hover:border-brand transition-colors">
+        <div className="mb-4 flex items-center justify-between">
+          <Link href="/" className="group flex items-center gap-2.5">
+            <div className="flex size-8 items-center justify-center overflow-hidden rounded-lg border border-border bg-surface-raised p-1 transition-colors group-hover:border-brand">
               <Image
                 src="/logo.png"
                 alt="Strim Labs Logo"
@@ -162,19 +162,19 @@ function AuthformContent({ type }: AuthformProps) {
                 className="size-full object-contain"
               />
             </div>
-            <span className="font-mono text-sm font-bold tracking-tight text-foreground group-hover:text-brand transition-colors">
+            <span className="font-mono text-sm font-bold tracking-tight text-foreground transition-colors group-hover:text-brand">
               STRIM LABS
             </span>
           </Link>
-          <span className="text-brand font-mono text-[11px] font-semibold flex items-center gap-1.5 border border-brand/30 bg-brand/10 px-2 py-0.5 rounded">
-            <span className="size-1.5 rounded-full bg-brand animate-pulse" />
+          <span className="flex items-center gap-1.5 rounded border border-brand/30 bg-brand/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-brand">
+            <span className="size-1.5 animate-pulse rounded-full bg-brand" />
             {isLogin ? "SIGN IN" : "SIGN UP"}
           </span>
         </div>
-        <h1 className="font-mono text-2xl sm:text-3xl font-normal text-foreground tracking-tight">
+        <h1 className="font-mono text-2xl font-normal tracking-tight text-foreground sm:text-3xl">
           {isLogin ? "Sign in to Strim-Labs" : "Create your account"}
         </h1>
-        <p className="mt-2 font-sans text-xs text-foreground-muted leading-relaxed">
+        <p className="mt-2 font-sans text-xs leading-relaxed text-foreground-muted">
           {isLogin
             ? "Access your automated API discovery, load testing, and live monitoring cockpit."
             : "Get started with high-concurrency API performance testing in seconds."}
@@ -183,8 +183,8 @@ function AuthformContent({ type }: AuthformProps) {
 
       {/* Error Alert Banner */}
       {(errorMessage || urlError) && (
-        <div className="mb-5 flex items-start gap-2.5 rounded-md border border-danger/50 bg-danger/10 p-3 text-xs text-danger font-mono">
-          <AlertCircle className="size-4 shrink-0 mt-0.5 text-danger" />
+        <div className="mb-5 flex items-start gap-2.5 rounded-md border border-danger/50 bg-danger/10 p-3 font-mono text-xs text-danger">
+          <AlertCircle className="mt-0.5 size-4 shrink-0 text-danger" />
           <span className="leading-relaxed">{errorMessage || urlError}</span>
         </div>
       )}
@@ -195,7 +195,10 @@ function AuthformContent({ type }: AuthformProps) {
         {!isLogin && (
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label htmlFor="firstName" className="text-[11px] text-sand uppercase tracking-wider block">
+              <label
+                htmlFor="firstName"
+                className="block text-[11px] tracking-wider text-sand uppercase"
+              >
                 First name
               </label>
               <input
@@ -206,11 +209,14 @@ function AuthformContent({ type }: AuthformProps) {
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
                 required
-                className="w-full rounded-md border border-border bg-surface-sunken px-3 py-2 text-xs text-foreground placeholder:text-foreground-subtle focus:border-brand focus:outline-hidden focus:ring-1 focus:ring-brand transition-colors"
+                className="w-full rounded-md border border-border bg-surface-sunken px-3 py-2 text-xs text-foreground transition-colors placeholder:text-foreground-subtle focus:border-brand focus:ring-1 focus:ring-brand focus:outline-hidden"
               />
             </div>
             <div className="space-y-1.5">
-              <label htmlFor="lastName" className="text-[11px] text-sand uppercase tracking-wider block">
+              <label
+                htmlFor="lastName"
+                className="block text-[11px] tracking-wider text-sand uppercase"
+              >
                 Last name
               </label>
               <input
@@ -221,7 +227,7 @@ function AuthformContent({ type }: AuthformProps) {
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
                 required
-                className="w-full rounded-md border border-border bg-surface-sunken px-3 py-2 text-xs text-foreground placeholder:text-foreground-subtle focus:border-brand focus:outline-hidden focus:ring-1 focus:ring-brand transition-colors"
+                className="w-full rounded-md border border-border bg-surface-sunken px-3 py-2 text-xs text-foreground transition-colors placeholder:text-foreground-subtle focus:border-brand focus:ring-1 focus:ring-brand focus:outline-hidden"
               />
             </div>
           </div>
@@ -229,7 +235,10 @@ function AuthformContent({ type }: AuthformProps) {
 
         {/* Email Field */}
         <div className="space-y-1.5">
-          <label htmlFor="email" className="text-[11px] text-sand uppercase tracking-wider block">
+          <label
+            htmlFor="email"
+            className="block text-[11px] tracking-wider text-sand uppercase"
+          >
             Work email
           </label>
           <input
@@ -240,20 +249,23 @@ function AuthformContent({ type }: AuthformProps) {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full rounded-md border border-border bg-surface-sunken px-3 py-2 text-xs text-foreground placeholder:text-foreground-subtle focus:border-brand focus:outline-hidden focus:ring-1 focus:ring-brand transition-colors"
+            className="w-full rounded-md border border-border bg-surface-sunken px-3 py-2 text-xs text-foreground transition-colors placeholder:text-foreground-subtle focus:border-brand focus:ring-1 focus:ring-brand focus:outline-hidden"
           />
         </div>
 
         {/* Password Field */}
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <label htmlFor="password" className="text-[11px] text-sand uppercase tracking-wider block">
+            <label
+              htmlFor="password"
+              className="block text-[11px] tracking-wider text-sand uppercase"
+            >
               Password
             </label>
             {isLogin && (
               <Link
                 href="/forgot-password"
-                className="text-[11px] text-foreground-subtle hover:text-sand transition-colors font-sans"
+                className="font-sans text-[11px] text-foreground-subtle transition-colors hover:text-sand"
               >
                 Forgot?
               </Link>
@@ -269,14 +281,18 @@ function AuthformContent({ type }: AuthformProps) {
               onChange={(e) => setPassword(e.target.value)}
               required
               minLength={isLogin ? 1 : 8}
-              className="w-full rounded-md border border-border bg-surface-sunken px-3 py-2 pr-9 text-xs text-foreground placeholder:text-foreground-subtle focus:border-brand focus:outline-hidden focus:ring-1 focus:ring-brand transition-colors"
+              className="w-full rounded-md border border-border bg-surface-sunken px-3 py-2 pr-9 text-xs text-foreground transition-colors placeholder:text-foreground-subtle focus:border-brand focus:ring-1 focus:ring-brand focus:outline-hidden"
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-foreground-subtle hover:text-sand transition-colors cursor-pointer"
+              className="absolute top-1/2 right-2.5 -translate-y-1/2 cursor-pointer text-foreground-subtle transition-colors hover:text-sand"
             >
-              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              {showPassword ? (
+                <EyeOff className="size-4" />
+              ) : (
+                <Eye className="size-4" />
+              )}
             </button>
           </div>
         </div>
@@ -285,7 +301,7 @@ function AuthformContent({ type }: AuthformProps) {
         <button
           type="submit"
           disabled={isSubmitting || isOAuthLoading}
-          className="w-full rounded-md bg-brand hover:bg-brand-hover disabled:opacity-50 py-2.5 px-4 font-mono text-xs font-semibold uppercase tracking-wider text-white shadow-md shadow-brand/20 transition-all flex items-center justify-center gap-2 cursor-pointer mt-2"
+          className="mt-2 flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-brand px-4 py-2.5 font-mono text-xs font-semibold tracking-wider text-white uppercase shadow-md shadow-brand/20 transition-all hover:bg-brand-hover disabled:opacity-50"
         >
           {isSubmitting ? (
             <span className="inline-flex items-center gap-2">
@@ -305,36 +321,42 @@ function AuthformContent({ type }: AuthformProps) {
         <div className="absolute inset-0 flex items-center">
           <div className="w-full border-t border-border" />
         </div>
-        <span className="relative bg-surface px-3 font-mono text-[10px] text-foreground-subtle uppercase tracking-wider">
+        <span className="relative bg-surface px-3 font-mono text-[10px] tracking-wider text-foreground-subtle uppercase">
           OR CONTINUE WITH
         </span>
       </div>
 
       {/* Social OAuth Buttons in STRIM dark palette */}
 
-        <button
-          type="button"
-          onClick={handleGoogleAuth}
-          disabled={isSubmitting || isOAuthLoading}
-          className="w-full flex items-center justify-center gap-2 rounded-md border border-border bg-surface-raised hover:bg-surface-hover hover:border-border py-2 px-3 font-mono text-xs text-sand transition-colors cursor-pointer"
-        >
-          <GoogleIcon className="size-3.5 shrink-0" />
-          <span>Google</span>
-        </button>
+      <button
+        type="button"
+        onClick={handleGoogleAuth}
+        disabled={isSubmitting || isOAuthLoading}
+        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-border bg-surface-raised px-3 py-2 font-mono text-xs text-sand transition-colors hover:border-border hover:bg-surface-hover"
+      >
+        <GoogleIcon className="size-3.5 shrink-0" />
+        <span>Google</span>
+      </button>
 
       {/* Switcher Footer */}
-      <div className="mt-7 pt-5 border-t border-border-subtle text-center font-mono text-xs text-foreground-subtle">
+      <div className="mt-7 border-t border-border-subtle pt-5 text-center font-mono text-xs text-foreground-subtle">
         {isLogin ? (
           <span>
             Don&apos;t have an account?{" "}
-            <Link href="/signup" className="text-brand hover:underline font-semibold transition-colors">
+            <Link
+              href="/signup"
+              className="font-semibold text-brand transition-colors hover:underline"
+            >
               Sign up →
             </Link>
           </span>
         ) : (
           <span>
             Already have an account?{" "}
-            <Link href="/login" className="text-brand hover:underline font-semibold transition-colors">
+            <Link
+              href="/login"
+              className="font-semibold text-brand transition-colors hover:underline"
+            >
               Sign in →
             </Link>
           </span>
@@ -346,7 +368,11 @@ function AuthformContent({ type }: AuthformProps) {
 
 export function Authform(props: AuthformProps) {
   return (
-    <React.Suspense fallback={<div className="w-full max-w-sm sm:max-w-md h-[450px] rounded-xl border border-border bg-surface animate-pulse" />}>
+    <React.Suspense
+      fallback={
+        <div className="h-[450px] w-full max-w-sm animate-pulse rounded-xl border border-border bg-surface sm:max-w-md" />
+      }
+    >
       <AuthformContent {...props} />
     </React.Suspense>
   )

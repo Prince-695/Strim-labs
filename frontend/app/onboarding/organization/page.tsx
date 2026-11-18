@@ -5,22 +5,41 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Building2, Globe, FileText, Loader2, AlertCircle, ArrowRight } from "lucide-react"
+import {
+  Building2,
+  Globe,
+  FileText,
+  Loader2,
+  AlertCircle,
+  ArrowRight,
+} from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card"
 import { orgApi } from "@/lib/org-api"
 import { useUIStore } from "@/lib/stores/ui-store"
 
 const createOrgSchema = z.object({
-  name: z.string().min(2, "Organization name must be at least 2 characters").max(100),
+  name: z
+    .string()
+    .min(2, "Organization name must be at least 2 characters")
+    .max(100),
   slug: z
     .string()
     .min(2, "Slug must be at least 2 characters")
     .max(50)
-    .regex(/^[a-z0-9-]+$/, "Slug may only contain lowercase letters, numbers, and hyphens"),
+    .regex(
+      /^[a-z0-9-]+$/,
+      "Slug may only contain lowercase letters, numbers, and hyphens"
+    ),
   description: z.string().max(500).optional(),
 })
 
@@ -98,27 +117,28 @@ export default function OnboardingOrgPage() {
 
   return (
     <Card className="border-border bg-surface shadow-2xl">
-      <CardHeader className="space-y-2 pb-6 border-b border-border-subtle">
+      <CardHeader className="space-y-2 border-b border-border-subtle pb-6">
         {/* Step Indicator */}
         <div className="flex items-center gap-2 font-mono text-[11px] text-brand">
-          <span className="flex size-5 items-center justify-center rounded-full bg-brand/20 text-brand font-bold">
+          <span className="flex size-5 items-center justify-center rounded-full bg-brand/20 font-bold text-brand">
             1
           </span>
           <span>ORGANIZATION WORKSPACE SETUP</span>
         </div>
 
-        <CardTitle className="text-xl font-heading font-bold text-foreground">
+        <CardTitle className="font-heading text-xl font-bold text-foreground">
           Create Organization Workspace
         </CardTitle>
         <CardDescription className="text-xs text-foreground-muted">
-          Your organization is the dedicated tenant for your API targets, metrics telemetry, and team members.
+          Your organization is the dedicated tenant for your API targets,
+          metrics telemetry, and team members.
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="pt-6 space-y-4">
+      <CardContent className="space-y-4 pt-6">
         {errorMessage && (
           <div className="flex items-start gap-2.5 rounded-lg border border-danger/40 bg-danger/10 p-3 text-xs text-danger">
-            <AlertCircle className="size-4 shrink-0 mt-0.5" />
+            <AlertCircle className="mt-0.5 size-4 shrink-0" />
             <span className="leading-relaxed">{errorMessage}</span>
           </div>
         )}
@@ -126,38 +146,48 @@ export default function OnboardingOrgPage() {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Org Name */}
           <div className="space-y-1.5">
-            <Label htmlFor="name" className="text-xs font-mono text-foreground-muted">
+            <Label
+              htmlFor="name"
+              className="font-mono text-xs text-foreground-muted"
+            >
               Organization Name
             </Label>
             <div className="relative">
-              <Building2 className="absolute left-3 top-2.5 size-4 text-foreground-subtle" />
+              <Building2 className="absolute top-2.5 left-3 size-4 text-foreground-subtle" />
               <Input
                 id="name"
                 placeholder="Acme Engineering"
-                className="pl-9 text-xs font-mono bg-surface-raised border-border-subtle focus-visible:border-brand"
+                className="border-border-subtle bg-surface-raised pl-9 font-mono text-xs focus-visible:border-brand"
                 disabled={isSubmitting}
                 {...register("name")}
               />
             </div>
             {errors.name && (
-              <p className="text-[11px] font-mono text-danger">{errors.name.message}</p>
+              <p className="font-mono text-[11px] text-danger">
+                {errors.name.message}
+              </p>
             )}
           </div>
 
           {/* Org Slug */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <Label htmlFor="slug" className="text-xs font-mono text-foreground-muted">
+              <Label
+                htmlFor="slug"
+                className="font-mono text-xs text-foreground-muted"
+              >
                 Workspace URL Identifier (Slug)
               </Label>
-              <span className="text-[10px] font-mono text-foreground-subtle">Immutable after creation</span>
+              <span className="font-mono text-[10px] text-foreground-subtle">
+                Immutable after creation
+              </span>
             </div>
             <div className="relative">
-              <Globe className="absolute left-3 top-2.5 size-4 text-foreground-subtle" />
+              <Globe className="absolute top-2.5 left-3 size-4 text-foreground-subtle" />
               <Input
                 id="slug"
                 placeholder="acme-engineering"
-                className="pl-9 text-xs font-mono bg-surface-raised border-border-subtle focus-visible:border-brand"
+                className="border-border-subtle bg-surface-raised pl-9 font-mono text-xs focus-visible:border-brand"
                 disabled={isSubmitting}
                 {...register("slug", {
                   onChange: () => setIsManualSlug(true),
@@ -165,30 +195,40 @@ export default function OnboardingOrgPage() {
               />
             </div>
             {errors.slug && (
-              <p className="text-[11px] font-mono text-danger">{errors.slug.message}</p>
+              <p className="font-mono text-[11px] text-danger">
+                {errors.slug.message}
+              </p>
             )}
-            <p className="text-[11px] font-mono text-foreground-subtle">
-              API routes will be scoped under: <code className="text-sand">/v1/organizations/{watch("slug") || "slug"}/...</code>
+            <p className="font-mono text-[11px] text-foreground-subtle">
+              API routes will be scoped under:{" "}
+              <code className="text-sand">
+                /v1/organizations/{watch("slug") || "slug"}/...
+              </code>
             </p>
           </div>
 
           {/* Description */}
           <div className="space-y-1.5">
-            <Label htmlFor="description" className="text-xs font-mono text-foreground-muted">
+            <Label
+              htmlFor="description"
+              className="font-mono text-xs text-foreground-muted"
+            >
               Description (Optional)
             </Label>
             <div className="relative">
-              <FileText className="absolute left-3 top-2.5 size-4 text-foreground-subtle" />
+              <FileText className="absolute top-2.5 left-3 size-4 text-foreground-subtle" />
               <Input
                 id="description"
                 placeholder="Core backend services and checkout microservices"
-                className="pl-9 text-xs font-mono bg-surface-raised border-border-subtle focus-visible:border-brand"
+                className="border-border-subtle bg-surface-raised pl-9 font-mono text-xs focus-visible:border-brand"
                 disabled={isSubmitting}
                 {...register("description")}
               />
             </div>
             {errors.description && (
-              <p className="text-[11px] font-mono text-danger">{errors.description.message}</p>
+              <p className="font-mono text-[11px] text-danger">
+                {errors.description.message}
+              </p>
             )}
           </div>
 
@@ -196,7 +236,7 @@ export default function OnboardingOrgPage() {
           <Button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-brand text-white hover:bg-brand-hover text-xs font-mono h-10 mt-2 gap-2"
+            className="mt-2 h-10 w-full gap-2 bg-brand font-mono text-xs text-white hover:bg-brand-hover"
           >
             {isSubmitting ? (
               <>

@@ -23,7 +23,9 @@ function AuthCallbackContent() {
         const detailParam = searchParams.get("detail")
         const statusParam = searchParams.get("status")
         if (statusParam === "error" || errorParam) {
-          const combinedMsg = detailParam ? `${errorParam} - ${detailParam}` : (errorParam || "oauth_failed")
+          const combinedMsg = detailParam
+            ? `${errorParam} - ${detailParam}`
+            : errorParam || "oauth_failed"
           router.push(`/login?error=${encodeURIComponent(combinedMsg)}`)
           return
         }
@@ -74,9 +76,9 @@ function AuthCallbackContent() {
   }, [router, searchParams, setAuth, setCurrentOrgId])
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-foreground">
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-6 text-foreground">
       <div className="flex flex-col items-center gap-3 font-mono text-xs text-foreground-muted">
-        <Loader2 className="size-6 text-brand animate-spin" />
+        <Loader2 className="size-6 animate-spin text-brand" />
         <p>Completing authentication and establishing session...</p>
       </div>
     </div>

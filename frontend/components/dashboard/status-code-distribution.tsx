@@ -17,8 +17,13 @@ interface StatusCodeDistributionProps {
   projectId: string
 }
 
-export function StatusCodeDistribution({ orgId, projectId }: StatusCodeDistributionProps) {
-  const { data: response, isLoading } = useQuery<ApiResponse<StatusCodesResponse>>({
+export function StatusCodeDistribution({
+  orgId,
+  projectId,
+}: StatusCodeDistributionProps) {
+  const { data: response, isLoading } = useQuery<
+    ApiResponse<StatusCodesResponse>
+  >({
     queryKey: ["status_codes", orgId, projectId],
     queryFn: async () => {
       return api.get<StatusCodesResponse>(
@@ -48,11 +53,13 @@ export function StatusCodeDistribution({ orgId, projectId }: StatusCodeDistribut
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <div className="flex items-center gap-2">
           <BarChart2 className="size-4 text-brand" />
-          <CardTitle className="text-sm font-semibold font-heading text-foreground">
+          <CardTitle className="font-heading text-sm font-semibold text-foreground">
             Status Code Distribution
           </CardTitle>
         </div>
-        <span className="font-mono text-[10px] text-foreground-subtle uppercase">Last 1h</span>
+        <span className="font-mono text-[10px] text-foreground-subtle uppercase">
+          Last 1h
+        </span>
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -62,13 +69,13 @@ export function StatusCodeDistribution({ orgId, projectId }: StatusCodeDistribut
             <Skeleton className="h-10 w-full" />
           </div>
         ) : total === 0 ? (
-          <div className="py-6 text-center text-xs font-mono text-foreground-subtle">
+          <div className="py-6 text-center font-mono text-xs text-foreground-subtle">
             No HTTP traffic observed in current window.
           </div>
         ) : (
           <>
             {/* Visual Stacked Progress Bar */}
-            <div className="h-3 w-full overflow-hidden rounded-full bg-surface-raised flex">
+            <div className="flex h-3 w-full overflow-hidden rounded-full bg-surface-raised">
               {p2xx > 0 && (
                 <div
                   style={{ width: `${p2xx}%` }}
@@ -100,9 +107,9 @@ export function StatusCodeDistribution({ orgId, projectId }: StatusCodeDistribut
             </div>
 
             {/* Legend & Breakdown */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 font-mono text-xs">
+            <div className="grid grid-cols-2 gap-2 pt-1 font-mono text-xs sm:grid-cols-4">
               <div className="rounded border border-border-subtle bg-surface-raised/40 p-2">
-                <div className="flex items-center gap-1.5 text-success font-medium">
+                <div className="flex items-center gap-1.5 font-medium text-success">
                   <span className="size-2 rounded-full bg-success" />
                   <span>2xx OK</span>
                 </div>
@@ -115,7 +122,7 @@ export function StatusCodeDistribution({ orgId, projectId }: StatusCodeDistribut
               </div>
 
               <div className="rounded border border-border-subtle bg-surface-raised/40 p-2">
-                <div className="flex items-center gap-1.5 text-info font-medium">
+                <div className="flex items-center gap-1.5 font-medium text-info">
                   <span className="size-2 rounded-full bg-info" />
                   <span>3xx Redirect</span>
                 </div>
@@ -128,7 +135,7 @@ export function StatusCodeDistribution({ orgId, projectId }: StatusCodeDistribut
               </div>
 
               <div className="rounded border border-border-subtle bg-surface-raised/40 p-2">
-                <div className="flex items-center gap-1.5 text-warning font-medium">
+                <div className="flex items-center gap-1.5 font-medium text-warning">
                   <span className="size-2 rounded-full bg-warning" />
                   <span>4xx Client</span>
                 </div>
@@ -141,7 +148,7 @@ export function StatusCodeDistribution({ orgId, projectId }: StatusCodeDistribut
               </div>
 
               <div className="rounded border border-border-subtle bg-surface-raised/40 p-2">
-                <div className="flex items-center gap-1.5 text-danger font-medium">
+                <div className="flex items-center gap-1.5 font-medium text-danger">
                   <span className="size-2 rounded-full bg-danger" />
                   <span>5xx Server</span>
                 </div>
@@ -157,27 +164,29 @@ export function StatusCodeDistribution({ orgId, projectId }: StatusCodeDistribut
             {/* Top Observed Codes */}
             {topCodes.length > 0 && (
               <div className="border-t border-border-subtle pt-3">
-                <p className="text-[11px] font-mono text-foreground-subtle mb-2 uppercase">
+                <p className="mb-2 font-mono text-[11px] text-foreground-subtle uppercase">
                   Top Observed Statuses
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {topCodes.slice(0, 6).map((code) => (
                     <span
                       key={code.status}
-                      className="inline-flex items-center gap-1.5 rounded bg-surface-raised px-2 py-1 font-mono text-[11px] border border-border-subtle"
+                      className="inline-flex items-center gap-1.5 rounded border border-border-subtle bg-surface-raised px-2 py-1 font-mono text-[11px]"
                     >
                       <span
                         className={
                           code.status >= 500
-                            ? "text-danger font-bold"
+                            ? "font-bold text-danger"
                             : code.status >= 400
-                            ? "text-warning font-bold"
-                            : "text-success font-bold"
+                              ? "font-bold text-warning"
+                              : "font-bold text-success"
                         }
                       >
                         {code.status}
                       </span>
-                      <span className="text-foreground-muted">{code.count.toLocaleString()}</span>
+                      <span className="text-foreground-muted">
+                        {code.count.toLocaleString()}
+                      </span>
                     </span>
                   ))}
                 </div>

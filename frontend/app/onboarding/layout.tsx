@@ -11,11 +11,11 @@ export default function OnboardingLayout({
 }) {
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-background text-foreground flex flex-col justify-between selection:bg-brand/20 selection:text-sand">
+      <div className="flex min-h-screen flex-col justify-between bg-background text-foreground selection:bg-brand/20 selection:text-sand">
         {/* Header */}
-        <header className="w-full border-b border-border-subtle/50 px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="size-8 rounded-lg bg-surface border border-border flex items-center justify-center p-1 overflow-hidden group-hover:border-brand transition-colors">
+        <header className="flex w-full items-center justify-between border-b border-border-subtle/50 px-6 py-4">
+          <Link href="/" className="group flex items-center gap-2.5">
+            <div className="flex size-8 items-center justify-center overflow-hidden rounded-lg border border-border bg-surface p-1 transition-colors group-hover:border-brand">
               <Image
                 src="/logo.png"
                 alt="Strim Labs Logo"
@@ -25,10 +25,10 @@ export default function OnboardingLayout({
                 className="size-full object-contain"
               />
             </div>
-            <span className="font-heading font-bold text-lg tracking-tight text-foreground">
+            <span className="font-heading text-lg font-bold tracking-tight text-foreground">
               STRIM<span className="text-brand">.</span>
             </span>
-            <span className="hidden sm:inline-block font-mono text-[11px] text-foreground-subtle border-l border-border-subtle pl-2.5 ml-1">
+            <span className="ml-1 hidden border-l border-border-subtle pl-2.5 font-mono text-[11px] text-foreground-subtle sm:inline-block">
               ONBOARDING
             </span>
           </Link>
@@ -40,14 +40,12 @@ export default function OnboardingLayout({
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 flex items-center justify-center p-4 sm:p-6 md:p-10">
-          <div className="w-full max-w-lg">
-            {children}
-          </div>
+        <main className="flex flex-1 items-center justify-center p-4 sm:p-6 md:p-10">
+          <div className="w-full max-w-lg">{children}</div>
         </main>
 
         {/* Footer */}
-        <footer className="w-full border-t border-border-subtle/50 px-6 py-4 flex items-center justify-between font-mono text-xs text-foreground-subtle">
+        <footer className="flex w-full items-center justify-between border-t border-border-subtle/50 px-6 py-4 font-mono text-xs text-foreground-subtle">
           <div className="flex items-center gap-2">
             <ShieldCheck className="size-4 text-brand" />
             <span>Multi-Tenant Isolated Data Plane</span>

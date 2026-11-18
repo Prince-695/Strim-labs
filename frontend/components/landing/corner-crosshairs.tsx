@@ -15,25 +15,25 @@ export function CornerCrosshairs({
     <>
       <span
         aria-hidden="true"
-        className={`absolute -top-1.5 -left-1.5 font-mono text-[11px] leading-none select-none pointer-events-none transition-colors ${colorClass} ${className}`}
+        className={`pointer-events-none absolute -top-1.5 -left-1.5 font-mono text-[11px] leading-none transition-colors select-none ${colorClass} ${className}`}
       >
         +
       </span>
       <span
         aria-hidden="true"
-        className={`absolute -top-1.5 -right-1.5 font-mono text-[11px] leading-none select-none pointer-events-none transition-colors ${colorClass} ${className}`}
+        className={`pointer-events-none absolute -top-1.5 -right-1.5 font-mono text-[11px] leading-none transition-colors select-none ${colorClass} ${className}`}
       >
         +
       </span>
       <span
         aria-hidden="true"
-        className={`absolute -bottom-1.5 -left-1.5 font-mono text-[11px] leading-none select-none pointer-events-none transition-colors ${colorClass} ${className}`}
+        className={`pointer-events-none absolute -bottom-1.5 -left-1.5 font-mono text-[11px] leading-none transition-colors select-none ${colorClass} ${className}`}
       >
         +
       </span>
       <span
         aria-hidden="true"
-        className={`absolute -bottom-1.5 -right-1.5 font-mono text-[11px] leading-none select-none pointer-events-none transition-colors ${colorClass} ${className}`}
+        className={`pointer-events-none absolute -right-1.5 -bottom-1.5 font-mono text-[11px] leading-none transition-colors select-none ${colorClass} ${className}`}
       >
         +
       </span>

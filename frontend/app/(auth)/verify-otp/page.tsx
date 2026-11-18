@@ -7,7 +7,14 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, ShieldCheck, RefreshCw } from "lucide-react"
+import {
+  ArrowLeft,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  ShieldCheck,
+  RefreshCw,
+} from "lucide-react"
 
 import { CornerCrosshairs } from "@/components/landing/corner-crosshairs"
 import { OtpInput } from "@/components/auth/otp-input"
@@ -53,7 +60,9 @@ export default function VerifyOtpPage() {
       if (err instanceof Error) {
         setErrorMessage(err.message)
       } else {
-        setErrorMessage("Failed to verify code. Please verify the 6 digits and try again.")
+        setErrorMessage(
+          "Failed to verify code. Please verify the 6 digits and try again."
+        )
       }
     } finally {
       setIsSubmitting(false)
@@ -78,14 +87,14 @@ export default function VerifyOtpPage() {
   }
 
   return (
-    <div className="w-full max-w-sm sm:max-w-md relative rounded-xl border border-border bg-surface p-7 sm:p-9 shadow-xl shadow-black text-left">
+    <div className="relative w-full max-w-sm rounded-xl border border-border bg-surface p-7 text-left shadow-xl shadow-black sm:max-w-md sm:p-9">
       <CornerCrosshairs colorClass="text-sand/30" />
 
       {/* Metadata Tag & Title */}
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="flex size-8 items-center justify-center rounded-lg border border-border bg-surface-raised p-1 overflow-hidden group-hover:border-brand transition-colors">
+        <div className="mb-4 flex items-center justify-between">
+          <Link href="/" className="group flex items-center gap-2.5">
+            <div className="flex size-8 items-center justify-center overflow-hidden rounded-lg border border-border bg-surface-raised p-1 transition-colors group-hover:border-brand">
               <Image
                 src="/logo.png"
                 alt="Strim Labs Logo"
@@ -95,35 +104,36 @@ export default function VerifyOtpPage() {
                 className="size-full object-contain"
               />
             </div>
-            <span className="font-mono text-sm font-bold tracking-tight text-foreground group-hover:text-brand transition-colors">
+            <span className="font-mono text-sm font-bold tracking-tight text-foreground transition-colors group-hover:text-brand">
               STRIM LABS
             </span>
           </Link>
-          <span className="text-brand font-mono text-[11px] font-semibold flex items-center gap-1.5 border border-brand/30 bg-brand/10 px-2 py-0.5 rounded">
-            <span className="size-1.5 rounded-full bg-brand animate-pulse" />
+          <span className="flex items-center gap-1.5 rounded border border-brand/30 bg-brand/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-brand">
+            <span className="size-1.5 animate-pulse rounded-full bg-brand" />
             2FA CODE
           </span>
         </div>
-        <h1 className="font-mono text-2xl sm:text-3xl font-normal text-foreground tracking-tight">
+        <h1 className="font-mono text-2xl font-normal tracking-tight text-foreground sm:text-3xl">
           Verify your account
         </h1>
-        <p className="mt-2 font-sans text-xs text-foreground-muted leading-relaxed">
-          Enter the 6-digit verification code sent to your registered email inbox to complete authentication.
+        <p className="mt-2 font-sans text-xs leading-relaxed text-foreground-muted">
+          Enter the 6-digit verification code sent to your registered email
+          inbox to complete authentication.
         </p>
       </div>
 
       {/* Error Alert */}
       {errorMessage && (
-        <div className="mb-5 flex items-start gap-2.5 rounded-md border border-danger/50 bg-danger/10 p-3 text-xs text-danger font-mono">
-          <AlertCircle className="size-4 shrink-0 mt-0.5 text-danger" />
+        <div className="mb-5 flex items-start gap-2.5 rounded-md border border-danger/50 bg-danger/10 p-3 font-mono text-xs text-danger">
+          <AlertCircle className="mt-0.5 size-4 shrink-0 text-danger" />
           <span className="leading-relaxed">{errorMessage}</span>
         </div>
       )}
 
       {/* Resend Status */}
       {resendStatus && (
-        <div className="mb-5 flex items-start gap-2.5 rounded-md border border-success/40 bg-success/10 p-3 text-xs text-success font-mono">
-          <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
+        <div className="mb-5 flex items-start gap-2.5 rounded-md border border-success/40 bg-success/10 p-3 font-mono text-xs text-success">
+          <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
           <span className="leading-relaxed">{resendStatus}</span>
         </div>
       )}
@@ -131,19 +141,24 @@ export default function VerifyOtpPage() {
       {isSuccess ? (
         <div className="space-y-4 font-mono text-xs">
           <div className="flex items-start gap-3 rounded-md border border-success/40 bg-success/10 p-3.5 text-xs text-success">
-            <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
+            <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
             <div>
-              <p className="font-semibold text-foreground">Account verified successfully!</p>
-              <p className="mt-1 text-foreground-muted text-[11px] font-sans leading-relaxed">
+              <p className="font-semibold text-foreground">
+                Account verified successfully!
+              </p>
+              <p className="mt-1 font-sans text-[11px] leading-relaxed text-foreground-muted">
                 Loading your organization setup workspace...
               </p>
             </div>
           </div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5 font-mono text-xs">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="space-y-5 font-mono text-xs"
+        >
           <div className="space-y-2">
-            <label className="text-[11px] text-sand uppercase tracking-wider block font-mono">
+            <label className="block font-mono text-[11px] tracking-wider text-sand uppercase">
               6-Digit verification code
             </label>
             <OtpInput
@@ -157,14 +172,16 @@ export default function VerifyOtpPage() {
               autoFocus={true}
             />
             {errors.otp && (
-              <p className="text-[11px] text-danger mt-1">{errors.otp.message}</p>
+              <p className="mt-1 text-[11px] text-danger">
+                {errors.otp.message}
+              </p>
             )}
           </div>
 
           <button
             type="submit"
             disabled={isSubmitting || otpValue.length !== 6}
-            className="w-full rounded-md bg-brand hover:bg-brand-hover disabled:opacity-40 py-2.5 px-4 font-mono text-xs font-semibold uppercase tracking-wider text-white shadow-md shadow-brand/20 transition-all flex items-center justify-center gap-2 cursor-pointer mt-3"
+            className="mt-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-brand px-4 py-2.5 font-mono text-xs font-semibold tracking-wider text-white uppercase shadow-md shadow-brand/20 transition-all hover:bg-brand-hover disabled:opacity-40"
           >
             {isSubmitting ? (
               <span className="inline-flex items-center gap-2">
@@ -184,7 +201,7 @@ export default function VerifyOtpPage() {
           type="button"
           onClick={handleResend}
           disabled={isResending || isSubmitting}
-          className="text-foreground-subtle hover:text-sand transition-colors inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-50 text-[11px]"
+          className="inline-flex cursor-pointer items-center gap-1.5 text-[11px] text-foreground-subtle transition-colors hover:text-sand disabled:opacity-50"
         >
           {isResending ? (
             <>
@@ -201,10 +218,10 @@ export default function VerifyOtpPage() {
       </div>
 
       {/* Switcher Footer */}
-      <div className="mt-7 pt-5 border-t border-border-subtle text-center font-mono text-xs text-foreground-subtle">
+      <div className="mt-7 border-t border-border-subtle pt-5 text-center font-mono text-xs text-foreground-subtle">
         <Link
           href="/login"
-          className="inline-flex items-center gap-1.5 text-sand hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-1.5 text-sand transition-colors hover:text-foreground"
         >
           <ArrowLeft className="size-3" />
           <span>Back to Sign In</span>

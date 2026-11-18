@@ -11,7 +11,7 @@ import {
   ShieldAlert,
   ArrowRight,
   Play,
-  Layers
+  Layers,
 } from "lucide-react"
 
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -26,10 +26,14 @@ import { useUIStore } from "@/lib/stores/ui-store"
 
 function ProjectsDirectoryContent() {
   const searchParams = useSearchParams()
-  const { currentOrgId, setCurrentProjectId, setCreateProjectOpen } = useUIStore()
+  const { currentOrgId, setCurrentProjectId, setCreateProjectOpen } =
+    useUIStore()
 
   React.useEffect(() => {
-    if (searchParams?.get("new") === "1" || searchParams?.get("new") === "true") {
+    if (
+      searchParams?.get("new") === "1" ||
+      searchParams?.get("new") === "true"
+    ) {
       setCreateProjectOpen(true)
     }
   }, [searchParams, setCreateProjectOpen])
@@ -50,7 +54,7 @@ function ProjectsDirectoryContent() {
         actions={
           <Button
             onClick={() => setCreateProjectOpen(true)}
-            className="gap-1.5 bg-brand text-white hover:bg-brand-hover text-xs font-mono"
+            className="gap-1.5 bg-brand font-mono text-xs text-white hover:bg-brand-hover"
           >
             <Plus className="size-3.5" />
             <span>Register New Target</span>
@@ -67,7 +71,8 @@ function ProjectsDirectoryContent() {
             <Link
               href="/onboarding/organization"
               className={buttonVariants({
-                className: "bg-brand text-white hover:bg-brand-hover text-xs font-mono",
+                className:
+                  "bg-brand font-mono text-xs text-white hover:bg-brand-hover",
               })}
             >
               <Plus className="mr-1.5 size-3.5" />
@@ -89,7 +94,7 @@ function ProjectsDirectoryContent() {
           action={
             <Button
               onClick={() => setCreateProjectOpen(true)}
-              className="bg-brand text-white hover:bg-brand-hover text-xs font-mono"
+              className="bg-brand font-mono text-xs text-white hover:bg-brand-hover"
             >
               <Plus className="mr-1.5 size-3.5" />
               <span>Register Target Project</span>
@@ -104,38 +109,43 @@ function ProjectsDirectoryContent() {
             return (
               <Card
                 key={project.id}
-                className="border-border bg-surface hover:border-brand/40 transition-all duration-200 flex flex-col justify-between relative overflow-hidden"
+                className="relative flex flex-col justify-between overflow-hidden border-border bg-surface transition-all duration-200 hover:border-brand/40"
               >
                 <CornerCrosshairs />
-                <CardHeader className="pb-3 border-b border-border-subtle/50">
+                <CardHeader className="border-b border-border-subtle/50 pb-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-1">
-                      <CardTitle className="text-sm font-semibold font-heading text-foreground">
+                      <CardTitle className="font-heading text-sm font-semibold text-foreground">
                         {project.name}
                       </CardTitle>
-                      <p className="font-mono text-[11px] text-foreground-subtle truncate max-w-[200px]">
+                      <p className="max-w-[200px] truncate font-mono text-[11px] text-foreground-subtle">
                         {project.slug}
                       </p>
                     </div>
 
-                    <span className="rounded bg-surface-raised px-2 py-0.5 font-mono text-[10px] uppercase text-sand border border-border-subtle shrink-0">
+                    <span className="shrink-0 rounded border border-border-subtle bg-surface-raised px-2 py-0.5 font-mono text-[10px] text-sand uppercase">
                       {project.environment}
                     </span>
                   </div>
                 </CardHeader>
 
-                <CardContent className="py-4 space-y-3 font-mono text-xs flex-1">
+                <CardContent className="flex-1 space-y-3 py-4 font-mono text-xs">
                   {/* Target Base URL */}
                   <div className="flex items-center gap-2 text-foreground-muted">
-                    <Globe className="size-3.5 text-foreground-subtle shrink-0" />
-                    <span className="truncate text-foreground" title={project.base_url}>
+                    <Globe className="size-3.5 shrink-0 text-foreground-subtle" />
+                    <span
+                      className="truncate text-foreground"
+                      title={project.base_url}
+                    >
                       {project.base_url}
                     </span>
                   </div>
 
                   {/* Verification Status */}
                   <div className="flex items-center justify-between pt-1">
-                    <span className="text-[11px] text-foreground-subtle uppercase">Target Authority</span>
+                    <span className="text-[11px] text-foreground-subtle uppercase">
+                      Target Authority
+                    </span>
                     <StatusBadge
                       status={isVerified ? "completed" : "pending"}
                       label={isVerified ? "VERIFIED" : "UNVERIFIED"}
@@ -143,18 +153,22 @@ function ProjectsDirectoryContent() {
                   </div>
 
                   {/* Endpoints Count */}
-                  <div className="flex items-center justify-between pt-1 border-t border-border-subtle/40">
-                    <span className="text-[11px] text-foreground-subtle uppercase">Registered Endpoints</span>
-                    <span className="font-bold text-foreground">{project.endpoint_count || 0}</span>
+                  <div className="flex items-center justify-between border-t border-border-subtle/40 pt-1">
+                    <span className="text-[11px] text-foreground-subtle uppercase">
+                      Registered Endpoints
+                    </span>
+                    <span className="font-bold text-foreground">
+                      {project.endpoint_count || 0}
+                    </span>
                   </div>
                 </CardContent>
 
                 {/* Card Actions Footer */}
-                <div className="border-t border-border-subtle p-3 bg-surface-raised/20 flex items-center justify-between gap-2 font-mono text-xs">
+                <div className="flex items-center justify-between gap-2 border-t border-border-subtle bg-surface-raised/20 p-3 font-mono text-xs">
                   {!isVerified ? (
                     <Link
                       href={`/dashboard/projects/${project.id}`}
-                      className="inline-flex items-center gap-1.5 text-warning hover:underline text-xs"
+                      className="inline-flex items-center gap-1.5 text-xs text-warning hover:underline"
                       onClick={() => setCurrentProjectId(project.id)}
                     >
                       <ShieldAlert className="size-3.5" />
@@ -163,7 +177,7 @@ function ProjectsDirectoryContent() {
                   ) : (
                     <Link
                       href={`/dashboard/runner?project=${project.id}`}
-                      className="inline-flex items-center gap-1.5 text-sand hover:underline text-xs"
+                      className="inline-flex items-center gap-1.5 text-xs text-sand hover:underline"
                       onClick={() => setCurrentProjectId(project.id)}
                     >
                       <Play className="size-3 fill-current text-brand" />
@@ -173,7 +187,7 @@ function ProjectsDirectoryContent() {
 
                   <Link
                     href={`/dashboard/projects/${project.id}`}
-                    className="inline-flex items-center gap-1 text-foreground-muted hover:text-foreground text-xs"
+                    className="inline-flex items-center gap-1 text-xs text-foreground-muted hover:text-foreground"
                     onClick={() => setCurrentProjectId(project.id)}
                   >
                     <span>View Project</span>
@@ -191,7 +205,11 @@ function ProjectsDirectoryContent() {
 
 export default function ProjectsDirectoryPage() {
   return (
-    <React.Suspense fallback={<div className="h-48 w-full animate-pulse bg-surface-raised rounded-xl" />}>
+    <React.Suspense
+      fallback={
+        <div className="h-48 w-full animate-pulse rounded-xl bg-surface-raised" />
+      }
+    >
       <ProjectsDirectoryContent />
     </React.Suspense>
   )

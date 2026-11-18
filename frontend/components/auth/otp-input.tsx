@@ -40,7 +40,10 @@ export function OtpInput({
     }
   }, [autoFocus, disabled])
 
-  const handleInputChange = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleInputChange = (
+    index: number,
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const inputValue = e.target.value
     // If multiple digits were typed/input at once
     const cleaned = inputValue.replace(/\D/g, "")
@@ -73,7 +76,7 @@ export function OtpInput({
   const handleMultiDigitFill = (chars: string, startIndex: number) => {
     const nextDigits = [...digits]
     const cleanChars = chars.replace(/\D/g, "")
-    
+
     // Fill from startIndex or from 0 if cleanChars is 6 chars
     const start = cleanChars.length === 6 ? 0 : startIndex
     for (let i = 0; i < cleanChars.length && start + i < 6; i++) {
@@ -87,7 +90,10 @@ export function OtpInput({
     inputRefs.current[nextFocusIndex]?.focus()
   }
 
-  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (
+    index: number,
+    e: React.KeyboardEvent<HTMLInputElement>
+  ) => {
     if (e.key === "Backspace") {
       e.preventDefault()
       if (digits[index]) {
@@ -188,12 +194,12 @@ export function OtpInput({
               onChange={(e) => handleInputChange(index, e)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               aria-label={`Verification digit ${index + 1} of 6`}
-              className={`h-12 sm:h-14 w-10 sm:w-12 rounded-lg border text-center font-mono text-xl sm:text-2xl font-bold transition-all outline-hidden select-all ${
+              className={`h-12 w-10 rounded-lg border text-center font-mono text-xl font-bold outline-hidden transition-all select-all sm:h-14 sm:w-12 sm:text-2xl ${
                 hasError
                   ? "border-danger/80 bg-danger/10 text-danger focus:border-danger focus:ring-1 focus:ring-danger"
                   : isFilled
-                  ? "border-border bg-surface-raised text-foreground shadow-sm shadow-black/40 focus:border-brand focus:ring-2 focus:ring-brand/30"
-                  : "border-border bg-surface-sunken text-foreground placeholder:text-foreground-subtle focus:border-brand focus:bg-background focus:ring-2 focus:ring-brand/30"
+                    ? "border-border bg-surface-raised text-foreground shadow-sm shadow-black/40 focus:border-brand focus:ring-2 focus:ring-brand/30"
+                    : "border-border bg-surface-sunken text-foreground placeholder:text-foreground-subtle focus:border-brand focus:bg-background focus:ring-2 focus:ring-brand/30"
               } disabled:cursor-not-allowed disabled:opacity-50`}
             />
           )
@@ -201,14 +207,14 @@ export function OtpInput({
       </div>
 
       {/* Copy / Paste Helper Bar */}
-      <div className="flex items-center justify-between font-mono text-[11px] text-foreground-subtle px-0.5">
+      <div className="flex items-center justify-between px-0.5 font-mono text-[11px] text-foreground-subtle">
         <span>Enter 6 digits or paste</span>
         <div className="flex items-center gap-3">
           {digits.some(Boolean) && (
             <button
               type="button"
               onClick={handleDirectCopy}
-              className="inline-flex items-center gap-1 text-foreground-muted hover:text-foreground transition-colors cursor-pointer"
+              className="inline-flex cursor-pointer items-center gap-1 text-foreground-muted transition-colors hover:text-foreground"
             >
               {copied ? (
                 <>
@@ -226,7 +232,7 @@ export function OtpInput({
           <button
             type="button"
             onClick={handleDirectPaste}
-            className="inline-flex items-center gap-1 text-foreground-muted hover:text-foreground transition-colors cursor-pointer"
+            className="inline-flex cursor-pointer items-center gap-1 text-foreground-muted transition-colors hover:text-foreground"
           >
             <ClipboardPaste className="size-3" />
             <span>Paste code</span>

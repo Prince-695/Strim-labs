@@ -14,7 +14,13 @@ import {
   FileCode,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { CornerCrosshairs } from "@/components/landing/corner-crosshairs"
 import type { Project } from "@/lib/project-api"
@@ -111,17 +117,21 @@ Value: strim-verify=${verifyToken}`
   }
 
   return (
-    <Card className="border-border bg-surface shadow-xs relative overflow-hidden">
+    <Card className="relative overflow-hidden border-border bg-surface shadow-xs">
       <CornerCrosshairs />
       <CardHeader className="border-b border-border-subtle pb-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div>
-            <CardTitle className="text-base font-semibold font-heading text-foreground flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 font-heading text-base font-semibold text-foreground">
               <ShieldCheck className="size-4 text-emerald-400" />
               <span>Domain Authority & Ownership Verification</span>
             </CardTitle>
-            <CardDescription className="text-xs text-foreground-muted font-mono mt-0.5">
-              Verify ownership of <span className="text-foreground font-medium">{project.base_url}</span> to unlock the project cockpit and distributed load testing.
+            <CardDescription className="mt-0.5 font-mono text-xs text-foreground-muted">
+              Verify ownership of{" "}
+              <span className="font-medium text-foreground">
+                {project.base_url}
+              </span>{" "}
+              to unlock the project cockpit and distributed load testing.
             </CardDescription>
           </div>
           <StatusBadge
@@ -131,7 +141,7 @@ Value: strim-verify=${verifyToken}`
         </div>
       </CardHeader>
 
-      <CardContent className="pt-6 space-y-5 font-mono text-xs">
+      <CardContent className="space-y-5 pt-6 font-mono text-xs">
         {/* Verification result feedback banner */}
         {verifyStatus && (
           <div
@@ -142,13 +152,15 @@ Value: strim-verify=${verifyToken}`
             }`}
           >
             {verifyStatus.success ? (
-              <CheckCircle2 className="size-4 shrink-0 mt-0.5" />
+              <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
             ) : (
-              <AlertCircle className="size-4 shrink-0 mt-0.5" />
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
             )}
             <div className="space-y-1">
-              <span className="font-semibold block">
-                {verifyStatus.success ? "Domain Verified Successfully" : "Verification Check Failed"}
+              <span className="block font-semibold">
+                {verifyStatus.success
+                  ? "Domain Verified Successfully"
+                  : "Verification Check Failed"}
               </span>
               <p className="text-[11px] opacity-90">{verifyStatus.message}</p>
             </div>
@@ -156,26 +168,32 @@ Value: strim-verify=${verifyToken}`
         )}
 
         {/* Expected Endpoint Banner */}
-        <div className="rounded-xl border border-border-subtle bg-surface-raised/40 p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-foreground-subtle shrink-0">Verification Endpoint:</span>
+        <div className="flex flex-col justify-between gap-2.5 rounded-xl border border-border-subtle bg-surface-raised/40 p-3.5 sm:flex-row sm:items-center">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="shrink-0 text-foreground-subtle">
+              Verification Endpoint:
+            </span>
             <a
               href={verificationUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-brand hover:underline font-medium truncate inline-flex items-center gap-1"
+              className="inline-flex items-center gap-1 truncate font-medium text-brand hover:underline"
             >
               <span>{verificationUrl}</span>
               <ExternalLink className="size-3 shrink-0" />
             </a>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={() => copyToClipboard(`strim-verify=${verifyToken}`)}
-              className="inline-flex items-center gap-1 text-[11px] text-foreground-muted hover:text-foreground bg-surface px-2.5 py-1 rounded border border-border-subtle hover:border-border transition-colors"
+              className="inline-flex items-center gap-1 rounded border border-border-subtle bg-surface px-2.5 py-1 text-[11px] text-foreground-muted transition-colors hover:border-border hover:text-foreground"
             >
-              {copiedToken ? <Check className="size-3 text-emerald-400" /> : <Copy className="size-3" />}
+              {copiedToken ? (
+                <Check className="size-3 text-emerald-400" />
+              ) : (
+                <Copy className="size-3" />
+              )}
               <span>{copiedToken ? "Token Copied" : "Copy Token"}</span>
             </button>
           </div>
@@ -184,17 +202,17 @@ Value: strim-verify=${verifyToken}`
         {/* Technology Method Selector */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] text-foreground-subtle uppercase tracking-wider font-semibold">
+            <span className="text-[11px] font-semibold tracking-wider text-foreground-subtle uppercase">
               Select Framework / Method:
             </span>
             {tech === "nextjs" && (
-              <div className="flex items-center gap-1 bg-surface rounded-lg p-0.5 border border-border-subtle">
+              <div className="flex items-center gap-1 rounded-lg border border-border-subtle bg-surface p-0.5">
                 <button
                   type="button"
                   onClick={() => setNextRouter("app")}
-                  className={`px-2.5 py-0.5 rounded text-[11px] transition-colors ${
+                  className={`rounded px-2.5 py-0.5 text-[11px] transition-colors ${
                     nextRouter === "app"
-                      ? "bg-brand/15 text-white font-medium border border-brand/30"
+                      ? "border border-brand/30 bg-brand/15 font-medium text-white"
                       : "text-foreground-muted hover:text-foreground"
                   }`}
                 >
@@ -203,9 +221,9 @@ Value: strim-verify=${verifyToken}`
                 <button
                   type="button"
                   onClick={() => setNextRouter("pages")}
-                  className={`px-2.5 py-0.5 rounded text-[11px] transition-colors ${
+                  className={`rounded px-2.5 py-0.5 text-[11px] transition-colors ${
                     nextRouter === "pages"
-                      ? "bg-brand/15 text-white font-medium border border-brand/30"
+                      ? "border border-brand/30 bg-brand/15 font-medium text-white"
                       : "text-foreground-muted hover:text-foreground"
                   }`}
                 >
@@ -229,9 +247,9 @@ Value: strim-verify=${verifyToken}`
                 key={t.id}
                 type="button"
                 onClick={() => setTech(t.id)}
-                className={`rounded-lg px-3 py-1.5 border transition-colors ${
+                className={`rounded-lg border px-3 py-1.5 transition-colors ${
                   tech === t.id
-                    ? "border-brand bg-brand/10 text-white font-medium"
+                    ? "border-brand bg-brand/10 font-medium text-white"
                     : "border-border-subtle bg-surface-raised text-foreground-muted hover:text-foreground"
                 }`}
               >
@@ -242,9 +260,9 @@ Value: strim-verify=${verifyToken}`
         </div>
 
         {/* Code / Record Display */}
-        <div className="rounded-xl border border-border-subtle bg-surface-raised/40 p-4 space-y-3">
+        <div className="space-y-3 rounded-xl border border-border-subtle bg-surface-raised/40 p-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 text-foreground-muted text-[11px]">
+            <div className="flex items-center gap-2 text-[11px] text-foreground-muted">
               {tech === "dns" ? (
                 <span>Add TXT Record in DNS Settings:</span>
               ) : (
@@ -256,10 +274,10 @@ Value: strim-verify=${verifyToken}`
                         ? "File: app/.well-known/strim-verification/route.ts"
                         : "File: pages/.well-known/strim-verification.ts"
                       : tech === "node"
-                      ? "File: server.js or app.js"
-                      : tech === "python"
-                      ? "File: main.py"
-                      : "File: main.go"}
+                        ? "File: server.js or app.js"
+                        : tech === "python"
+                          ? "File: main.py"
+                          : "File: main.go"}
                   </span>
                 </>
               )}
@@ -269,33 +287,41 @@ Value: strim-verify=${verifyToken}`
               onClick={() => copyToClipboard(getSnippet(), true)}
               className="inline-flex items-center gap-1 text-[11px] text-brand hover:underline"
             >
-              {copiedSnippet ? <Check className="size-3" /> : <Copy className="size-3" />}
+              {copiedSnippet ? (
+                <Check className="size-3" />
+              ) : (
+                <Copy className="size-3" />
+              )}
               <span>{copiedSnippet ? "Snippet Copied" : "Copy Snippet"}</span>
             </button>
           </div>
 
           {tech === "dns" ? (
-            <div className="space-y-2 p-3 bg-surface rounded-lg border border-border">
-              <div className="flex justify-between items-center py-1 border-b border-border-subtle/50">
+            <div className="space-y-2 rounded-lg border border-border bg-surface p-3">
+              <div className="flex items-center justify-between border-b border-border-subtle/50 py-1">
                 <span className="text-foreground-subtle">Record Type:</span>
-                <span className="text-foreground font-semibold">TXT</span>
+                <span className="font-semibold text-foreground">TXT</span>
               </div>
-              <div className="flex justify-between items-center py-1 border-b border-border-subtle/50">
+              <div className="flex items-center justify-between border-b border-border-subtle/50 py-1">
                 <span className="text-foreground-subtle">Host / Name:</span>
-                <span className="text-foreground font-semibold">_strim-verification</span>
+                <span className="font-semibold text-foreground">
+                  _strim-verification
+                </span>
               </div>
-              <div className="flex justify-between items-center py-1">
+              <div className="flex items-center justify-between py-1">
                 <span className="text-foreground-subtle">Value:</span>
-                <span className="text-brand font-semibold break-all">strim-verify={verifyToken}</span>
+                <span className="font-semibold break-all text-brand">
+                  strim-verify={verifyToken}
+                </span>
               </div>
             </div>
           ) : (
-            <pre className="p-3 bg-surface rounded-lg border border-border text-sand text-[11px] leading-relaxed overflow-x-auto">
+            <pre className="overflow-x-auto rounded-lg border border-border bg-surface p-3 text-[11px] leading-relaxed text-sand">
               {getSnippet()}
             </pre>
           )}
 
-          <p className="text-[11px] text-foreground-subtle leading-relaxed">
+          <p className="text-[11px] leading-relaxed text-foreground-subtle">
             {tech === "dns"
               ? "DNS TXT propagation may take between 1 to 5 minutes depending on your domain registrar."
               : `Deploy the route to ${project.base_url}. Strim Labs will send a GET request to verify the token match.`}
@@ -303,8 +329,8 @@ Value: strim-verify=${verifyToken}`
         </div>
 
         {/* Verification Trigger Button */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2">
-          <div className="flex items-center gap-2 text-foreground-subtle text-[11px]">
+        <div className="flex flex-col justify-between gap-3 pt-2 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-2 text-[11px] text-foreground-subtle">
             <Lock className="size-3.5 text-foreground-muted" />
             <span>Project cockpit unlocks immediately upon verification.</span>
           </div>
@@ -312,14 +338,18 @@ Value: strim-verify=${verifyToken}`
           <Button
             onClick={onVerify}
             disabled={isVerifying}
-            className="bg-brand text-white hover:bg-brand-hover text-xs font-mono gap-1.5 shrink-0"
+            className="shrink-0 gap-1.5 bg-brand font-mono text-xs text-white hover:bg-brand-hover"
           >
             {isVerifying ? (
               <Loader2 className="size-3.5 animate-spin" />
             ) : (
               <ShieldCheck className="size-3.5" />
             )}
-            <span>{isVerified ? "Re-run Verification Check" : "Run Verification Check"}</span>
+            <span>
+              {isVerified
+                ? "Re-run Verification Check"
+                : "Run Verification Check"}
+            </span>
           </Button>
         </div>
       </CardContent>

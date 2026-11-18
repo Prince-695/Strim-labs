@@ -81,15 +81,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         // ignore parse error
       }
     }
-    set({ token, user: cachedUser, isAuthenticated: Boolean(token), isLoading: false })
+    set({
+      token,
+      user: cachedUser,
+      isAuthenticated: Boolean(token),
+      isLoading: false,
+    })
 
     // If authenticated, refresh profile in background to get latest username, etc.
     if (token) {
-      api.get<UserProfile>("/users/me").then((res) => {
-        if (res.data) {
-          get().setUser(res.data)
-        }
-      }).catch(() => {})
+      api
+        .get<UserProfile>("/users/me")
+        .then((res) => {
+          if (res.data) {
+            get().setUser(res.data)
+          }
+        })
+        .catch(() => {})
     }
   },
 }))

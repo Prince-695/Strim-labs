@@ -27,12 +27,18 @@ import { orgApi } from "@/lib/org-api"
 import { useUIStore } from "@/lib/stores/ui-store"
 
 const createProjectSchema = z.object({
-  name: z.string().min(2, "Project name must be at least 2 characters").max(100),
+  name: z
+    .string()
+    .min(2, "Project name must be at least 2 characters")
+    .max(100),
   slug: z
     .string()
     .min(2, "Slug must be at least 2 characters")
     .max(50)
-    .regex(/^[a-z0-9-]+$/, "Slug may only contain lowercase letters, numbers, and hyphens"),
+    .regex(
+      /^[a-z0-9-]+$/,
+      "Slug may only contain lowercase letters, numbers, and hyphens"
+    ),
   baseUrl: z
     .string()
     .url("Please enter a valid target URL (e.g. https://api.yourdomain.com)")
@@ -78,7 +84,8 @@ export function CreateProjectModal({
     setCreateProjectOpen,
   } = useUIStore()
 
-  const isOpen = controlledIsOpen !== undefined ? controlledIsOpen : isCreateProjectOpen
+  const isOpen =
+    controlledIsOpen !== undefined ? controlledIsOpen : isCreateProjectOpen
   const handleClose = React.useCallback(() => {
     if (controlledOnClose) {
       controlledOnClose()
@@ -90,7 +97,9 @@ export function CreateProjectModal({
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
   const [isManualSlug, setIsManualSlug] = React.useState(false)
-  const [activeOrgId, setActiveOrgId] = React.useState<string>(currentOrgId || "")
+  const [activeOrgId, setActiveOrgId] = React.useState<string>(
+    currentOrgId || ""
+  )
 
   // Sync activeOrgId when currentOrgId changes
   React.useEffect(() => {
@@ -197,7 +206,9 @@ export function CreateProjectModal({
     }
 
     if (!targetOrgId) {
-      setErrorMessage("No organization workspace found. Please create an organization first.")
+      setErrorMessage(
+        "No organization workspace found. Please create an organization first."
+      )
       return
     }
 
@@ -246,28 +257,32 @@ export function CreateProjectModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-project-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md animate-in fade-in duration-150"
+      className="fixed inset-0 z-50 flex animate-in items-center justify-center bg-black/75 p-4 backdrop-blur-md duration-150 fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget && !isSubmitting) {
           handleClose()
         }
       }}
     >
-      <div className="relative w-full max-w-lg rounded-2xl border border-border bg-surface shadow-2xl p-6 sm:p-7 animate-in zoom-in-95 duration-150">
+      <div className="relative w-full max-w-lg animate-in rounded-2xl border border-border bg-surface p-6 shadow-2xl duration-150 zoom-in-95 sm:p-7">
         <CornerCrosshairs />
 
         {/* Modal Header */}
-        <div className="flex items-start justify-between pb-5 border-b border-border-subtle">
+        <div className="flex items-start justify-between border-b border-border-subtle pb-5">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2 font-mono text-[11px] text-brand">
-              <span className="size-1.5 rounded-full bg-brand animate-pulse" />
+              <span className="size-1.5 animate-pulse rounded-full bg-brand" />
               <span>[TARGET API REGISTRATION]</span>
             </div>
-            <h2 id="create-project-title" className="text-lg font-heading font-bold text-foreground">
+            <h2
+              id="create-project-title"
+              className="font-heading text-lg font-bold text-foreground"
+            >
               Register Target API Project
             </h2>
             <p className="text-xs text-foreground-muted">
-              Configure the API endpoint URL you will be observing, probing, and load testing.
+              Configure the API endpoint URL you will be observing, probing, and
+              load testing.
             </p>
           </div>
 
@@ -276,29 +291,30 @@ export function CreateProjectModal({
             onClick={handleClose}
             disabled={isSubmitting}
             aria-label="Close modal"
-            className="rounded-lg p-1 text-foreground-subtle hover:text-foreground hover:bg-surface-raised transition-colors -mr-1 -mt-1 disabled:opacity-50"
+            className="-mt-1 -mr-1 rounded-lg p-1 text-foreground-subtle transition-colors hover:bg-surface-raised hover:text-foreground disabled:opacity-50"
           >
             <X className="size-4" />
           </button>
         </div>
 
         {/* Modal Body */}
-        <div className="pt-5 space-y-4">
+        <div className="space-y-4 pt-5">
           {errorMessage && (
             <div className="flex items-start gap-2.5 rounded-lg border border-danger/40 bg-danger/10 p-3 text-xs text-danger">
-              <AlertCircle className="size-4 shrink-0 mt-0.5" />
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
               <span className="leading-relaxed">{errorMessage}</span>
             </div>
           )}
 
           {!activeOrgId && !currentOrgId ? (
-            <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-3 font-mono text-xs">
-              <div className="flex items-center gap-2 text-warning font-semibold">
+            <div className="space-y-3 rounded-lg border border-warning/30 bg-warning/5 p-4 font-mono text-xs">
+              <div className="flex items-center gap-2 font-semibold text-warning">
                 <Layers className="size-4" />
                 <span>No Organization Workspace Found</span>
               </div>
-              <p className="text-foreground-muted text-[11px] leading-relaxed">
-                Projects must belong to an organization workspace before registering targets.
+              <p className="text-[11px] leading-relaxed text-foreground-muted">
+                Projects must belong to an organization workspace before
+                registering targets.
               </p>
               <Button
                 type="button"
@@ -306,7 +322,7 @@ export function CreateProjectModal({
                   handleClose()
                   router.push("/onboarding/organization")
                 }}
-                className="w-full bg-brand text-white hover:bg-brand-hover text-xs font-mono h-9"
+                className="h-9 w-full bg-brand font-mono text-xs text-white hover:bg-brand-hover"
               >
                 Create Workspace Organization
               </Button>
@@ -315,35 +331,43 @@ export function CreateProjectModal({
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               {/* Project Name */}
               <div className="space-y-1.5">
-                <Label htmlFor="create-project-name" className="text-xs font-mono text-foreground-muted">
+                <Label
+                  htmlFor="create-project-name"
+                  className="font-mono text-xs text-foreground-muted"
+                >
                   Project Name
                 </Label>
                 <div className="relative">
-                  <Server className="absolute left-3 top-2.5 size-4 text-foreground-subtle" />
+                  <Server className="absolute top-2.5 left-3 size-4 text-foreground-subtle" />
                   <Input
                     id="create-project-name"
                     placeholder="Checkout API"
-                    className="pl-9 text-xs font-mono bg-surface-raised border-border-subtle focus-visible:border-brand"
+                    className="border-border-subtle bg-surface-raised pl-9 font-mono text-xs focus-visible:border-brand"
                     disabled={isSubmitting}
                     {...register("name")}
                   />
                 </div>
                 {errors.name && (
-                  <p className="text-[11px] font-mono text-danger">{errors.name.message}</p>
+                  <p className="font-mono text-[11px] text-danger">
+                    {errors.name.message}
+                  </p>
                 )}
               </div>
 
               {/* Project Slug */}
               <div className="space-y-1.5">
-                <Label htmlFor="create-project-slug" className="text-xs font-mono text-foreground-muted">
+                <Label
+                  htmlFor="create-project-slug"
+                  className="font-mono text-xs text-foreground-muted"
+                >
                   Project Slug
                 </Label>
                 <div className="relative">
-                  <Globe className="absolute left-3 top-2.5 size-4 text-foreground-subtle" />
+                  <Globe className="absolute top-2.5 left-3 size-4 text-foreground-subtle" />
                   <Input
                     id="create-project-slug"
                     placeholder="checkout-api"
-                    className="pl-9 text-xs font-mono bg-surface-raised border-border-subtle focus-visible:border-brand"
+                    className="border-border-subtle bg-surface-raised pl-9 font-mono text-xs focus-visible:border-brand"
                     disabled={isSubmitting}
                     {...register("slug", {
                       onChange: () => setIsManualSlug(true),
@@ -351,93 +375,106 @@ export function CreateProjectModal({
                   />
                 </div>
                 {errors.slug && (
-                  <p className="text-[11px] font-mono text-danger">{errors.slug.message}</p>
+                  <p className="font-mono text-[11px] text-danger">
+                    {errors.slug.message}
+                  </p>
                 )}
               </div>
 
               {/* Target Base URL */}
               <div className="space-y-1.5">
-                <Label htmlFor="create-project-url" className="text-xs font-mono text-foreground-muted">
+                <Label
+                  htmlFor="create-project-url"
+                  className="font-mono text-xs text-foreground-muted"
+                >
                   Target API Base URL
                 </Label>
                 <div className="relative">
-                  <Link2 className="absolute left-3 top-2.5 size-4 text-foreground-subtle" />
+                  <Link2 className="absolute top-2.5 left-3 size-4 text-foreground-subtle" />
                   <Input
                     id="create-project-url"
                     type="url"
                     placeholder="https://api.yourdomain.com"
-                    className="pl-9 text-xs font-mono bg-surface-raised border-border-subtle focus-visible:border-brand"
+                    className="border-border-subtle bg-surface-raised pl-9 font-mono text-xs focus-visible:border-brand"
                     disabled={isSubmitting}
                     {...register("baseUrl")}
                   />
                 </div>
                 {errors.baseUrl && (
-                  <p className="text-[11px] font-mono text-danger">{errors.baseUrl.message}</p>
+                  <p className="font-mono text-[11px] text-danger">
+                    {errors.baseUrl.message}
+                  </p>
                 )}
-                <p className="text-[10px] font-mono text-foreground-subtle">
-                  Netguard SSRF protection verifies this domain before high-volume distributed runs.
+                <p className="font-mono text-[10px] text-foreground-subtle">
+                  Netguard SSRF protection verifies this domain before
+                  high-volume distributed runs.
                 </p>
               </div>
 
               {/* Environment Selector */}
               <div className="space-y-1.5">
-                <Label className="text-xs font-mono text-foreground-muted">
+                <Label className="font-mono text-xs text-foreground-muted">
                   Environment
                 </Label>
                 <div className="grid grid-cols-3 gap-2 font-mono text-xs">
-                  {(["development", "staging", "production"] as const).map((env) => (
-                    <button
-                      type="button"
-                      key={env}
-                      onClick={() => setValue("environment", env)}
-                      className={`rounded-lg border p-2 text-center capitalize transition-colors ${
-                        selectedEnv === env
-                          ? "border-brand bg-brand/10 text-white font-medium"
-                          : "border-border-subtle bg-surface-raised text-foreground-subtle hover:text-foreground"
-                      }`}
-                    >
-                      {env}
-                    </button>
-                  ))}
+                  {(["development", "staging", "production"] as const).map(
+                    (env) => (
+                      <button
+                        type="button"
+                        key={env}
+                        onClick={() => setValue("environment", env)}
+                        className={`rounded-lg border p-2 text-center capitalize transition-colors ${
+                          selectedEnv === env
+                            ? "border-brand bg-brand/10 font-medium text-white"
+                            : "border-border-subtle bg-surface-raised text-foreground-subtle hover:text-foreground"
+                        }`}
+                      >
+                        {env}
+                      </button>
+                    )
+                  )}
                 </div>
               </div>
 
               {/* Safety Acknowledgement */}
-              <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 space-y-2">
-                <div className="flex items-start gap-2 text-warning font-mono text-xs font-semibold">
-                  <ShieldAlert className="size-4 shrink-0 mt-0.5" />
+              <div className="space-y-2 rounded-lg border border-warning/30 bg-warning/5 p-3">
+                <div className="flex items-start gap-2 font-mono text-xs font-semibold text-warning">
+                  <ShieldAlert className="mt-0.5 size-4 shrink-0" />
                   <span>Target Authorization Guarantee</span>
                 </div>
-                <label className="flex items-start gap-2.5 cursor-pointer">
+                <label className="flex cursor-pointer items-start gap-2.5">
                   <input
                     type="checkbox"
                     className="mt-0.5 rounded border-border-subtle bg-surface-raised text-brand focus:ring-brand"
                     {...register("authorized")}
                   />
-                  <span className="text-[11px] font-mono text-foreground-muted leading-tight">
-                    I certify that I own or have written authorization to load test this target endpoint.
+                  <span className="font-mono text-[11px] leading-tight text-foreground-muted">
+                    I certify that I own or have written authorization to load
+                    test this target endpoint.
                   </span>
                 </label>
                 {errors.authorized && (
-                  <p className="text-[11px] font-mono text-danger pl-6">{errors.authorized.message}</p>
+                  <p className="pl-6 font-mono text-[11px] text-danger">
+                    {errors.authorized.message}
+                  </p>
                 )}
               </div>
 
               {/* Action Buttons Footer */}
-              <div className="flex items-center justify-end gap-3 pt-3 border-t border-border-subtle">
+              <div className="flex items-center justify-end gap-3 border-t border-border-subtle pt-3">
                 <Button
                   type="button"
                   variant="outline"
                   disabled={isSubmitting}
                   onClick={handleClose}
-                  className="text-xs font-mono h-10 px-4 border-border-subtle hover:bg-surface-raised"
+                  className="h-10 border-border-subtle px-4 font-mono text-xs hover:bg-surface-raised"
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="bg-brand text-white hover:bg-brand-hover text-xs font-mono h-10 px-5 gap-2"
+                  className="h-10 gap-2 bg-brand px-5 font-mono text-xs text-white hover:bg-brand-hover"
                 >
                   {isSubmitting ? (
                     <>

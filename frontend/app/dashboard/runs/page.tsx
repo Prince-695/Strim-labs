@@ -4,13 +4,7 @@ import * as React from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import {
-  History,
-  Play,
-  RotateCw,
-  Square,
-  Plus
-} from "lucide-react"
+import { History, Play, RotateCw, Square, Plus } from "lucide-react"
 
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -38,7 +32,8 @@ export default function RunsHistoryPage() {
   })
 
   const projects = projectsRes?.data || []
-  const activeProjectId = currentProjectId || (projects.length > 0 ? projects[0].id : "")
+  const activeProjectId =
+    currentProjectId || (projects.length > 0 ? projects[0].id : "")
   const activeProject = projects.find((p) => p.id === activeProjectId)
 
   // Auto-select first project if none selected
@@ -56,9 +51,12 @@ export default function RunsHistoryPage() {
   })
 
   const rerunMutation = useMutation({
-    mutationFn: (testId: string) => loadtestApi.rerun(currentOrgId!, activeProjectId!, testId),
+    mutationFn: (testId: string) =>
+      loadtestApi.rerun(currentOrgId!, activeProjectId!, testId),
     onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ["load_tests_list", currentOrgId, activeProjectId] })
+      queryClient.invalidateQueries({
+        queryKey: ["load_tests_list", currentOrgId, activeProjectId],
+      })
       if (res.data?.id) {
         router.push(`/dashboard/runs/${res.data.id}`)
       }
@@ -66,9 +64,12 @@ export default function RunsHistoryPage() {
   })
 
   const stopMutation = useMutation({
-    mutationFn: (testId: string) => loadtestApi.stop(currentOrgId!, activeProjectId!, testId),
+    mutationFn: (testId: string) =>
+      loadtestApi.stop(currentOrgId!, activeProjectId!, testId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["load_tests_list", currentOrgId, activeProjectId] })
+      queryClient.invalidateQueries({
+        queryKey: ["load_tests_list", currentOrgId, activeProjectId],
+      })
     },
   })
 
@@ -88,7 +89,8 @@ export default function RunsHistoryPage() {
           <Link
             href="/dashboard/runner"
             className={buttonVariants({
-              className: "gap-1.5 bg-brand text-white hover:bg-brand-hover text-xs font-mono",
+              className:
+                "gap-1.5 bg-brand font-mono text-xs text-white hover:bg-brand-hover",
             })}
           >
             <Plus className="size-3.5" />
@@ -98,16 +100,18 @@ export default function RunsHistoryPage() {
       />
 
       {/* Target Project Selector */}
-      <Card className="border-border bg-surface relative overflow-hidden">
+      <Card className="relative overflow-hidden border-border bg-surface">
         <CornerCrosshairs />
-        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <CardContent className="flex flex-col justify-between gap-4 p-4 sm:flex-row sm:items-center">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="font-mono text-xs text-foreground-subtle uppercase">Target Project:</span>
+            <span className="font-mono text-xs text-foreground-subtle uppercase">
+              Target Project:
+            </span>
             {projects.length > 0 ? (
               <select
                 value={activeProjectId}
                 onChange={(e) => setProjectId(e.target.value)}
-                className="rounded-md border border-border-subtle bg-surface-raised px-3 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:border-brand"
+                className="rounded-md border border-border-subtle bg-surface-raised px-3 py-1.5 font-mono text-xs text-foreground focus:border-brand focus:outline-none"
               >
                 {projects.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -116,12 +120,17 @@ export default function RunsHistoryPage() {
                 ))}
               </select>
             ) : (
-              <span className="font-mono text-xs text-foreground-muted">No projects found</span>
+              <span className="font-mono text-xs text-foreground-muted">
+                No projects found
+              </span>
             )}
 
             {activeProject && (
               <span className="font-mono text-xs text-foreground-muted">
-                Base URL: <strong className="text-foreground">{activeProject.base_url}</strong>
+                Base URL:{" "}
+                <strong className="text-foreground">
+                  {activeProject.base_url}
+                </strong>
               </span>
             )}
           </div>
@@ -134,27 +143,29 @@ export default function RunsHistoryPage() {
 
       {/* Filter Tabs */}
       <div className="inline-flex rounded-lg border border-border-subtle bg-surface-raised p-1 font-mono text-xs">
-        {(["ALL", "RUNNING", "COMPLETED", "FAILED", "STOPPED"] as const).map((status) => (
-          <button
-            key={status}
-            onClick={() => setSelectedStatus(status)}
-            className={`rounded px-3 py-1 transition-colors ${
-              selectedStatus === status
-                ? "bg-brand text-white font-medium"
-                : "text-foreground-muted hover:text-foreground"
-            }`}
-          >
-            {status}
-          </button>
-        ))}
+        {(["ALL", "RUNNING", "COMPLETED", "FAILED", "STOPPED"] as const).map(
+          (status) => (
+            <button
+              key={status}
+              onClick={() => setSelectedStatus(status)}
+              className={`rounded px-3 py-1 transition-colors ${
+                selectedStatus === status
+                  ? "bg-brand font-medium text-white"
+                  : "text-foreground-muted hover:text-foreground"
+              }`}
+            >
+              {status}
+            </button>
+          )
+        )}
       </div>
 
       {/* Runs Table Card */}
-      <Card className="border-border bg-surface shadow-xs relative overflow-hidden">
+      <Card className="relative overflow-hidden border-border bg-surface shadow-xs">
         <CornerCrosshairs />
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="p-6 space-y-3">
+            <div className="space-y-3 p-6">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
@@ -162,7 +173,11 @@ export default function RunsHistoryPage() {
           ) : filteredTests.length === 0 ? (
             <EmptyState
               icon={<History className="size-6 text-sand" />}
-              title={allTests.length === 0 ? "No Load Tests Executed" : "No Tests Match Selected Status"}
+              title={
+                allTests.length === 0
+                  ? "No Load Tests Executed"
+                  : "No Tests Match Selected Status"
+              }
               description={
                 allTests.length === 0
                   ? "Launch your first load test from the runner to benchmark capacity thresholds."
@@ -173,7 +188,8 @@ export default function RunsHistoryPage() {
                   <Link
                     href="/dashboard/runner"
                     className={buttonVariants({
-                      className: "bg-brand text-white hover:bg-brand-hover text-xs font-mono gap-1.5",
+                      className:
+                        "gap-1.5 bg-brand font-mono text-xs text-white hover:bg-brand-hover",
                     })}
                   >
                     <Play className="size-3.5 fill-current" />
@@ -187,14 +203,24 @@ export default function RunsHistoryPage() {
               <table className="w-full text-left font-mono text-xs">
                 <thead>
                   <tr className="border-b border-border-subtle bg-surface-raised/40 text-[11px] text-foreground-subtle uppercase">
-                    <th className="py-3 px-4 font-semibold">Test Run</th>
-                    <th className="py-3 px-4 font-semibold">Profile</th>
-                    <th className="py-3 px-4 font-semibold">Status</th>
-                    <th className="py-3 px-4 font-semibold text-right">Achieved RPS</th>
-                    <th className="py-3 px-4 font-semibold text-right">P95 Latency</th>
-                    <th className="py-3 px-4 font-semibold text-right">Error Rate</th>
-                    <th className="py-3 px-4 font-semibold text-right">Executed At</th>
-                    <th className="py-3 px-4 font-semibold text-right">Actions</th>
+                    <th className="px-4 py-3 font-semibold">Test Run</th>
+                    <th className="px-4 py-3 font-semibold">Profile</th>
+                    <th className="px-4 py-3 font-semibold">Status</th>
+                    <th className="px-4 py-3 text-right font-semibold">
+                      Achieved RPS
+                    </th>
+                    <th className="px-4 py-3 text-right font-semibold">
+                      P95 Latency
+                    </th>
+                    <th className="px-4 py-3 text-right font-semibold">
+                      Error Rate
+                    </th>
+                    <th className="px-4 py-3 text-right font-semibold">
+                      Executed At
+                    </th>
+                    <th className="px-4 py-3 text-right font-semibold">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-subtle">
@@ -202,17 +228,20 @@ export default function RunsHistoryPage() {
                     const isRunning = test.status === "running"
 
                     return (
-                      <tr key={test.id} className="hover:bg-surface-raised/30 transition-colors">
+                      <tr
+                        key={test.id}
+                        className="transition-colors hover:bg-surface-raised/30"
+                      >
                         {/* Test Name & Target */}
-                        <td className="py-3.5 px-4">
+                        <td className="px-4 py-3.5">
                           <Link
                             href={`/dashboard/runs/${test.id}`}
-                            className="font-medium text-foreground hover:text-brand transition-colors block"
+                            className="block font-medium text-foreground transition-colors hover:text-brand"
                           >
                             {test.name}
                           </Link>
-                          <div className="flex items-center gap-1.5 text-[10px] text-foreground-subtle pt-0.5">
-                            <span className="text-foreground-muted font-medium">
+                          <div className="flex items-center gap-1.5 pt-0.5 text-[10px] text-foreground-subtle">
+                            <span className="font-medium text-foreground-muted">
                               {activeProject?.name || "Target"}
                             </span>
                             <span>•</span>
@@ -224,40 +253,40 @@ export default function RunsHistoryPage() {
                         </td>
 
                         {/* Profile Preset */}
-                        <td className="py-3.5 px-4">
-                          <span className="rounded bg-surface-raised px-2 py-0.5 text-[10px] uppercase text-sand border border-border-subtle">
+                        <td className="px-4 py-3.5">
+                          <span className="rounded border border-border-subtle bg-surface-raised px-2 py-0.5 text-[10px] text-sand uppercase">
                             {test.profile}
                           </span>
                         </td>
 
                         {/* Status */}
-                        <td className="py-3.5 px-4">
+                        <td className="px-4 py-3.5">
                           <StatusBadge status={test.status} />
                         </td>
 
                         {/* Achieved RPS */}
-                        <td className="py-3.5 px-4 text-right text-foreground font-semibold">
+                        <td className="px-4 py-3.5 text-right font-semibold text-foreground">
                           {test.summary?.achieved_avg_rps
                             ? `${test.summary.achieved_avg_rps.toFixed(1)} RPS`
                             : isRunning
-                            ? "Streaming..."
-                            : "—"}
+                              ? "Streaming..."
+                              : "—"}
                         </td>
 
                         {/* P95 Latency */}
-                        <td className="py-3.5 px-4 text-right text-foreground">
+                        <td className="px-4 py-3.5 text-right text-foreground">
                           {test.summary?.p95_ms
                             ? `${test.summary.p95_ms.toFixed(1)}ms`
                             : "—"}
                         </td>
 
                         {/* Error Rate */}
-                        <td className="py-3.5 px-4 text-right">
+                        <td className="px-4 py-3.5 text-right">
                           {test.summary?.error_rate !== undefined ? (
                             <span
                               className={
                                 test.summary.error_rate > 0.05
-                                  ? "text-danger font-bold"
+                                  ? "font-bold text-danger"
                                   : "text-foreground"
                               }
                             >
@@ -269,7 +298,7 @@ export default function RunsHistoryPage() {
                         </td>
 
                         {/* Executed At */}
-                        <td className="py-3.5 px-4 text-right text-foreground-subtle">
+                        <td className="px-4 py-3.5 text-right text-foreground-subtle">
                           <div className="text-foreground">
                             {new Date(test.created_at).toLocaleTimeString([], {
                               hour: "2-digit",
@@ -286,7 +315,7 @@ export default function RunsHistoryPage() {
                         </td>
 
                         {/* Actions */}
-                        <td className="py-3.5 px-4 text-right">
+                        <td className="px-4 py-3.5 text-right">
                           <div className="flex items-center justify-end gap-1.5">
                             {isRunning ? (
                               <Button
@@ -316,7 +345,8 @@ export default function RunsHistoryPage() {
                               href={`/dashboard/runs/${test.id}`}
                               className={buttonVariants({
                                 size: "xs",
-                                className: "bg-surface-raised border border-border-subtle text-foreground text-[10px] font-mono",
+                                className:
+                                  "border border-border-subtle bg-surface-raised font-mono text-[10px] text-foreground",
                               })}
                             >
                               <span>Cockpit</span>

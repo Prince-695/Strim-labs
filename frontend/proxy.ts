@@ -6,7 +6,8 @@ export function proxy(request: NextRequest) {
   const token = request.cookies.get("strim_access_token")?.value
 
   // Protected paths that require active authentication
-  const isProtectedPath = pathname.startsWith("/dashboard") || pathname.startsWith("/onboarding")
+  const isProtectedPath =
+    pathname.startsWith("/dashboard") || pathname.startsWith("/onboarding")
 
   // Auth pages where already logged-in users should be redirected to dashboard
   const isAuthPage =

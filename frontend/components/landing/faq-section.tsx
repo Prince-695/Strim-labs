@@ -56,19 +56,23 @@ export function FAQSection() {
   }
 
   return (
-    <section id="faq" className="scroll-mt-20 border-t border-border bg-background px-4 py-24 sm:px-6 lg:px-8">
+    <section
+      id="faq"
+      className="scroll-mt-20 border-t border-border bg-background px-4 py-24 sm:px-6 lg:px-8"
+    >
       <div className="mx-auto max-w-4xl">
         {/* Section Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-raised px-3.5 py-1 font-mono text-xs text-foreground-muted mb-4">
+        <div className="mb-12 text-center">
+          <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-raised px-3.5 py-1 font-mono text-xs text-foreground-muted">
             <span className="text-brand">[06]</span>
             <span>FREQUENTLY ASKED QUESTIONS</span>
           </div>
-          <h2 className="font-mono text-2xl sm:text-3xl font-light text-foreground tracking-[-0.03em]">
+          <h2 className="font-mono text-2xl font-light tracking-[-0.03em] text-foreground sm:text-3xl">
             Everything you need to know.
           </h2>
           <p className="mt-3 font-sans text-sm text-foreground-muted">
-            Simple answers to common questions about testing, monitoring, and scaling with STRIM Labs.
+            Simple answers to common questions about testing, monitoring, and
+            scaling with STRIM Labs.
           </p>
         </div>
 
@@ -79,29 +83,31 @@ export function FAQSection() {
             return (
               <div
                 key={faq.id}
-                className="rounded-xl border border-border bg-surface overflow-hidden transition-colors hover:border-border"
+                className="overflow-hidden rounded-xl border border-border bg-surface transition-colors hover:border-border"
               >
                 <button
                   type="button"
                   onClick={() => toggle(faq.id)}
-                  className="w-full flex items-center justify-between p-5 sm:p-6 text-left transition-colors"
+                  className="flex w-full items-center justify-between p-5 text-left transition-colors sm:p-6"
                 >
                   <div className="flex items-center gap-4">
-                    <span className="font-mono text-xs text-brand font-semibold">{faq.index}</span>
+                    <span className="font-mono text-xs font-semibold text-brand">
+                      {faq.index}
+                    </span>
                     <span className="font-mono text-sm font-normal text-foreground">
                       {faq.question}
                     </span>
                   </div>
                   <ChevronDown
-                    className={`size-4 text-foreground-subtle shrink-0 ml-4 transition-transform duration-200 ${
+                    className={`ml-4 size-4 shrink-0 text-foreground-subtle transition-transform duration-200 ${
                       isOpen ? "rotate-180 text-brand" : ""
                     }`}
                   />
                 </button>
 
                 {isOpen && (
-                  <div className="px-5 pb-5 sm:px-6 sm:pb-6 pt-0 border-t border-border">
-                    <p className="font-sans text-xs text-sand leading-relaxed pt-3">
+                  <div className="border-t border-border px-5 pt-0 pb-5 sm:px-6 sm:pb-6">
+                    <p className="pt-3 font-sans text-xs leading-relaxed text-sand">
                       {faq.answer}
                     </p>
                   </div>

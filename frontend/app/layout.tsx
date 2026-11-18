@@ -7,10 +7,7 @@ export const metadata: Metadata = {
   title: "Strim-Labs - API Observability & Load Testing",
   description: "Find your API's breaking point before production does.",
   icons: {
-    icon: [
-      { url: "/favicon.ico" },
-      { url: "/logo.png", type: "image/png" },
-    ],
+    icon: [{ url: "/favicon.ico" }, { url: "/logo.png", type: "image/png" }],
     shortcut: "/favicon.ico",
     apple: "/logo.png",
   },

@@ -30,7 +30,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-background text-foreground">
         <div className="flex flex-col items-center gap-4">
-          <div className="size-12 rounded-xl border border-border bg-surface-raised flex items-center justify-center shadow-lg animate-pulse p-2 overflow-hidden">
+          <div className="flex size-12 animate-pulse items-center justify-center overflow-hidden rounded-xl border border-border bg-surface-raised p-2 shadow-lg">
             <Image
               src="/logo.png"
               alt="Strim Labs Logo"

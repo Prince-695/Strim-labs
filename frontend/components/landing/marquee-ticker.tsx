@@ -1,51 +1,92 @@
 "use client"
 
 import * as React from "react"
-import { Activity, Cpu, ShieldCheck, Zap, Gauge, Terminal, Radio } from "lucide-react"
+import {
+  Activity,
+  Cpu,
+  ShieldCheck,
+  Zap,
+  Gauge,
+  Terminal,
+  Radio,
+} from "lucide-react"
 
 const TICKER_ITEMS = [
   { text: "SIMULATE 500,000+ USERS", icon: Cpu, accent: "text-brand" },
-  { text: "REAL-TIME TRAFFIC MONITORING", icon: Radio, accent: "text-emerald-400" },
-  { text: "AUTOMATIC ENDPOINT DISCOVERY", icon: Activity, accent: "text-brand" },
-  { text: "TRUE LATENCY MEASUREMENTS", icon: ShieldCheck, accent: "text-emerald-400" },
-  { text: "AUTOMATED BREAKING POINT DETECTION", icon: Gauge, accent: "text-amber-400" },
+  {
+    text: "REAL-TIME TRAFFIC MONITORING",
+    icon: Radio,
+    accent: "text-emerald-400",
+  },
+  {
+    text: "AUTOMATIC ENDPOINT DISCOVERY",
+    icon: Activity,
+    accent: "text-brand",
+  },
+  {
+    text: "TRUE LATENCY MEASUREMENTS",
+    icon: ShieldCheck,
+    accent: "text-emerald-400",
+  },
+  {
+    text: "AUTOMATED BREAKING POINT DETECTION",
+    icon: Gauge,
+    accent: "text-amber-400",
+  },
   { text: "PREVENT PRODUCTION DOWNTIME", icon: Zap, accent: "text-brand" },
   { text: "MULTI-REGION LOAD TESTING", icon: Terminal, accent: "text-sand" },
-  { text: "ZERO CONFIGURATION REQUIRED", icon: ShieldCheck, accent: "text-emerald-400" },
+  {
+    text: "ZERO CONFIGURATION REQUIRED",
+    icon: ShieldCheck,
+    accent: "text-emerald-400",
+  },
 ]
 
 export function MarqueeTicker() {
   return (
-    <div className="relative w-full border-y border-border-subtle bg-surface py-3.5 overflow-hidden select-none">
+    <div className="relative w-full overflow-hidden border-y border-border-subtle bg-surface py-3.5 select-none">
       {/* Corner Crosshairs */}
-      <span className="absolute left-2 top-1 font-mono text-[10px] text-sand/30 pointer-events-none">+</span>
-      <span className="absolute right-2 top-1 font-mono text-[10px] text-sand/30 pointer-events-none">+</span>
+      <span className="pointer-events-none absolute top-1 left-2 font-mono text-[10px] text-sand/30">
+        +
+      </span>
+      <span className="pointer-events-none absolute top-1 right-2 font-mono text-[10px] text-sand/30">
+        +
+      </span>
 
       {/* Infinite scrolling ribbon */}
-      <div className="flex w-max animate-marquee-horizontal">
+      <div className="animate-marquee-horizontal flex w-max">
         {/* First copy */}
-        <div className="flex items-center gap-8 shrink-0 pr-8">
+        <div className="flex shrink-0 items-center gap-8 pr-8">
           {TICKER_ITEMS.map((item, idx) => {
             const Icon = item.icon
             return (
-              <div key={`ticker-1-${idx}`} className="flex items-center gap-3 font-mono text-xs tracking-wider uppercase text-foreground-muted">
+              <div
+                key={`ticker-1-${idx}`}
+                className="flex items-center gap-3 font-mono text-xs tracking-wider text-foreground-muted uppercase"
+              >
                 <Icon className={`size-3.5 ${item.accent}`} />
                 <span className="font-light text-foreground">{item.text}</span>
-                <span className="text-border font-light">✦</span>
+                <span className="font-light text-border">✦</span>
               </div>
             )
           })}
         </div>
 
         {/* Second identical copy for seamless loop */}
-        <div className="flex items-center gap-8 shrink-0 pr-8" aria-hidden="true">
+        <div
+          className="flex shrink-0 items-center gap-8 pr-8"
+          aria-hidden="true"
+        >
           {TICKER_ITEMS.map((item, idx) => {
             const Icon = item.icon
             return (
-              <div key={`ticker-2-${idx}`} className="flex items-center gap-3 font-mono text-xs tracking-wider uppercase text-foreground-muted">
+              <div
+                key={`ticker-2-${idx}`}
+                className="flex items-center gap-3 font-mono text-xs tracking-wider text-foreground-muted uppercase"
+              >
                 <Icon className={`size-3.5 ${item.accent}`} />
                 <span className="font-light text-foreground">{item.text}</span>
-                <span className="text-border font-light">✦</span>
+                <span className="font-light text-border">✦</span>
               </div>
             )
           })}
