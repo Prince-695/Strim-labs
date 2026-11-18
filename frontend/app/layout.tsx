@@ -4,10 +4,15 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { QueryProvider } from "@/components/providers/query-provider"
 
 export const metadata: Metadata = {
-  title: "STRIM Labs — API Observability & Load Testing",
+  title: "Strim-Labs - API Observability & Load Testing",
   description: "Find your API's breaking point before production does.",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/logo.png", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/logo.png",
   },
 }
 
@@ -17,7 +22,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className="dark">
+    <html lang="en" suppressHydrationWarning className="dark scroll-smooth">
       <body className="min-h-screen bg-background font-sans text-foreground antialiased selection:bg-brand/30 selection:text-foreground">
         <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark">
           <QueryProvider>{children}</QueryProvider>

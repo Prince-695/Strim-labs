@@ -32,7 +32,7 @@ export interface Project {
 
 export function ProjectSwitcher() {
   const router = useRouter()
-  const { currentOrgId, currentProjectId, setProjectId } = useUIStore()
+  const { currentOrgId, currentProjectId, setProjectId, setCreateProjectOpen } = useUIStore()
 
   const { data: projectsResponse, isLoading } = useQuery<ApiResponse<Project[]>>({
     queryKey: ["projects", currentOrgId],
@@ -94,10 +94,10 @@ export function ProjectSwitcher() {
         align="start"
         className="w-72 border-border bg-surface-raised p-1 shadow-xl"
       >
-        <DropdownMenuLabel className="px-2 py-1.5 font-mono text-[11px] text-foreground-muted uppercase tracking-wider">
-          Projects & Target APIs
-        </DropdownMenuLabel>
         <DropdownMenuGroup>
+          <DropdownMenuLabel className="px-2 py-1.5 font-mono text-[11px] text-foreground-muted uppercase tracking-wider">
+            Projects & Target APIs
+          </DropdownMenuLabel>
           {projects.map((project) => {
             const isSelected = project.id === activeProject?.id
             const isVerified = project.verification_status === "verified"
@@ -135,7 +135,7 @@ export function ProjectSwitcher() {
         </DropdownMenuGroup>
         <DropdownMenuSeparator className="bg-border-subtle my-1" />
         <DropdownMenuItem
-          onClick={() => router.push("/onboarding/project")}
+          onClick={() => setCreateProjectOpen(true)}
           className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-sand hover:bg-surface-hover hover:text-sand"
         >
           <Plus className="size-3.5" />

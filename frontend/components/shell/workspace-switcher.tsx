@@ -76,10 +76,10 @@ export function WorkspaceSwitcher() {
         align="start"
         className="w-64 border-border bg-surface-raised p-1 shadow-xl"
       >
-        <DropdownMenuLabel className="px-2 py-1.5 font-mono text-[11px] text-foreground-muted uppercase tracking-wider">
-          Workspaces
-        </DropdownMenuLabel>
         <DropdownMenuGroup>
+          <DropdownMenuLabel className="px-2 py-1.5 font-mono text-[11px] text-foreground-muted uppercase tracking-wider">
+            Workspaces
+          </DropdownMenuLabel>
           {organizations.map((org) => {
             const isSelected = org.id === activeOrg?.id
             return (

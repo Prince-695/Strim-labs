@@ -46,7 +46,7 @@ export function StatusBadge({
       case "passed":
       case "verified":
         return {
-          container: "bg-success-subtle text-success border-[#35B779]/30",
+          container: "bg-success-subtle text-success border-success/30",
           dot: "bg-success",
         }
       case "running":

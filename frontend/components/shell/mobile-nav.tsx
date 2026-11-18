@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname } from "next/navigation"
 import {
   X,
@@ -34,7 +35,6 @@ const navSections = [
     items: [
       { title: "Overview", href: "/dashboard", icon: LayoutDashboard },
       { title: "Projects", href: "/dashboard/projects", icon: FolderKanban },
-      { title: "Targets & Verification", href: "/dashboard/targets", icon: Crosshair },
     ],
   },
   {
@@ -42,8 +42,6 @@ const navSections = [
     items: [
       { title: "Load Runner", href: "/dashboard/runner", icon: Rocket },
       { title: "Test History", href: "/dashboard/tests", icon: History },
-      { title: "Capacity Analysis", href: "/dashboard/capacity", icon: Gauge },
-      { title: "Compare Runs", href: "/dashboard/compare", icon: GitCompare },
     ],
   },
   {
@@ -55,12 +53,12 @@ const navSections = [
     ],
   },
   {
-    title: "Manage",
+    title: "Configuration",
     items: [
       { title: "Integrations", href: "/dashboard/integrations", icon: Blocks },
-      { title: "API Keys", href: "/dashboard/api-keys", icon: Key },
-      { title: "Organization", href: "/dashboard/organization", icon: Building },
-      { title: "Settings", href: "/dashboard/settings/profile", icon: Settings },
+      { title: "API Keys", href: "/dashboard/settings/api-keys", icon: Key },
+      { title: "Organization", href: "/dashboard/settings/organization", icon: Building },
+      { title: "Account & Profile", href: "/dashboard/settings/profile", icon: Settings },
     ],
   },
 ]
@@ -95,9 +93,15 @@ export function MobileNav() {
             onClick={() => setMobileNavOpen(false)}
             className="flex items-center gap-2.5"
           >
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface border border-border">
-              <span className="font-mono text-sm font-bold tracking-tighter text-brand">S</span>
-              <span className="font-mono text-sm font-bold tracking-tighter text-sand">L</span>
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-surface border border-border p-1 overflow-hidden">
+              <Image
+                src="/logo.png"
+                alt="Strim Labs Logo"
+                width={28}
+                height={28}
+                priority
+                className="size-full object-contain"
+              />
             </div>
             <div className="flex flex-col leading-none">
               <span className="font-mono text-sm font-bold tracking-tight text-foreground">
