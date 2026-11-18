@@ -83,7 +83,7 @@ func (r *GormProjectRepository) CreateWithLimitCheck(ctx context.Context, projec
 			project.Environment = domain.EnvProduction
 		}
 
-		return tx.Create(project).Error
+		return tx.Omit("Organization").Create(project).Error
 	})
 }
 

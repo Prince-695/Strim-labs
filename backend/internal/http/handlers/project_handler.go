@@ -19,6 +19,15 @@ func NewProjectHandler(projectSvc service.ProjectService) *ProjectHandler {
 	return &ProjectHandler{projectSvc: projectSvc}
 }
 
+// resolveOrgID retrieves orgID from Locals or URL params.
+func resolveOrgID(c *fiber.Ctx) string {
+	orgID := middleware.GetCurrentOrgID(c)
+	if orgID == "" {
+		orgID = strings.TrimSpace(c.Params("orgID"))
+	}
+	return orgID
+}
+
 // CreateProject creates a new project within an organization.
 // @Summary Create project
 // @Description Creates a new project in the organization (hard limit of 5 projects per org)
@@ -36,7 +45,7 @@ func NewProjectHandler(projectSvc service.ProjectService) *ProjectHandler {
 // @Failure 422 {object} domain.Response
 // @Router /v1/organizations/{orgID}/projects [post]
 func (h *ProjectHandler) CreateProject(c *fiber.Ctx) error {
-	orgID := middleware.GetCurrentOrgID(c)
+	orgID := resolveOrgID(c)
 
 	var req domain.CreateProjectRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -63,7 +72,7 @@ func (h *ProjectHandler) CreateProject(c *fiber.Ctx) error {
 // @Failure 404 {object} domain.Response
 // @Router /v1/organizations/{orgID}/projects [get]
 func (h *ProjectHandler) ListProjects(c *fiber.Ctx) error {
-	orgID := middleware.GetCurrentOrgID(c)
+	orgID := resolveOrgID(c)
 
 	resp, err := h.projectSvc.ListProjects(c.Context(), orgID)
 	if err != nil {
@@ -86,7 +95,7 @@ func (h *ProjectHandler) ListProjects(c *fiber.Ctx) error {
 // @Failure 404 {object} domain.Response
 // @Router /v1/organizations/{orgID}/projects/{projectID} [get]
 func (h *ProjectHandler) GetProject(c *fiber.Ctx) error {
-	orgID := middleware.GetCurrentOrgID(c)
+	orgID := resolveOrgID(c)
 	projectID := strings.TrimSpace(c.Params("projectID"))
 
 	resp, err := h.projectSvc.GetProject(c.Context(), orgID, projectID)
@@ -114,7 +123,7 @@ func (h *ProjectHandler) GetProject(c *fiber.Ctx) error {
 // @Failure 422 {object} domain.Response
 // @Router /v1/organizations/{orgID}/projects/{projectID} [put]
 func (h *ProjectHandler) UpdateProject(c *fiber.Ctx) error {
-	orgID := middleware.GetCurrentOrgID(c)
+	orgID := resolveOrgID(c)
 	projectID := strings.TrimSpace(c.Params("projectID"))
 
 	var req domain.UpdateProjectRequest
@@ -144,7 +153,7 @@ func (h *ProjectHandler) UpdateProject(c *fiber.Ctx) error {
 // @Failure 404 {object} domain.Response
 // @Router /v1/organizations/{orgID}/projects/{projectID} [delete]
 func (h *ProjectHandler) DeleteProject(c *fiber.Ctx) error {
-	orgID := middleware.GetCurrentOrgID(c)
+	orgID := resolveOrgID(c)
 	projectID := strings.TrimSpace(c.Params("projectID"))
 
 	if err := h.projectSvc.DeleteProject(c.Context(), orgID, projectID); err != nil {
@@ -170,7 +179,7 @@ func (h *ProjectHandler) DeleteProject(c *fiber.Ctx) error {
 // @Failure 404 {object} domain.Response
 // @Router /v1/organizations/{orgID}/projects/{projectID}/verification [post]
 func (h *ProjectHandler) InitiateVerification(c *fiber.Ctx) error {
-	orgID := middleware.GetCurrentOrgID(c)
+	orgID := resolveOrgID(c)
 	projectID := strings.TrimSpace(c.Params("projectID"))
 
 	var req domain.InitiateVerificationRequest
@@ -201,7 +210,7 @@ func (h *ProjectHandler) InitiateVerification(c *fiber.Ctx) error {
 // @Failure 404 {object} domain.Response
 // @Router /v1/organizations/{orgID}/projects/{projectID}/verification/check [post]
 func (h *ProjectHandler) CheckVerification(c *fiber.Ctx) error {
-	orgID := middleware.GetCurrentOrgID(c)
+	orgID := resolveOrgID(c)
 	projectID := strings.TrimSpace(c.Params("projectID"))
 
 	resp, err := h.projectSvc.CheckVerification(c.Context(), orgID, projectID)
@@ -225,7 +234,7 @@ func (h *ProjectHandler) CheckVerification(c *fiber.Ctx) error {
 // @Failure 404 {object} domain.Response
 // @Router /v1/organizations/{orgID}/projects/{projectID}/verification [get]
 func (h *ProjectHandler) GetVerificationStatus(c *fiber.Ctx) error {
-	orgID := middleware.GetCurrentOrgID(c)
+	orgID := resolveOrgID(c)
 	projectID := strings.TrimSpace(c.Params("projectID"))
 
 	resp, err := h.projectSvc.GetVerificationStatus(c.Context(), orgID, projectID)
