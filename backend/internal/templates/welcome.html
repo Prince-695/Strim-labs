@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Welcome to STRIM Labs</title>
+  <style>
+    body, table, td, a { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+    table, td { mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+    img { -ms-interpolation-mode: bicubic; border: 0; outline: none; text-decoration: none; }
+    body { margin: 0; padding: 0; width: 100% !important; background-color: #0b0f19; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+    @media only screen and (max-width: 620px) {
+      .email-container { width: 100% !important; padding: 16px !important; }
+      .feature-col { display: block !important; width: 100% !important; margin-bottom: 12px !important; }
+      .cta-button { width: 100% !important; text-align: center !important; }
+    }
+  </style>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0b0f19; color: #f3f4f6;">
+  <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #0b0f19;">
+    <tr>
+      <td align="center" style="padding: 40px 16px;">
+        <!-- Card Container -->
+        <table role="presentation" class="email-container" border="0" cellpadding="0" cellspacing="0" width="600" style="max-width: 600px; background-color: #111827; border: 1px solid #1f2937; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);">
+          
+          <!-- Top Accent Banner (Emerald to Cyan to Indigo) -->
+          <tr>
+            <td height="4" style="background: linear-gradient(90deg, #10b981 0%, #06b6d4 50%, #6366f1 100%);"></td>
+          </tr>
+
+          <!-- Header Logo / Brand -->
+          <tr>
+            <td style="padding: 36px 36px 20px 36px; text-align: left;">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td>
+                    <div style="display: inline-block; padding: 6px 12px; background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px;">
+                      <span style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace; font-size: 15px; font-weight: 800; color: #34d399; letter-spacing: 1.5px;">STRIM LABS</span>
+                    </div>
+                  </td>
+                  <td align="right">
+                    <span style="font-size: 12px; color: #10b981; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Welcome</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Main Content Area -->
+          <tr>
+            <td style="padding: 10px 36px 32px 36px;">
+              <h1 style="margin: 0 0 16px 0; font-size: 26px; font-weight: 700; color: #ffffff; letter-spacing: -0.5px;">
+                Welcome to STRIM Labs! 🚀
+              </h1>
+              <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 24px; color: #9ca3af;">
+                Hello <strong style="color: #f3f4f6;">{{if .FirstName}}{{.FirstName}}{{else}}there{{end}}</strong>,
+              </p>
+              <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 24px; color: #9ca3af;">
+                Your account is verified and ready. You now have full access to STRIM Labs — the developer-first platform built for end-to-end API observability, distributed synthetic load testing, and real-time telemetry streaming.
+              </p>
+
+              <!-- CTA Button -->
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="margin: 28px 0 32px 0;">
+                <tr>
+                  <td align="center">
+                    <a href="{{if .DashboardURL}}{{.DashboardURL}}{{else}}https://strim-labs.com{{end}}" target="_blank" class="cta-button" style="display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); color: #ffffff; text-decoration: none; font-size: 15px; font-weight: 700; border-radius: 10px; letter-spacing: 0.3px; box-shadow: 0 4px 14px 0 rgba(79, 70, 229, 0.4);">
+                      Launch Your Dashboard &rarr;
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- What You Can Do (Feature Highlights) -->
+              <div style="margin-bottom: 24px;">
+                <h3 style="margin: 0 0 14px 0; font-size: 14px; font-weight: 700; color: #e5e7eb; text-transform: uppercase; letter-spacing: 1px;">
+                  What you can build with STRIM Labs
+                </h3>
+
+                <!-- Feature 1 -->
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #1e293b; border-radius: 8px; margin-bottom: 10px;">
+                  <tr>
+                    <td style="padding: 14px 16px;">
+                      <div style="font-size: 14px; font-weight: 600; color: #f3f4f6; margin-bottom: 4px;">
+                        ⚡ Real-Time API Ingestion &amp; Observability
+                      </div>
+                      <div style="font-size: 13px; color: #9ca3af; line-height: 18px;">
+                        Track latency percentiles (p50, p95, p99), error rates, throughput spikes, and status code distributions in real time with Server-Sent Events.
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Feature 2 -->
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #1e293b; border-radius: 8px; margin-bottom: 10px;">
+                  <tr>
+                    <td style="padding: 14px 16px;">
+                      <div style="font-size: 14px; font-weight: 600; color: #f3f4f6; margin-bottom: 4px;">
+                        🎯 High-Concurrency Synthetic Load Testing
+                      </div>
+                      <div style="font-size: 13px; color: #9ca3af; line-height: 18px;">
+                        Generate realistic, scheduled synthetic load (up to thousands of RPS) with custom headers, body payloads, and virtual user ramping.
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+
+                <!-- Feature 3 -->
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #1e293b; border-radius: 8px; margin-bottom: 10px;">
+                  <tr>
+                    <td style="padding: 14px 16px;">
+                      <div style="font-size: 14px; font-weight: 600; color: #f3f4f6; margin-bottom: 4px;">
+                        🚨 Automated Alert Rules &amp; Incident Dispatch
+                      </div>
+                      <div style="font-size: 13px; color: #9ca3af; line-height: 18px;">
+                        Configure threshold rules and get instant alerts dispatched across Webhooks, Slack channels, and SMTP emails before your users notice issues.
+                      </div>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <!-- Next Steps Box -->
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: rgba(99, 102, 241, 0.08); border-left: 3px solid #6366f1; border-radius: 4px; margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 14px 16px;">
+                    <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #c7d2fe;">
+                      Recommended Next Steps:
+                    </p>
+                    <ol style="margin: 0; padding-left: 20px; font-size: 13px; line-height: 20px; color: #9ca3af;">
+                      <li>Navigate to <strong>API Keys</strong> in your settings to generate an ingest token.</li>
+                      <li>Register your first API endpoints or upload an OpenAPI / Swagger spec.</li>
+                      <li>Run a dry-run load test from the <strong>Load Engine</strong> console.</li>
+                    </ol>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 0; font-size: 13px; line-height: 20px; color: #6b7280;">
+                Have questions or need assistance? Our documentation and engineering team are here to help. Simply reply to this email or visit our developer documentation.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer Divider -->
+          <tr>
+            <td style="padding: 0 36px;">
+              <div style="border-top: 1px solid #1f2937;"></div>
+            </td>
+          </tr>
+
+          <!-- Footer Area -->
+          <tr>
+            <td style="padding: 24px 36px 36px 36px; text-align: left;">
+              <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td>
+                    <p style="margin: 0 0 6px 0; font-size: 12px; color: #6b7280;">
+                      STRIM Labs &bull; High-Performance API Observability &amp; Load Testing
+                    </p>
+                    <p style="margin: 0; font-size: 11px; color: #4b5563;">
+                      You are receiving this welcome email because an account was registered with this email address.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+        </table>
+        <!-- End Card Container -->
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
