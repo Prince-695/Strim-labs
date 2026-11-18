@@ -81,7 +81,7 @@ export default function OnboardingOrgPage() {
 
       if (res.data?.id) {
         setCurrentOrgId(res.data.id)
-        router.push("/onboarding/project")
+        router.push("/dashboard/projects?new=1")
       } else {
         router.push("/dashboard")
       }
@@ -104,7 +104,7 @@ export default function OnboardingOrgPage() {
           <span className="flex size-5 items-center justify-center rounded-full bg-brand/20 text-brand font-bold">
             1
           </span>
-          <span>STEP 1 OF 2: WORKSPACE PROVISIONING</span>
+          <span>ORGANIZATION WORKSPACE SETUP</span>
         </div>
 
         <CardTitle className="text-xl font-heading font-bold text-foreground">
@@ -205,7 +205,7 @@ export default function OnboardingOrgPage() {
               </>
             ) : (
               <>
-                <span>Continue to Target API Setup</span>
+                <span>Complete Provisioning & Enter Dashboard</span>
                 <ArrowRight className="size-3.5" />
               </>
             )}

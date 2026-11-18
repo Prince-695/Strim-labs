@@ -19,36 +19,54 @@ function AuthCallbackContent() {
   React.useEffect(() => {
     const handleAuth = async () => {
       try {
+        const errorParam = searchParams.get("error") || searchParams.get("code")
+        const detailParam = searchParams.get("detail")
+        const statusParam = searchParams.get("status")
+        if (statusParam === "error" || errorParam) {
+          const combinedMsg = detailParam ? `${errorParam} - ${detailParam}` : (errorParam || "oauth_failed")
+          router.push(`/login?error=${encodeURIComponent(combinedMsg)}`)
+          return
+        }
+
         const tokenFromUrl = searchParams.get("token")
         if (tokenFromUrl) {
           tokenStorage.set(tokenFromUrl)
         }
 
+        const activeToken = tokenStorage.get() || tokenFromUrl
+        if (!activeToken) {
+          // No token received from backend OAuth redirect
+          console.warn("Auth callback: No token received in URL or cookies.")
+          router.push("/login?error=missing_token")
+          return
+        }
+
         // Fetch current user details
         const meRes = await authApi.getMe()
         if (meRes.data?.user) {
-          const currentToken = tokenStorage.get() || tokenFromUrl || ""
-          setAuth(currentToken, meRes.data.user)
+          setAuth(activeToken, meRes.data.user)
 
-          // Route to org onboarding or dashboard
+          // For OAuth authenticated & verified users, redirect directly to dashboard
           try {
             const orgsRes = await orgApi.list()
             const orgs = orgsRes.data || []
             if (orgs.length > 0) {
               setCurrentOrgId(orgs[0].id)
-              router.push("/dashboard")
-            } else {
-              router.push("/onboarding/organization")
             }
           } catch {
-            router.push("/onboarding/organization")
+            // Ignore org lookup errors and proceed directly to dashboard
           }
+          router.push("/dashboard")
         } else {
-          router.push("/login")
+          router.push("/dashboard")
         }
       } catch (err) {
         console.error("Auth callback error:", err)
-        router.push("/login?error=oauth_failed")
+        if (tokenStorage.get()) {
+          router.push("/dashboard")
+        } else {
+          router.push("/login?error=oauth_failed")
+        }
       }
     }
 
