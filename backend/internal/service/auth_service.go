@@ -512,6 +512,14 @@ func (s *authService) VerifyOTP(ctx context.Context, userID, code string) (*doma
 	}
 
 	user.IsVerified = true
+
+	// Dispatch welcome onboarding email asynchronously upon successful verification
+	if s.mailer != nil {
+		go func(email, name string) {
+			_ = s.mailer.SendWelcomeEmail(context.Background(), email, name)
+		}(user.Email, user.FirstName)
+	}
+
 	resp := domain.ToUserResponse(user)
 	return &resp, nil
 }
@@ -560,6 +568,13 @@ func (s *authService) HandleOAuthLogin(ctx context.Context, provider, providerUs
 				return nil, "", "", domain.NewInternalError(createErr)
 			}
 			user = newUser
+
+			// Dispatch welcome onboarding email asynchronously for newly provisioned OAuth user
+			if s.mailer != nil {
+				go func(email, name string) {
+					_ = s.mailer.SendWelcomeEmail(context.Background(), email, name)
+				}(user.Email, user.FirstName)
+			}
 		}
 	}
 
