@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   FileCode2,
@@ -33,6 +33,7 @@ const HTTP_COLORS: Record<string, string> = {
 
 export default function ProjectEndpointsPage() {
   const params = useParams()
+  const router = useRouter()
   const queryClient = useQueryClient()
   const { currentOrgId } = useUIStore()
 
@@ -82,7 +83,15 @@ export default function ProjectEndpointsPage() {
   })
 
   const project = projectRes?.data
+  const isVerified = project?.verification_status === "verified"
   const allEndpoints = endpointsRes?.data || []
+
+  // Gate endpoint registry: redirect to verification guide until domain ownership is verified
+  React.useEffect(() => {
+    if (project && project.verification_status !== "verified") {
+      router.replace(`/dashboard/projects/${projectId}/verification`)
+    }
+  }, [project, projectId, router])
 
   // Filter endpoints by search and method
   const filteredEndpoints = allEndpoints.filter((ep: EndpointItem) => {
@@ -93,6 +102,15 @@ export default function ProjectEndpointsPage() {
     const matchesMethod = selectedMethod === "ALL" || ep.method.toUpperCase() === selectedMethod
     return matchesQuery && matchesMethod
   })
+
+  if (project && !isVerified) {
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">

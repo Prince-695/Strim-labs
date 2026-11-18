@@ -3,14 +3,15 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Users, Key, User } from "lucide-react"
+import { Users, Key, User, Building } from "lucide-react"
 
 import { PageHeader } from "@/components/shell/page-header"
 
 const SETTINGS_TABS = [
+  { label: "Account & Security", href: "/dashboard/settings/profile", icon: User },
+  { label: "Organization", href: "/dashboard/settings/organization", icon: Building },
   { label: "Team Members", href: "/dashboard/settings/members", icon: Users },
-  { label: "API Keys & Ingestion", href: "/dashboard/settings/api-keys", icon: Key },
-  { label: "Account Profile", href: "/dashboard/settings/profile", icon: User },
+  { label: "API Keys", href: "/dashboard/settings/api-keys", icon: Key },
 ]
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
@@ -20,7 +21,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
     <div className="space-y-6">
       <PageHeader
         title="Settings & Workspace Management"
-        description="Manage workspace organization access, team member permissions, ingestion API keys, and account security."
+        description="Manage your account profile, unique username, password rotation, workspace organization, team permissions, and ingestion API keys."
         breadcrumbs={[
           { label: "Settings" },
         ]}
@@ -29,7 +30,7 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
       {/* Settings Navigation Tabs */}
       <div className="flex border-b border-border font-mono text-xs overflow-x-auto">
         {SETTINGS_TABS.map((tab) => {
-          const isActive = pathname.startsWith(tab.href)
+          const isActive = pathname === tab.href || pathname.startsWith(tab.href + "/")
           const Icon = tab.icon
 
           return (
