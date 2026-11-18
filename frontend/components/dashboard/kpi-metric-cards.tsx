@@ -80,6 +80,22 @@ export function KPIMetricCards({ current, previous, isLoading }: KPIMetricCardsP
     )
   }
 
+  const hasData = Boolean(
+    current &&
+      (typeof current.requests === "number" ||
+        typeof current.rps === "number" ||
+        typeof current.p95 === "number")
+  )
+
+  const rpsVal = current?.rps ?? 0
+  const requestsVal = current?.requests ?? 0
+  const p50Val = current?.p50 ?? 0
+  const p95Val = current?.p95 ?? 0
+  const p99Val = current?.p99 ?? 0
+  const errorRateVal = current?.error_rate ?? 0
+  const successRateVal =
+    current?.success_rate ?? (requestsVal > 0 ? Math.max(0, 1 - errorRateVal) : 1)
+
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {/* Throughput */}
@@ -91,17 +107,17 @@ export function KPIMetricCards({ current, previous, isLoading }: KPIMetricCardsP
           <Activity className="size-4 text-brand" />
         </CardHeader>
         <CardContent>
-          {current ? (
+          {hasData ? (
             <div className="space-y-1">
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold font-mono text-foreground">
-                  {current.rps.toFixed(1)}
+                  {rpsVal.toFixed(1)}
                 </span>
                 <span className="text-xs font-mono text-foreground-subtle">RPS</span>
                 {renderDeltaChip(rpsDelta)}
               </div>
               <p className="text-[11px] font-mono text-foreground-subtle">
-                Volume: {current.requests.toLocaleString()} reqs in window
+                Volume: {requestsVal.toLocaleString()} reqs in window
               </p>
             </div>
           ) : (
@@ -122,17 +138,17 @@ export function KPIMetricCards({ current, previous, isLoading }: KPIMetricCardsP
           <Clock className="size-4 text-warning" />
         </CardHeader>
         <CardContent>
-          {current ? (
+          {hasData ? (
             <div className="space-y-1">
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold font-mono text-foreground">
-                  {current.p95.toFixed(1)}
+                  {p95Val.toFixed(1)}
                 </span>
                 <span className="text-xs font-mono text-foreground-subtle">ms</span>
                 {renderDeltaChip(p95Delta)}
               </div>
               <p className="text-[11px] font-mono text-foreground-subtle">
-                P50: {current.p50.toFixed(1)}ms • P99: {current.p99.toFixed(1)}ms
+                P50: {p50Val.toFixed(1)}ms • P99: {p99Val.toFixed(1)}ms
               </p>
             </div>
           ) : (
@@ -153,16 +169,16 @@ export function KPIMetricCards({ current, previous, isLoading }: KPIMetricCardsP
           <AlertCircle className="size-4 text-danger" />
         </CardHeader>
         <CardContent>
-          {current ? (
+          {hasData ? (
             <div className="space-y-1">
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-bold font-mono text-foreground">
-                  {(current.error_rate * 100).toFixed(2)}%
+                  {(errorRateVal * 100).toFixed(2)}%
                 </span>
                 {renderDeltaChip(errorDelta)}
               </div>
               <p className="text-[11px] font-mono text-foreground-subtle">
-                Success rate: {(current.success_rate * 100).toFixed(2)}%
+                Success rate: {(successRateVal * 100).toFixed(2)}%
               </p>
             </div>
           ) : (
@@ -187,9 +203,9 @@ export function KPIMetricCards({ current, previous, isLoading }: KPIMetricCardsP
             <div className="pt-0.5">
               <StatusBadge
                 status={
-                  !current
+                  !hasData
                     ? "queued"
-                    : current.error_rate > 0.05 || current.p95 > 500
+                    : errorRateVal > 0.05 || p95Val > 500
                     ? "degraded"
                     : "healthy"
                 }
@@ -197,9 +213,9 @@ export function KPIMetricCards({ current, previous, isLoading }: KPIMetricCardsP
               />
             </div>
             <p className="text-[11px] text-foreground-subtle pt-1">
-              {!current
+              {!hasData
                 ? "Awaiting target telemetry"
-                : current.error_rate < 0.01
+                : errorRateVal < 0.01
                 ? "Sustained performance normal"
                 : "Latency or error threshold breach"}
             </p>

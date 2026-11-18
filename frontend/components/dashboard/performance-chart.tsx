@@ -94,10 +94,10 @@ export function PerformanceChart({ orgId, projectId }: PerformanceChartProps) {
   }, [pathD, points.length, getX])
 
   const metricMeta = {
-    rps: { label: "Throughput (RPS)", stroke: "#2F6BFF", fill: "url(#gradient-blue)", unit: "RPS" },
-    p95: { label: "P95 Tail Latency", stroke: "#E6AD55", fill: "url(#gradient-amber)", unit: "ms" },
-    error_rate: { label: "Error Rate", stroke: "#EF6464", fill: "url(#gradient-red)", unit: "%" },
-    requests: { label: "Total Requests", stroke: "#35B779", fill: "url(#gradient-green)", unit: "reqs" },
+    rps: { label: "Throughput (RPS)", stroke: "var(--brand)", fill: "url(#gradient-blue)", unit: "RPS" },
+    p95: { label: "P95 Tail Latency", stroke: "var(--warning)", fill: "url(#gradient-amber)", unit: "ms" },
+    error_rate: { label: "Error Rate", stroke: "var(--danger)", fill: "url(#gradient-red)", unit: "%" },
+    requests: { label: "Total Requests", stroke: "var(--success)", fill: "url(#gradient-green)", unit: "reqs" },
   }[metric]
 
   return (
@@ -184,20 +184,20 @@ export function PerformanceChart({ orgId, projectId }: PerformanceChartProps) {
             >
               <defs>
                 <linearGradient id="gradient-blue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#2F6BFF" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="#2F6BFF" stopOpacity="0.0" />
+                  <stop offset="0%" stopColor="var(--brand)" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="var(--brand)" stopOpacity="0.0" />
                 </linearGradient>
                 <linearGradient id="gradient-amber" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#E6AD55" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="#E6AD55" stopOpacity="0.0" />
+                  <stop offset="0%" stopColor="var(--warning)" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="var(--warning)" stopOpacity="0.0" />
                 </linearGradient>
                 <linearGradient id="gradient-red" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#EF6464" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="#EF6464" stopOpacity="0.0" />
+                  <stop offset="0%" stopColor="var(--danger)" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="var(--danger)" stopOpacity="0.0" />
                 </linearGradient>
                 <linearGradient id="gradient-green" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#35B779" stopOpacity="0.3" />
-                  <stop offset="100%" stopColor="#35B779" stopOpacity="0.0" />
+                  <stop offset="0%" stopColor="var(--success)" stopOpacity="0.3" />
+                  <stop offset="100%" stopColor="var(--success)" stopOpacity="0.0" />
                 </linearGradient>
               </defs>
 
@@ -212,14 +212,14 @@ export function PerformanceChart({ orgId, projectId }: PerformanceChartProps) {
                       y1={y}
                       x2={SVG_WIDTH - PADDING.right}
                       y2={y}
-                      stroke="#34342F"
+                      stroke="var(--border-subtle)"
                       strokeDasharray="4 4"
                       strokeWidth="1"
                     />
                     <text
                       x={PADDING.left - 8}
                       y={y + 4}
-                      fill="#77766F"
+                      fill="var(--foreground-subtle)"
                       fontSize="9"
                       fontFamily="monospace"
                       textAnchor="end"
@@ -253,7 +253,7 @@ export function PerformanceChart({ orgId, projectId }: PerformanceChartProps) {
                     cx={x}
                     cy={y}
                     r={hoveredPoint?.time === point.timeString ? 5 : 3}
-                    fill={hoveredPoint?.time === point.timeString ? "#FFFFFF" : metricMeta.stroke}
+                    fill={hoveredPoint?.time === point.timeString ? "var(--foreground)" : metricMeta.stroke}
                     className="cursor-pointer transition-all"
                     onMouseEnter={() =>
                       setHoveredPoint({
@@ -273,7 +273,7 @@ export function PerformanceChart({ orgId, projectId }: PerformanceChartProps) {
                   <text
                     x={PADDING.left}
                     y={SVG_HEIGHT - 8}
-                    fill="#77766F"
+                    fill="var(--foreground-subtle)"
                     fontSize="10"
                     fontFamily="monospace"
                   >
@@ -282,7 +282,7 @@ export function PerformanceChart({ orgId, projectId }: PerformanceChartProps) {
                   <text
                     x={SVG_WIDTH - PADDING.right}
                     y={SVG_HEIGHT - 8}
-                    fill="#77766F"
+                    fill="var(--foreground-subtle)"
                     fontSize="10"
                     fontFamily="monospace"
                     textAnchor="end"

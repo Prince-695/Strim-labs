@@ -66,11 +66,11 @@ export default function DashboardOverviewPage() {
             <Button
               variant="outline"
               size="sm"
-              render={<Link href="/dashboard/targets" />}
+              render={<Link href={currentProjectId ? `/dashboard/projects/${currentProjectId}` : "/dashboard/projects"} />}
               className="gap-1.5 text-xs font-mono"
             >
               <ShieldCheck className="size-3.5 text-success" />
-              <span>Verify Target</span>
+              <span>Project Cockpit</span>
             </Button>
             <Button
               size="sm"
@@ -162,7 +162,7 @@ export default function DashboardOverviewPage() {
                       </p>
                     </div>
                     <Link
-                      href="/dashboard/targets"
+                      href={currentProjectId ? `/dashboard/projects/${currentProjectId}/verification` : "/dashboard/projects"}
                       className="text-xs font-mono text-sand hover:underline flex items-center"
                     >
                       <ArrowRight className="size-3" />
