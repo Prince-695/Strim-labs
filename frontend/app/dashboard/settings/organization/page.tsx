@@ -18,7 +18,13 @@ import {
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { orgApi } from "@/lib/org-api"
 import { useUIStore } from "@/lib/stores/ui-store"
@@ -27,8 +33,8 @@ export default function OrganizationSettingsPage() {
   const queryClient = useQueryClient()
   const { currentOrgId } = useUIStore()
 
-  const [name, setName] = React.useState("")
-  const [description, setDescription] = React.useState("")
+  const [nameOverride, setNameOverride] = React.useState<string | null>(null)
+  const [descOverride, setDescOverride] = React.useState<string | null>(null)
   const [saveSuccess, setSaveSuccess] = React.useState(false)
   const [saveError, setSaveError] = React.useState<string | null>(null)
 
@@ -45,14 +51,9 @@ export default function OrganizationSettingsPage() {
   })
 
   const org = orgRes?.data
-
-  // Sync form inputs when org is loaded
-  React.useEffect(() => {
-    if (org) {
-      setName(org.name || "")
-      setDescription(org.description || "")
-    }
-  }, [org])
+  const name = nameOverride !== null ? nameOverride : org?.name || ""
+  const description =
+    descOverride !== null ? descOverride : org?.description || ""
 
   // 2. Update Org Mutation
   const updateMutation = useMutation({
@@ -64,12 +65,16 @@ export default function OrganizationSettingsPage() {
     onSuccess: (res) => {
       queryClient.setQueryData(["org_detail", currentOrgId], res)
       queryClient.invalidateQueries({ queryKey: ["organizations"] })
+      setNameOverride(null)
+      setDescOverride(null)
       setSaveSuccess(true)
       setSaveError(null)
       setTimeout(() => setSaveSuccess(false), 3000)
     },
     onError: (err: unknown) => {
-      setSaveError(err instanceof Error ? err.message : "Failed to update organization.")
+      setSaveError(
+        err instanceof Error ? err.message : "Failed to update organization."
+      )
     },
   })
 
@@ -97,7 +102,9 @@ export default function OrganizationSettingsPage() {
       queryClient.invalidateQueries({ queryKey: ["organizations"] })
       window.location.href = "/onboarding/organization"
     } catch (err: unknown) {
-      setDeleteError(err instanceof Error ? err.message : "Failed to delete organization.")
+      setDeleteError(
+        err instanceof Error ? err.message : "Failed to delete organization."
+      )
     } finally {
       setIsDeleting(false)
     }
@@ -105,7 +112,7 @@ export default function OrganizationSettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4 max-w-2xl">
+      <div className="max-w-2xl space-y-4">
         <Skeleton className="h-44 w-full" />
         <Skeleton className="h-32 w-full" />
       </div>
@@ -121,41 +128,60 @@ export default function OrganizationSettingsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-3xl font-mono text-xs">
+    <div className="max-w-3xl space-y-6 font-mono text-xs">
       {/* Overview Stats Bar */}
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-border bg-surface p-4 space-y-1">
-          <span className="text-[10px] text-foreground-subtle uppercase">Target Projects</span>
-          <p className="text-xl font-bold text-foreground">{org.project_count || 0}</p>
-          <p className="text-[10px] text-foreground-muted">Observability & load tests</p>
+        <div className="space-y-1 rounded-xl border border-border bg-surface p-4">
+          <span className="text-[10px] text-foreground-subtle uppercase">
+            Target Projects
+          </span>
+          <p className="text-xl font-bold text-foreground">
+            {org.project_count || 0}
+          </p>
+          <p className="text-[10px] text-foreground-muted">
+            Observability & load tests
+          </p>
         </div>
 
-        <div className="rounded-xl border border-border bg-surface p-4 space-y-1">
-          <span className="text-[10px] text-foreground-subtle uppercase">Team Members</span>
-          <p className="text-xl font-bold text-foreground">{org.member_count || 1}</p>
-          <p className="text-[10px] text-foreground-muted">Workspace collaborators</p>
+        <div className="space-y-1 rounded-xl border border-border bg-surface p-4">
+          <span className="text-[10px] text-foreground-subtle uppercase">
+            Team Members
+          </span>
+          <p className="text-xl font-bold text-foreground">
+            {org.member_count || 1}
+          </p>
+          <p className="text-[10px] text-foreground-muted">
+            Workspace collaborators
+          </p>
         </div>
 
-        <div className="rounded-xl border border-border bg-surface p-4 space-y-1">
-          <span className="text-[10px] text-foreground-subtle uppercase">Your Role</span>
-          <p className="text-base font-bold text-sand uppercase">{org.role || "OWNER"}</p>
-          <p className="text-[10px] text-foreground-muted">Workspace permissions</p>
+        <div className="space-y-1 rounded-xl border border-border bg-surface p-4">
+          <span className="text-[10px] text-foreground-subtle uppercase">
+            Your Role
+          </span>
+          <p className="text-base font-bold text-sand uppercase">
+            {org.role || "OWNER"}
+          </p>
+          <p className="text-[10px] text-foreground-muted">
+            Workspace permissions
+          </p>
         </div>
       </div>
 
       {/* General Org Profile Settings */}
       <Card className="border-border bg-surface shadow-xs">
-        <CardHeader className="pb-4 border-b border-border-subtle">
-          <CardTitle className="text-sm font-semibold font-heading text-foreground flex items-center gap-2">
+        <CardHeader className="border-b border-border-subtle pb-4">
+          <CardTitle className="flex items-center gap-2 font-heading text-sm font-semibold text-foreground">
             <Building className="size-4 text-brand" />
             <span>Organization Profile</span>
           </CardTitle>
-          <CardDescription className="text-xs text-foreground-muted font-mono">
-            Manage your workspace name and identifiers used across CLI and dashboards.
+          <CardDescription className="font-mono text-xs text-foreground-muted">
+            Manage your workspace name and identifiers used across CLI and
+            dashboards.
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="pt-6 space-y-4">
+        <CardContent className="space-y-4 pt-6">
           {saveSuccess && (
             <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 p-2.5 text-success">
               <CheckCircle2 className="size-4 shrink-0" />
@@ -174,18 +200,20 @@ export default function OrganizationSettingsPage() {
               <Label className="text-foreground-muted">Organization Name</Label>
               <Input
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => setNameOverride(e.target.value)}
                 placeholder="Acme Corp"
-                className="text-xs font-mono bg-surface-raised border-border-subtle focus-visible:border-brand"
+                className="border-border-subtle bg-surface-raised font-mono text-xs focus-visible:border-brand"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-foreground-muted">Organization Slug (Read-only)</Label>
+              <Label className="text-foreground-muted">
+                Organization Slug (Read-only)
+              </Label>
               <Input
                 value={org.slug}
                 disabled
-                className="text-xs font-mono bg-surface-raised/40 border-border-subtle opacity-70 cursor-not-allowed"
+                className="cursor-not-allowed border-border-subtle bg-surface-raised/40 font-mono text-xs opacity-70"
               />
               <span className="text-[10px] text-foreground-subtle">
                 Immutable URL slug and namespace used for API targeting.
@@ -193,20 +221,22 @@ export default function OrganizationSettingsPage() {
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-foreground-muted">Description (Optional)</Label>
+              <Label className="text-foreground-muted">
+                Description (Optional)
+              </Label>
               <Input
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
+                onChange={(e) => setDescOverride(e.target.value)}
                 placeholder="Core backend services and API infrastructure"
-                className="text-xs font-mono bg-surface-raised border-border-subtle focus-visible:border-brand"
+                className="border-border-subtle bg-surface-raised font-mono text-xs focus-visible:border-brand"
               />
             </div>
 
-            <div className="pt-2 flex items-center justify-between">
+            <div className="flex items-center justify-between pt-2">
               <Button
                 type="submit"
                 disabled={updateMutation.isPending}
-                className="bg-brand text-white hover:bg-brand-hover text-xs font-mono"
+                className="bg-brand font-mono text-xs text-white hover:bg-brand-hover"
               >
                 {updateMutation.isPending ? (
                   <>
@@ -224,7 +254,7 @@ export default function OrganizationSettingsPage() {
                   className={buttonVariants({
                     variant: "outline",
                     size: "sm",
-                    className: "text-xs font-mono gap-1.5",
+                    className: "gap-1.5 font-mono text-xs",
                   })}
                 >
                   <Users className="size-3.5" />
@@ -235,7 +265,7 @@ export default function OrganizationSettingsPage() {
                   className={buttonVariants({
                     variant: "outline",
                     size: "sm",
-                    className: "text-xs font-mono gap-1.5",
+                    className: "gap-1.5 font-mono text-xs",
                   })}
                 >
                   <Key className="size-3.5" />
@@ -249,34 +279,37 @@ export default function OrganizationSettingsPage() {
 
       {/* Danger Zone: Delete Organization */}
       <Card className="border-danger/30 bg-surface">
-        <CardHeader className="pb-3 border-b border-danger/20">
+        <CardHeader className="border-b border-danger/20 pb-3">
           <div className="flex items-center gap-2 text-danger">
             <Trash2 className="size-4" />
-            <CardTitle className="text-sm font-semibold font-heading">
+            <CardTitle className="font-heading text-sm font-semibold">
               Danger Zone: Delete Organization
             </CardTitle>
           </div>
-          <CardDescription className="text-xs text-foreground-muted font-mono">
-            Permanently delete this organization, all registered target APIs, and test results.
+          <CardDescription className="font-mono text-xs text-foreground-muted">
+            Permanently delete this organization, all registered target APIs,
+            and test results.
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="pt-4 space-y-3 font-mono text-xs">
-          {deleteError && <p className="text-danger text-[11px]">{deleteError}</p>}
+        <CardContent className="space-y-3 pt-4 font-mono text-xs">
+          {deleteError && (
+            <p className="text-[11px] text-danger">{deleteError}</p>
+          )}
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
             <input
               type="text"
               placeholder={`Type "${org.slug}" to confirm`}
               value={deleteConfirm}
               onChange={(e) => setDeleteConfirm(e.target.value)}
-              className="rounded-lg border border-border-subtle bg-surface-raised px-3 py-2 text-xs font-mono text-foreground focus:outline-none focus:border-danger flex-1"
+              className="flex-1 rounded-lg border border-border-subtle bg-surface-raised px-3 py-2 font-mono text-xs text-foreground focus:border-danger focus:outline-none"
             />
             <Button
               variant="destructive"
               onClick={handleDelete}
               disabled={deleteConfirm !== org.slug || isDeleting}
-              className="text-xs font-mono"
+              className="font-mono text-xs"
             >
               {isDeleting ? (
                 <>

@@ -17,7 +17,13 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card"
 import { userApi } from "@/lib/user-api"
 import { useAuthStore } from "@/lib/stores/auth-store"
 
@@ -25,39 +31,72 @@ export default function ProfileSettingsPage() {
   const { user, setUser, refreshProfile } = useAuthStore()
 
   // 1. Profile Form State
-  const [firstName, setFirstName] = React.useState("")
-  const [lastName, setLastName] = React.useState("")
-  const [profileMessage, setProfileMessage] = React.useState<string | null>(null)
+  const [firstNameOverride, setFirstNameOverride] = React.useState<
+    string | null
+  >(null)
+  const [lastNameOverride, setLastNameOverride] = React.useState<string | null>(
+    null
+  )
+  const firstName =
+    firstNameOverride !== null ? firstNameOverride : user?.first_name || ""
+  const lastName =
+    lastNameOverride !== null ? lastNameOverride : user?.last_name || ""
+  const [profileMessage, setProfileMessage] = React.useState<string | null>(
+    null
+  )
   const [profileError, setProfileError] = React.useState<string | null>(null)
   const [isUpdatingProfile, setIsUpdatingProfile] = React.useState(false)
 
   // 2. Unique Username State
   const [usernameInput, setUsernameInput] = React.useState("")
   const [isCheckingUsername, setIsCheckingUsername] = React.useState(false)
-  const [usernameAvailability, setUsernameAvailability] = React.useState<{
+  const [serverAvailability, setServerAvailability] = React.useState<{
     checked: boolean
     available: boolean
     message?: string
   } | null>(null)
-  const [usernameSuccess, setUsernameSuccess] = React.useState<string | null>(null)
+  const [usernameSuccess, setUsernameSuccess] = React.useState<string | null>(
+    null
+  )
   const [usernameError, setUsernameError] = React.useState<string | null>(null)
   const [isClaimingUsername, setIsClaimingUsername] = React.useState(false)
+
+  // Derived client-side username validation
+  const clientFormatError = React.useMemo(() => {
+    if (!usernameInput.trim()) return null
+    const clean = usernameInput.trim().toLowerCase()
+    if (clean.length < 3) return "Username must be at least 3 characters"
+    if (!/^[a-z]/.test(clean))
+      return "Username must start with a lowercase letter"
+    if (clean.length > 20) return "Username cannot exceed 20 characters"
+    const usernameRegex = /^[a-z][a-z0-9_]{2,19}$/
+    if (!usernameRegex.test(clean)) {
+      return "Only lowercase letters, numbers, and underscores are allowed"
+    }
+    return null
+  }, [usernameInput])
+
+  const usernameAvailability = React.useMemo(() => {
+    if (!usernameInput.trim()) return null
+    if (clientFormatError) {
+      return {
+        checked: true,
+        available: false,
+        message: clientFormatError,
+      }
+    }
+    return serverAvailability
+  }, [usernameInput, clientFormatError, serverAvailability])
 
   // 3. Password Rotation Form State
   const [oldPassword, setOldPassword] = React.useState("")
   const [newPassword, setNewPassword] = React.useState("")
   const [confirmPassword, setConfirmPassword] = React.useState("")
-  const [passwordMessage, setPasswordMessage] = React.useState<string | null>(null)
+  const [passwordMessage, setPasswordMessage] = React.useState<string | null>(
+    null
+  )
   const [passwordError, setPasswordError] = React.useState<string | null>(null)
   const [isUpdatingPassword, setIsUpdatingPassword] = React.useState(false)
-
-  // Sync profile values when user loads
-  React.useEffect(() => {
-    if (user) {
-      setFirstName(user.first_name || "")
-      setLastName(user.last_name || "")
-    }
-  }, [user])
 
   // Profile Update Handler
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -82,65 +121,34 @@ export default function ProfileSettingsPage() {
           last_name: res.data?.last_name || effectiveLast,
         })
       }
+      setFirstNameOverride(null)
+      setLastNameOverride(null)
       setProfileMessage("Profile updated successfully.")
       setTimeout(() => setProfileMessage(null), 3000)
     } catch (err: unknown) {
-      setProfileError(err instanceof Error ? err.message : "Failed to update profile.")
+      setProfileError(
+        err instanceof Error ? err.message : "Failed to update profile."
+      )
     } finally {
       setIsUpdatingProfile(false)
     }
   }
 
-  // Debounced Username Availability Checker
+  // Debounced Username Availability Checker (Server Verification)
   React.useEffect(() => {
-    if (!usernameInput.trim()) {
-      setUsernameAvailability(null)
-      return
-    }
-
     const clean = usernameInput.trim().toLowerCase()
-
-    // Client-side regex format check: 3-20 chars, lowercase alphanumeric + underscore, starts with letter
-    const usernameRegex = /^[a-z][a-z0-9_]{2,19}$/
-    if (!usernameRegex.test(clean)) {
-      if (clean.length < 3) {
-        setUsernameAvailability({
-          checked: true,
-          available: false,
-          message: "Username must be at least 3 characters",
-        })
-        return
-      }
-      if (!/^[a-z]/.test(clean)) {
-        setUsernameAvailability({
-          checked: true,
-          available: false,
-          message: "Username must start with a lowercase letter",
-        })
-        return
-      }
-      if (clean.length > 20) {
-        setUsernameAvailability({
-          checked: true,
-          available: false,
-          message: "Username cannot exceed 20 characters",
-        })
-        return
-      }
-      setUsernameAvailability({
-        checked: true,
-        available: false,
-        message: "Only lowercase letters, numbers, and underscores are allowed",
-      })
+    if (!clean || clientFormatError) {
       return
     }
 
+    let active = true
     const timer = setTimeout(async () => {
       try {
         setIsCheckingUsername(true)
         const res = await userApi.checkUsername(clean)
+        if (!active) return
         const isAvail = Boolean(res.data?.available)
-        setUsernameAvailability({
+        setServerAvailability({
           checked: true,
           available: isAvail,
           message: isAvail
@@ -148,18 +156,24 @@ export default function ProfileSettingsPage() {
             : `@${clean} is already taken or reserved`,
         })
       } catch {
-        setUsernameAvailability({
+        if (!active) return
+        setServerAvailability({
           checked: true,
           available: false,
           message: "Could not verify username availability",
         })
       } finally {
-        setIsCheckingUsername(false)
+        if (active) {
+          setIsCheckingUsername(false)
+        }
       }
     }, 350)
 
-    return () => clearTimeout(timer)
-  }, [usernameInput])
+    return () => {
+      active = false
+      clearTimeout(timer)
+    }
+  }, [usernameInput, clientFormatError])
 
   // Claim Username Handler
   const handleClaimUsername = async (e: React.FormEvent) => {
@@ -180,11 +194,16 @@ export default function ProfileSettingsPage() {
           username: res.data?.username || clean,
         })
       }
-      setUsernameSuccess(`@${clean} has been permanently registered to your account!`)
+      setUsernameSuccess(
+        `@${clean} has been permanently registered to your account!`
+      )
       setUsernameInput("")
+      setServerAvailability(null)
       await refreshProfile()
     } catch (err: unknown) {
-      setUsernameError(err instanceof Error ? err.message : "Failed to claim username.")
+      setUsernameError(
+        err instanceof Error ? err.message : "Failed to claim username."
+      )
     } finally {
       setIsClaimingUsername(false)
     }
@@ -212,35 +231,42 @@ export default function ProfileSettingsPage() {
         new_password: newPassword,
       })
 
-      setPasswordMessage("Password changed successfully. All other active sessions have been revoked.")
+      setPasswordMessage(
+        "Password changed successfully. All other active sessions have been revoked."
+      )
       setOldPassword("")
       setNewPassword("")
       setConfirmPassword("")
       setTimeout(() => setPasswordMessage(null), 4000)
     } catch (err: unknown) {
-      setPasswordError(err instanceof Error ? err.message : "Failed to change password. Please check your current password.")
+      setPasswordError(
+        err instanceof Error
+          ? err.message
+          : "Failed to change password. Please check your current password."
+      )
     } finally {
       setIsUpdatingPassword(false)
     }
   }
 
   return (
-    <div className="space-y-6 max-w-2xl font-mono text-xs">
+    <div className="max-w-2xl space-y-6 font-mono text-xs">
       {/* Section 1: Unique Username Claiming */}
       <Card className="border-border bg-surface shadow-xs">
-        <CardHeader className="pb-4 border-b border-border-subtle">
+        <CardHeader className="border-b border-border-subtle pb-4">
           <div className="flex items-center justify-between">
             <div className="space-y-0.5">
-              <CardTitle className="text-sm font-semibold font-heading text-foreground flex items-center gap-2">
+              <CardTitle className="flex items-center gap-2 font-heading text-sm font-semibold text-foreground">
                 <AtSign className="size-4 text-brand" />
                 <span>Unique Account Username</span>
               </CardTitle>
-              <CardDescription className="text-xs text-foreground-muted font-mono">
-                Your unique handle across workspaces, CLI profiles, and test audit logs.
+              <CardDescription className="font-mono text-xs text-foreground-muted">
+                Your unique handle across workspaces, CLI profiles, and test
+                audit logs.
               </CardDescription>
             </div>
             {user?.username && (
-              <span className="flex items-center gap-1.5 rounded-full bg-success/15 border border-success/30 px-3 py-1 text-[11px] font-mono text-success">
+              <span className="flex items-center gap-1.5 rounded-full border border-success/30 bg-success/15 px-3 py-1 font-mono text-[11px] text-success">
                 <ShieldCheck className="size-3.5" />
                 <span>Claimed</span>
               </span>
@@ -248,7 +274,7 @@ export default function ProfileSettingsPage() {
           </div>
         </CardHeader>
 
-        <CardContent className="pt-6 space-y-4">
+        <CardContent className="space-y-4 pt-6">
           {usernameSuccess && (
             <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 p-2.5 text-success">
               <CheckCircle2 className="size-4 shrink-0" />
@@ -264,51 +290,61 @@ export default function ProfileSettingsPage() {
 
           {user?.username ? (
             /* User already has a username registered */
-            <div className="rounded-xl border border-border-subtle bg-surface-raised p-4 space-y-2">
+            <div className="space-y-2 rounded-xl border border-border-subtle bg-surface-raised p-4">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] text-foreground-subtle uppercase">
                   Registered Handle
                 </span>
-                <span className="text-[10px] text-foreground-subtle flex items-center gap-1">
+                <span className="flex items-center gap-1 text-[10px] text-foreground-subtle">
                   <Lock className="size-3" />
                   <span>Permanent Handle</span>
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-lg font-bold text-brand font-mono">
+                <span className="font-mono text-lg font-bold text-brand">
                   @{user.username}
                 </span>
               </div>
-              <p className="text-[11px] text-foreground-muted leading-relaxed">
-                This unique handle is permanently claimed and linked to your primary developer credentials.
+              <p className="text-[11px] leading-relaxed text-foreground-muted">
+                This unique handle is permanently claimed and linked to your
+                primary developer credentials.
               </p>
             </div>
           ) : (
             /* User has not yet set a username */
             <form onSubmit={handleClaimUsername} className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-foreground-muted">Claim Unique Username</Label>
+                <Label className="text-foreground-muted">
+                  Claim Unique Username
+                </Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-2.5 text-foreground-subtle font-mono text-xs">
+                  <span className="absolute top-2.5 left-3 font-mono text-xs text-foreground-subtle">
                     @
                   </span>
                   <Input
                     placeholder="dev_alex, prince695..."
                     value={usernameInput}
-                    onChange={(e) => setUsernameInput(e.target.value.toLowerCase().replace(/\s+/g, ""))}
-                    className="pl-7 text-xs font-mono bg-surface-raised border-border-subtle focus-visible:border-brand"
+                    onChange={(e) => {
+                      setUsernameInput(
+                        e.target.value.toLowerCase().replace(/\s+/g, "")
+                      )
+                      setServerAvailability(null)
+                    }}
+                    className="border-border-subtle bg-surface-raised pl-7 font-mono text-xs focus-visible:border-brand"
                     disabled={isClaimingUsername}
                   />
                   {isCheckingUsername && (
-                    <Loader2 className="absolute right-3 top-2.5 size-4 animate-spin text-foreground-subtle" />
+                    <Loader2 className="absolute top-2.5 right-3 size-4 animate-spin text-foreground-subtle" />
                   )}
                 </div>
 
                 {/* Real-time availability indicator */}
                 {usernameAvailability && (
                   <div
-                    className={`flex items-center gap-2 text-[11px] font-mono ${
-                      usernameAvailability.available ? "text-success" : "text-warning"
+                    className={`flex items-center gap-2 font-mono text-[11px] ${
+                      usernameAvailability.available
+                        ? "text-success"
+                        : "text-warning"
                     }`}
                   >
                     {usernameAvailability.available ? (
@@ -320,12 +356,17 @@ export default function ProfileSettingsPage() {
                   </div>
                 )}
 
-                <div className="rounded-lg border border-border-subtle bg-surface-raised/40 p-3 space-y-1 text-[11px] text-foreground-subtle">
-                  <span className="font-semibold text-foreground-muted">Username Guidelines:</span>
-                  <ul className="list-disc list-inside space-y-0.5 text-[10px]">
+                <div className="space-y-1 rounded-lg border border-border-subtle bg-surface-raised/40 p-3 text-[11px] text-foreground-subtle">
+                  <span className="font-semibold text-foreground-muted">
+                    Username Guidelines:
+                  </span>
+                  <ul className="list-inside list-disc space-y-0.5 text-[10px]">
                     <li>Between 3 and 20 characters in length</li>
                     <li>Must start with a lowercase letter (a-z)</li>
-                    <li>Can only contain lowercase letters, numbers, and underscores (_)</li>
+                    <li>
+                      Can only contain lowercase letters, numbers, and
+                      underscores (_)
+                    </li>
                     <li>Cannot be changed once claimed</li>
                   </ul>
                 </div>
@@ -333,8 +374,12 @@ export default function ProfileSettingsPage() {
 
               <Button
                 type="submit"
-                disabled={!usernameAvailability?.available || isClaimingUsername || isCheckingUsername}
-                className="bg-brand text-white hover:bg-brand-hover text-xs font-mono gap-1.5"
+                disabled={
+                  !usernameAvailability?.available ||
+                  isClaimingUsername ||
+                  isCheckingUsername
+                }
+                className="gap-1.5 bg-brand font-mono text-xs text-white hover:bg-brand-hover"
               >
                 {isClaimingUsername ? (
                   <>
@@ -355,17 +400,18 @@ export default function ProfileSettingsPage() {
 
       {/* Section 2: Personal Information */}
       <Card className="border-border bg-surface shadow-xs">
-        <CardHeader className="pb-4 border-b border-border-subtle">
-          <CardTitle className="text-sm font-semibold font-heading text-foreground flex items-center gap-2">
+        <CardHeader className="border-b border-border-subtle pb-4">
+          <CardTitle className="flex items-center gap-2 font-heading text-sm font-semibold text-foreground">
             <User className="size-4 text-brand" />
             <span>Personal Information</span>
           </CardTitle>
-          <CardDescription className="text-xs text-foreground-muted font-mono">
-            Your name and primary account email used across organization workspaces.
+          <CardDescription className="font-mono text-xs text-foreground-muted">
+            Your name and primary account email used across organization
+            workspaces.
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="pt-6 space-y-4">
+        <CardContent className="space-y-4 pt-6">
           {profileMessage && (
             <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 p-2.5 text-success">
               <CheckCircle2 className="size-4 shrink-0" />
@@ -386,8 +432,8 @@ export default function ProfileSettingsPage() {
                 <Input
                   placeholder={user?.first_name || "First Name"}
                   value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  className="text-xs font-mono bg-surface-raised border-border-subtle focus-visible:border-brand"
+                  onChange={(e) => setFirstNameOverride(e.target.value)}
+                  className="border-border-subtle bg-surface-raised font-mono text-xs focus-visible:border-brand"
                 />
               </div>
 
@@ -396,8 +442,8 @@ export default function ProfileSettingsPage() {
                 <Input
                   placeholder={user?.last_name || "Last Name"}
                   value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  className="text-xs font-mono bg-surface-raised border-border-subtle focus-visible:border-brand"
+                  onChange={(e) => setLastNameOverride(e.target.value)}
+                  className="border-border-subtle bg-surface-raised font-mono text-xs focus-visible:border-brand"
                 />
               </div>
             </div>
@@ -405,22 +451,23 @@ export default function ProfileSettingsPage() {
             <div className="space-y-1.5">
               <Label className="text-foreground-muted">Account Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-2.5 size-3.5 text-foreground-subtle" />
+                <Mail className="absolute top-2.5 left-3 size-3.5 text-foreground-subtle" />
                 <Input
                   value={user?.email || ""}
                   disabled
-                  className="pl-8 text-xs font-mono bg-surface-raised/40 border-border-subtle opacity-70 cursor-not-allowed"
+                  className="cursor-not-allowed border-border-subtle bg-surface-raised/40 pl-8 font-mono text-xs opacity-70"
                 />
               </div>
               <span className="text-[10px] text-foreground-subtle">
-                Primary verified email address. Contact workspace admin to transfer organization ownership.
+                Primary verified email address. Contact workspace admin to
+                transfer organization ownership.
               </span>
             </div>
 
             <Button
               type="submit"
               disabled={isUpdatingProfile}
-              className="bg-brand text-white hover:bg-brand-hover text-xs font-mono"
+              className="bg-brand font-mono text-xs text-white hover:bg-brand-hover"
             >
               {isUpdatingProfile ? (
                 <>
@@ -437,17 +484,18 @@ export default function ProfileSettingsPage() {
 
       {/* Section 3: Password Rotation & Security */}
       <Card id="security" className="border-border bg-surface shadow-xs">
-        <CardHeader className="pb-4 border-b border-border-subtle">
-          <CardTitle className="text-sm font-semibold font-heading text-foreground flex items-center gap-2">
+        <CardHeader className="border-b border-border-subtle pb-4">
+          <CardTitle className="flex items-center gap-2 font-heading text-sm font-semibold text-foreground">
             <Key className="size-4 text-brand" />
             <span>Security & Password Rotation</span>
           </CardTitle>
-          <CardDescription className="text-xs text-foreground-muted font-mono">
-            Change your account password. Successful rotation revokes existing sessions across all devices.
+          <CardDescription className="font-mono text-xs text-foreground-muted">
+            Change your account password. Successful rotation revokes existing
+            sessions across all devices.
           </CardDescription>
         </CardHeader>
 
-        <CardContent className="pt-6 space-y-4">
+        <CardContent className="space-y-4 pt-6">
           {passwordMessage && (
             <div className="flex items-center gap-2 rounded-lg border border-success/30 bg-success/10 p-2.5 text-success">
               <CheckCircle2 className="size-4 shrink-0" />
@@ -469,38 +517,47 @@ export default function ProfileSettingsPage() {
                 placeholder="••••••••••••"
                 value={oldPassword}
                 onChange={(e) => setOldPassword(e.target.value)}
-                className="text-xs font-mono bg-surface-raised border-border-subtle focus-visible:border-brand"
+                className="border-border-subtle bg-surface-raised font-mono text-xs focus-visible:border-brand"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-foreground-muted">New Password (Min. 8 chars)</Label>
+                <Label className="text-foreground-muted">
+                  New Password (Min. 8 chars)
+                </Label>
                 <Input
                   type="password"
                   placeholder="••••••••••••"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  className="text-xs font-mono bg-surface-raised border-border-subtle focus-visible:border-brand"
+                  className="border-border-subtle bg-surface-raised font-mono text-xs focus-visible:border-brand"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label className="text-foreground-muted">Confirm New Password</Label>
+                <Label className="text-foreground-muted">
+                  Confirm New Password
+                </Label>
                 <Input
                   type="password"
                   placeholder="••••••••••••"
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="text-xs font-mono bg-surface-raised border-border-subtle focus-visible:border-brand"
+                  className="border-border-subtle bg-surface-raised font-mono text-xs focus-visible:border-brand"
                 />
               </div>
             </div>
 
             <Button
               type="submit"
-              disabled={isUpdatingPassword || !oldPassword || !newPassword || !confirmPassword}
-              className="bg-brand text-white hover:bg-brand-hover text-xs font-mono"
+              disabled={
+                isUpdatingPassword ||
+                !oldPassword ||
+                !newPassword ||
+                !confirmPassword
+              }
+              className="bg-brand font-mono text-xs text-white hover:bg-brand-hover"
             >
               {isUpdatingPassword ? (
                 <>
