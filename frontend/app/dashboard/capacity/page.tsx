@@ -76,13 +76,13 @@ function CapacityReportContent() {
         actions={
           activeTestId ? (
             <Link
-              href={`/dashboard/compare?baseline=${activeTestId}`}
+              href={currentProjectId ? `/dashboard/projects/${currentProjectId}` : "/dashboard/projects"}
               className={buttonVariants({
                 variant: "outline",
                 className: "text-xs font-mono gap-1.5",
               })}
             >
-              <span>Compare in Regression Studio</span>
+              <span>Back to Project Cockpit</span>
               <ArrowRight className="size-3.5" />
             </Link>
           ) : undefined

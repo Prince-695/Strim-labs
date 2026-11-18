@@ -11,7 +11,9 @@ import {
   CheckCircle2,
   TrendingUp,
   BarChart2,
-  ShieldAlert
+  ShieldAlert,
+  AlertTriangle,
+  Zap,
 } from "lucide-react"
 
 import { Button, buttonVariants } from "@/components/ui/button"
@@ -19,9 +21,13 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { PageHeader } from "@/components/shell/page-header"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { ConnectionIndicator, type ConnectionState } from "@/components/ui/connection-indicator"
-import { loadtestApi } from "@/lib/loadtest-api"
+import { CornerCrosshairs } from "@/components/landing/corner-crosshairs"
+import { loadtestApi, type LiveRequestLog, type LiveEndpointHealth } from "@/lib/loadtest-api"
 import { tokenStorage, API_BASE_URL } from "@/lib/api-client"
 import { useUIStore } from "@/lib/stores/ui-store"
+
+import { LiveTrafficStreamTerminal } from "@/components/runs/live-traffic-stream-terminal"
+import { LiveEndpointHealthMatrix } from "@/components/runs/live-endpoint-health-matrix"
 
 interface SSETick {
   t: number
@@ -33,6 +39,8 @@ interface SSETick {
   errors: number
   active: number
   total_requests: number
+  recent_logs?: LiveRequestLog[]
+  endpoint_health?: LiveEndpointHealth[]
 }
 
 export default function LiveTestCockpitPage() {
@@ -44,6 +52,8 @@ export default function LiveTestCockpitPage() {
 
   // State
   const [ticks, setTicks] = React.useState<SSETick[]>([])
+  const [logs, setLogs] = React.useState<LiveRequestLog[]>([])
+  const [endpointHealth, setEndpointHealth] = React.useState<LiveEndpointHealth[]>([])
   const [connectionState, setConnectionState] = React.useState<ConnectionState>("reconnecting")
   const [liveStatus, setLiveStatus] = React.useState<string | null>(null)
   const [lastUpdated, setLastUpdated] = React.useState<Date | undefined>(undefined)
@@ -55,7 +65,19 @@ export default function LiveTestCockpitPage() {
     enabled: Boolean(currentOrgId && currentProjectId && testId),
   })
 
-  // 2. Stop Mutation
+  const test = testRes?.data
+  const currentStatus = liveStatus || test?.status || "queued"
+  const isRunning = currentStatus === "running"
+  const isFinished = currentStatus === "completed" || currentStatus === "stopped" || currentStatus === "failed"
+
+  // 2. Fetch completed results when test finishes (for First Bottleneck summary)
+  const { data: resultsRes } = useQuery({
+    queryKey: ["load_test_results", currentOrgId, currentProjectId, testId],
+    queryFn: () => loadtestApi.getResults(currentOrgId!, currentProjectId!, testId),
+    enabled: Boolean(currentOrgId && currentProjectId && testId && isFinished),
+  })
+
+  // 3. Stop Mutation
   const stopMutation = useMutation({
     mutationFn: () => loadtestApi.stop(currentOrgId!, currentProjectId!, testId),
     onSuccess: () => {
@@ -64,7 +86,7 @@ export default function LiveTestCockpitPage() {
     },
   })
 
-  // 3. SSE Connection for real-time stream
+  // 4. SSE Connection for real-time stream
   React.useEffect(() => {
     if (!currentOrgId || !currentProjectId || !testId) return
 
@@ -104,6 +126,16 @@ export default function LiveTestCockpitPage() {
             setTicks((prev) => [...prev.slice(-180), tick])
             setLastUpdated(new Date())
             setConnectionState("connected")
+
+            // Feature 1: Listen for recent_logs array and prepend to scrolling feed (keep last 100 entries)
+            if (Array.isArray(tick.recent_logs) && tick.recent_logs.length > 0) {
+              setLogs((prev) => [...tick.recent_logs!, ...prev].slice(0, 100))
+            }
+
+            // Feature 1: Listen for endpoint_health breakdown and update live matrix
+            if (Array.isArray(tick.endpoint_health) && tick.endpoint_health.length > 0) {
+              setEndpointHealth(tick.endpoint_health)
+            }
           } catch {}
         })
 
@@ -115,6 +147,9 @@ export default function LiveTestCockpitPage() {
               setLiveStatus(data.status)
               if (data.status === "completed" || data.status === "stopped" || data.status === "failed") {
                 setConnectionState("disconnected")
+                queryClient.invalidateQueries({
+                  queryKey: ["load_test_results", currentOrgId, currentProjectId, testId],
+                })
               }
             }
           } catch {}
@@ -146,11 +181,7 @@ export default function LiveTestCockpitPage() {
         eventSource = null
       }
     }
-  }, [currentOrgId, currentProjectId, testId])
-
-  const test = testRes?.data
-  const currentStatus = liveStatus || test?.status || "queued"
-  const isRunning = currentStatus === "running"
+  }, [currentOrgId, currentProjectId, testId, queryClient])
 
   const latestTick = ticks[ticks.length - 1]
   const currentRPS = latestTick ? latestTick.achieved_rps : test?.summary?.achieved_avg_rps || 0
@@ -159,9 +190,13 @@ export default function LiveTestCockpitPage() {
   const currentActiveVUs = latestTick ? latestTick.active : 0
   const totalRequests = latestTick ? latestTick.total_requests : test?.summary?.total_requests || 0
 
+  // Feature 1: Completed Results Summary - First Bottleneck Detected
+  const bottleneck =
+    resultsRes?.data?.summary?.first_bottleneck || test?.summary?.first_bottleneck
+
   // SVG Chart Dimensions
   const svgWidth = 720
-  const svgHeight = 220
+  const svgHeight = 200
   const padding = { top: 20, right: 20, bottom: 30, left: 45 }
   const chartWidth = svgWidth - padding.left - padding.right
   const chartHeight = svgHeight - padding.top - padding.bottom
@@ -174,13 +209,25 @@ export default function LiveTestCockpitPage() {
     return `${acc} ${idx === 0 ? "M" : "L"} ${x} ${y}`
   }, "")
 
+  const defaultTarget = test?.config?.targets?.[0]
+    ? { method: test.config.targets[0].method, path: test.config.targets[0].path }
+    : undefined
+
   return (
     <div className="space-y-6">
       <PageHeader
         title={test?.name || "Live Test Cockpit"}
-        description={`Real-time SSE metrics stream and latency curve monitoring for test ${testId}`}
+        description={
+          test
+            ? `${test.profile.toUpperCase()} test execution • ${
+                test.config?.targets?.[0]
+                  ? `${test.config.targets[0].method} ${test.config.targets[0].path}`
+                  : "Full Server Target"
+              }`
+            : "Real-time load test metrics stream and latency curve monitoring"
+        }
         breadcrumbs={[
-          { label: "Runs History", href: "/dashboard/runs" },
+          { label: "Test History", href: "/dashboard/tests" },
           { label: test?.name || "Cockpit" },
         ]}
         actions={
@@ -220,6 +267,56 @@ export default function LiveTestCockpitPage() {
           </span>
         </div>
       </PageHeader>
+
+      {/* Feature 1.3: Completed Results Summary - First Bottleneck Detected Callout Box */}
+      {bottleneck && (
+        <div className="relative rounded-xl border border-danger/50 bg-danger/10 p-5 shadow-lg overflow-hidden font-mono">
+          <CornerCrosshairs />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="size-9 rounded-lg bg-danger/20 border border-danger/40 flex items-center justify-center text-danger shrink-0 mt-0.5">
+                <AlertTriangle className="size-5" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <h3 className="font-heading font-bold text-sm text-foreground">
+                    First Bottleneck Detected
+                  </h3>
+                  <span className="rounded bg-danger/25 border border-danger/40 px-2 py-0.5 text-[10px] text-danger font-bold uppercase">
+                    SLO Knee Reached
+                  </span>
+                </div>
+                <p className="text-xs text-sand leading-relaxed">
+                  <strong className="text-foreground">
+                    {bottleneck.method} {bottleneck.path}
+                  </strong>{" "}
+                  broke at{" "}
+                  <strong className="text-danger font-bold">
+                    {bottleneck.broke_at_rps.toFixed(0)} RPS
+                  </strong>{" "}
+                  (p95: <strong className="text-foreground">{bottleneck.p95_latency_ms.toFixed(1)}ms</strong>, error:{" "}
+                  <strong className="text-danger">{(bottleneck.error_rate * 100).toFixed(1)}%</strong>).
+                  {bottleneck.reason && (
+                    <span className="block text-[11px] text-foreground-muted mt-1">
+                      Reason: {bottleneck.reason}
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="sm:self-center shrink-0">
+              <Link
+                href={`/dashboard/capacity?testId=${testId}`}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-danger/40 bg-surface px-3 py-1.5 text-xs text-danger font-semibold hover:bg-danger/10 transition-colors"
+              >
+                <Zap className="size-3.5" />
+                <span>Full Capacity Diagnostics</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Real-time KPI Metric Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 font-mono">
@@ -280,15 +377,37 @@ export default function LiveTestCockpitPage() {
         </Card>
       </div>
 
+      {/* Feature 1.1 & 1.2: Live Traffic Stream Terminal + Per-API Health Console Side-by-Side */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Terminal Log Stream Feed (7 cols) */}
+        <div className="lg:col-span-7">
+          <LiveTrafficStreamTerminal
+            logs={logs}
+            isRunning={isRunning}
+            activeRps={currentRPS}
+            totalRequests={totalRequests}
+          />
+        </div>
+
+        {/* Real-Time Per-API Health Matrix (5 cols) */}
+        <div className="lg:col-span-5">
+          <LiveEndpointHealthMatrix
+            endpointHealth={endpointHealth}
+            defaultTarget={defaultTarget}
+            isRunning={isRunning}
+          />
+        </div>
+      </div>
+
       {/* Live Timeseries Chart */}
       <Card className="border-border bg-surface shadow-xs">
         <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-border-subtle">
           <div>
             <CardTitle className="text-sm font-semibold font-heading text-foreground">
-              Live Execution Curves
+              Execution Throughput Curve
             </CardTitle>
             <CardDescription className="text-xs text-foreground-muted font-mono">
-              Real-time offered vs achieved throughput stream (1s resolution)
+              Real-time achieved throughput stream (1-second tick resolution)
             </CardDescription>
           </div>
 
@@ -302,7 +421,7 @@ export default function LiveTestCockpitPage() {
 
         <CardContent className="pt-6">
           {ticks.length === 0 ? (
-            <div className="h-[220px] flex flex-col items-center justify-center text-center font-mono text-xs border border-dashed border-border-subtle rounded-lg">
+            <div className="h-[200px] flex flex-col items-center justify-center text-center font-mono text-xs border border-dashed border-border-subtle rounded-lg">
               {isRunning ? (
                 <>
                   <Activity className="size-6 text-brand animate-pulse mb-2" />
@@ -335,14 +454,14 @@ export default function LiveTestCockpitPage() {
                         y1={y}
                         x2={svgWidth - padding.right}
                         y2={y}
-                        stroke="#34342F"
+                        stroke="var(--border-subtle)"
                         strokeDasharray="4 4"
                         strokeWidth="1"
                       />
                       <text
                         x={padding.left - 8}
                         y={y + 4}
-                        fill="#77766F"
+                        fill="var(--foreground-subtle)"
                         fontSize="9"
                         fontFamily="monospace"
                         textAnchor="end"
@@ -357,7 +476,7 @@ export default function LiveTestCockpitPage() {
                 <path
                   d={rpsPathD}
                   fill="none"
-                  stroke="#2F6BFF"
+                  stroke="var(--brand)"
                   strokeWidth="2.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"

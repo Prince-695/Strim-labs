@@ -18,27 +18,47 @@ import { PageHeader } from "@/components/shell/page-header"
 import { StatusBadge } from "@/components/ui/status-badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/ui/empty-state"
+import { CornerCrosshairs } from "@/components/landing/corner-crosshairs"
 import { loadtestApi, type LoadTestItem } from "@/lib/loadtest-api"
+import { projectApi, type Project } from "@/lib/project-api"
 import { useUIStore } from "@/lib/stores/ui-store"
 
 export default function RunsHistoryPage() {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const { currentOrgId, currentProjectId } = useUIStore()
+  const { currentOrgId, currentProjectId, setProjectId } = useUIStore()
 
   const [selectedStatus, setSelectedStatus] = React.useState<string>("ALL")
 
+  // Fetch projects to map project names
+  const { data: projectsRes } = useQuery({
+    queryKey: ["projects_list", currentOrgId],
+    queryFn: () => projectApi.list(currentOrgId!),
+    enabled: Boolean(currentOrgId),
+  })
+
+  const projects = projectsRes?.data || []
+  const activeProjectId = currentProjectId || (projects.length > 0 ? projects[0].id : "")
+  const activeProject = projects.find((p) => p.id === activeProjectId)
+
+  // Auto-select first project if none selected
+  React.useEffect(() => {
+    if (!currentProjectId && projects.length > 0) {
+      setProjectId(projects[0].id)
+    }
+  }, [currentProjectId, projects, setProjectId])
+
   const { data: testsRes, isLoading } = useQuery({
-    queryKey: ["load_tests_list", currentOrgId, currentProjectId],
-    queryFn: () => loadtestApi.list(currentOrgId!, currentProjectId!),
-    enabled: Boolean(currentOrgId && currentProjectId),
+    queryKey: ["load_tests_list", currentOrgId, activeProjectId],
+    queryFn: () => loadtestApi.list(currentOrgId!, activeProjectId!),
+    enabled: Boolean(currentOrgId && activeProjectId),
     refetchInterval: 5000, // Poll every 5s for ongoing runs
   })
 
   const rerunMutation = useMutation({
-    mutationFn: (testId: string) => loadtestApi.rerun(currentOrgId!, currentProjectId!, testId),
+    mutationFn: (testId: string) => loadtestApi.rerun(currentOrgId!, activeProjectId!, testId),
     onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ["load_tests_list", currentOrgId, currentProjectId] })
+      queryClient.invalidateQueries({ queryKey: ["load_tests_list", currentOrgId, activeProjectId] })
       if (res.data?.id) {
         router.push(`/dashboard/runs/${res.data.id}`)
       }
@@ -46,9 +66,9 @@ export default function RunsHistoryPage() {
   })
 
   const stopMutation = useMutation({
-    mutationFn: (testId: string) => loadtestApi.stop(currentOrgId!, currentProjectId!, testId),
+    mutationFn: (testId: string) => loadtestApi.stop(currentOrgId!, activeProjectId!, testId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["load_tests_list", currentOrgId, currentProjectId] })
+      queryClient.invalidateQueries({ queryKey: ["load_tests_list", currentOrgId, activeProjectId] })
     },
   })
 
@@ -62,8 +82,8 @@ export default function RunsHistoryPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Load Test Runs & Cockpit History"
-        description="Inspect synthetic test executions, active progress streams, latency percentiles, and capacity reports."
+        title="Test History"
+        description="Review executed load test runs, RPS throughput, latency percentiles, and capacity limits."
         actions={
           <Link
             href="/dashboard/runner"
@@ -76,6 +96,41 @@ export default function RunsHistoryPage() {
           </Link>
         }
       />
+
+      {/* Target Project Selector */}
+      <Card className="border-border bg-surface relative overflow-hidden">
+        <CornerCrosshairs />
+        <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="font-mono text-xs text-foreground-subtle uppercase">Target Project:</span>
+            {projects.length > 0 ? (
+              <select
+                value={activeProjectId}
+                onChange={(e) => setProjectId(e.target.value)}
+                className="rounded-md border border-border-subtle bg-surface-raised px-3 py-1.5 font-mono text-xs text-foreground focus:outline-none focus:border-brand"
+              >
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.environment})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span className="font-mono text-xs text-foreground-muted">No projects found</span>
+            )}
+
+            {activeProject && (
+              <span className="font-mono text-xs text-foreground-muted">
+                Base URL: <strong className="text-foreground">{activeProject.base_url}</strong>
+              </span>
+            )}
+          </div>
+
+          <div className="font-mono text-xs text-foreground-subtle">
+            {allTests.length} recorded {allTests.length === 1 ? "run" : "runs"}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Filter Tabs */}
       <div className="inline-flex rounded-lg border border-border-subtle bg-surface-raised p-1 font-mono text-xs">
@@ -95,7 +150,8 @@ export default function RunsHistoryPage() {
       </div>
 
       {/* Runs Table Card */}
-      <Card className="border-border bg-surface shadow-xs">
+      <Card className="border-border bg-surface shadow-xs relative overflow-hidden">
+        <CornerCrosshairs />
         <CardContent className="p-0">
           {isLoading ? (
             <div className="p-6 space-y-3">
@@ -147,7 +203,7 @@ export default function RunsHistoryPage() {
 
                     return (
                       <tr key={test.id} className="hover:bg-surface-raised/30 transition-colors">
-                        {/* Test Name & ID */}
+                        {/* Test Name & Target */}
                         <td className="py-3.5 px-4">
                           <Link
                             href={`/dashboard/runs/${test.id}`}
@@ -155,9 +211,16 @@ export default function RunsHistoryPage() {
                           >
                             {test.name}
                           </Link>
-                          <span className="text-[10px] text-foreground-subtle truncate max-w-[150px] block">
-                            {test.id}
-                          </span>
+                          <div className="flex items-center gap-1.5 text-[10px] text-foreground-subtle pt-0.5">
+                            <span className="text-foreground-muted font-medium">
+                              {activeProject?.name || "Target"}
+                            </span>
+                            <span>•</span>
+                            <span>
+                              {test.config?.targets?.[0]?.method || "GET"}{" "}
+                              {test.config?.targets?.[0]?.path || "/"}
+                            </span>
+                          </div>
                         </td>
 
                         {/* Profile Preset */}
@@ -207,12 +270,19 @@ export default function RunsHistoryPage() {
 
                         {/* Executed At */}
                         <td className="py-3.5 px-4 text-right text-foreground-subtle">
-                          {new Date(test.created_at).toLocaleDateString([], {
-                            month: "short",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          <div className="text-foreground">
+                            {new Date(test.created_at).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </div>
+                          <div className="text-[10px]">
+                            {new Date(test.created_at).toLocaleDateString([], {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </div>
                         </td>
 
                         {/* Actions */}
@@ -232,7 +302,7 @@ export default function RunsHistoryPage() {
                             ) : (
                               <Button
                                 size="xs"
-                                variant="outline"
+                                variant="link"
                                 onClick={() => rerunMutation.mutate(test.id)}
                                 disabled={rerunMutation.isPending}
                                 title="Rerun test with identical config"
