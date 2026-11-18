@@ -35,6 +35,8 @@ export interface CreateLoadTestPayload {
   model: LoadTestModel
   profile: LoadTestProfile
   targets: TargetItem[]
+  all_endpoints?: boolean
+  safe_only?: boolean
   start_rate: number
   peak_rate: number
   ramp_up_seconds?: number
@@ -49,6 +51,39 @@ export interface CreateLoadTestPayload {
   start_now?: boolean
 }
 
+export interface BottleneckInsight {
+  method: string
+  path: string
+  broke_at_second?: number
+  broke_at_rps: number
+  p95_latency_ms: number
+  error_rate: number
+  reason?: string
+}
+
+export interface LiveRequestLog {
+  time: string
+  method: string
+  path: string
+  status_code: number
+  latency_ms: number
+  bytes: number
+  error?: string
+  is_error: boolean
+}
+
+export interface LiveEndpointHealth {
+  method: string
+  path: string
+  total_requests: number
+  current_rps: number
+  p95_latency_ms: number
+  error_rate: number
+  status: "healthy" | "degraded" | "failing" | string
+  first_broke_at_rps?: number
+  first_broke_reason?: string
+}
+
 export interface LoadTestSummary {
   total_requests: number
   achieved_avg_rps: number
@@ -61,6 +96,27 @@ export interface LoadTestSummary {
   error_rate: number
   status_codes: Record<string, number>
   duration_seconds: number
+  first_bottleneck?: BottleneckInsight
+}
+
+export interface LoadTestResultsResponse {
+  summary: LoadTestSummary
+  per_endpoint?: {
+    method: string
+    path: string
+    requests: number
+    error_rate: number
+    latency_ms: {
+      p50: number
+      p90: number
+      p95: number
+      p99: number
+      avg: number
+      min: number
+      max: number
+    }
+  }[]
+  latency_distribution?: { le_ms: number; count: number }[]
 }
 
 export interface LoadTestItem {
@@ -176,7 +232,7 @@ export const loadtestApi = {
   },
 
   getResults: async (orgId: string, projectId: string, testId: string) => {
-    return api.get<unknown>(`/organizations/${orgId}/projects/${projectId}/load-tests/${testId}/results`)
+    return api.get<LoadTestResultsResponse>(`/organizations/${orgId}/projects/${projectId}/load-tests/${testId}/results`)
   },
 
   getTimeseries: async (orgId: string, projectId: string, testId: string) => {

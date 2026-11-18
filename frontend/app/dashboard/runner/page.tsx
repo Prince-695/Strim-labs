@@ -7,7 +7,11 @@ import {
   Play,
   ShieldAlert,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Server,
+  Globe,
+  Layers,
+  ShieldCheck,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -16,6 +20,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
 import { PageHeader } from "@/components/shell/page-header"
 import { StatusBadge } from "@/components/ui/status-badge"
+import { CornerCrosshairs } from "@/components/landing/corner-crosshairs"
 import { projectApi } from "@/lib/project-api"
 import { endpointApi } from "@/lib/endpoint-api"
 import { loadtestApi, type LoadTestProfile, type LoadTestModel } from "@/lib/loadtest-api"
@@ -73,6 +78,14 @@ const PRESETS: {
   },
 ]
 
+function generateDefaultTestName(projectName?: string, testProfile?: string) {
+  const pName = projectName || "API Target"
+  const prof = (testProfile || "ramp").toUpperCase()
+  const now = new Date()
+  const timeStr = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+  return `${pName} • ${prof} • ${timeStr}`
+}
+
 function RunnerContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -82,7 +95,10 @@ function RunnerContent() {
   const activeProjectId = projectParam || currentProjectId || ""
 
   // State
-  const [testName, setTestName] = React.useState("API Stress Run")
+  const [testScope, setTestScope] = React.useState<"full_server" | "single">("full_server")
+  const [safeOnly, setSafeOnly] = React.useState(true)
+  const [testName, setTestName] = React.useState("")
+  const [isCustomName, setIsCustomName] = React.useState(false)
   const [profile, setProfile] = React.useState<LoadTestProfile>("ramp")
   const [model, setModel] = React.useState<LoadTestModel>("open")
   const [targetMethod, setTargetMethod] = React.useState("GET")
@@ -125,6 +141,13 @@ function RunnerContent() {
   const endpoints = endpointsRes?.data || []
   const isVerified = activeProject?.verification_status === "verified"
 
+  // Automatically update test run name with target project, profile, and timestamp unless user manually typed a custom name
+  React.useEffect(() => {
+    if (!isCustomName) {
+      setTestName(generateDefaultTestName(activeProject?.name, profile))
+    }
+  }, [activeProject?.name, profile, isCustomName])
+
   // Sync endpoint selection
   const handleEndpointSelect = (endpointId: string) => {
     setSelectedEndpointId(endpointId)
@@ -145,6 +168,9 @@ function RunnerContent() {
       setPeakRate(p.defaultPeak)
       setMaxVUs(p.defaultVUs)
     }
+    if (!isCustomName) {
+      setTestName(generateDefaultTestName(activeProject?.name, presetId))
+    }
   }
 
   // Launch Mutation
@@ -153,19 +179,25 @@ function RunnerContent() {
       if (!currentOrgId || !activeProjectId) {
         throw new Error("Missing organization or project selection")
       }
+      const isFullServer = testScope === "full_server"
+
       return loadtestApi.create(currentOrgId, activeProjectId, {
         name: testName,
         model,
         profile,
-        targets: [
-          {
-            endpoint_id: selectedEndpointId || undefined,
-            method: targetMethod,
-            path: targetPath,
-            body: targetBody ? targetBody : undefined,
-            weight: 1,
-          },
-        ],
+        all_endpoints: isFullServer,
+        safe_only: isFullServer ? safeOnly : undefined,
+        targets: isFullServer
+          ? []
+          : [
+              {
+                endpoint_id: selectedEndpointId || undefined,
+                method: targetMethod,
+                path: targetPath,
+                body: targetBody ? targetBody : undefined,
+                weight: 1,
+              },
+            ],
         start_rate: startRate,
         peak_rate: peakRate,
         ramp_up_seconds: rampUpSeconds,
@@ -206,8 +238,8 @@ function RunnerContent() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Load Runner & Capacity Prober"
-        description="Configure synthetic workload profiles, concurrency limits, and tail latency SLO breaking point assertions."
+        title="Load Test Runner"
+        description="Configure and execute synthetic workload tests to benchmark API latency and throughput limits."
         breadcrumbs={[
           { label: "Runner" },
           { label: activeProject?.name || "Target" },
@@ -222,7 +254,8 @@ function RunnerContent() {
       )}
 
       {/* Target & Verification Context Banner */}
-      <Card className="border-border bg-surface">
+      <Card className="border-border bg-surface relative overflow-hidden">
+        <CornerCrosshairs />
         <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
             <span className="font-mono text-xs text-foreground-subtle uppercase">Target Project:</span>
@@ -259,7 +292,7 @@ function RunnerContent() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => router.push(`/dashboard/projects/${activeProject.id}/verification`)}
+              onClick={() => router.push(`/dashboard/projects/${activeProject.id}`)}
               className="text-xs font-mono text-warning border-warning/40 gap-1.5 shrink-0"
             >
               <ShieldAlert className="size-3.5" />
@@ -327,10 +360,26 @@ function RunnerContent() {
             <CardContent className="pt-6 space-y-5 font-mono text-xs">
               {/* Test Name */}
               <div className="space-y-1.5">
-                <Label className="text-foreground-muted text-xs">Test Run Name</Label>
+                <div className="flex items-center justify-between">
+                  <Label className="text-foreground-muted text-xs">Test Run Name</Label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCustomName(false)
+                      setTestName(generateDefaultTestName(activeProject?.name, profile))
+                    }}
+                    className="text-[11px] text-brand hover:underline font-mono"
+                  >
+                    Reset with Current Time
+                  </button>
+                </div>
                 <Input
                   value={testName}
-                  onChange={(e) => setTestName(e.target.value)}
+                  onChange={(e) => {
+                    setIsCustomName(true)
+                    setTestName(e.target.value)
+                  }}
+                  placeholder="e.g. Production API • RAMP • 14:30:00"
                   className="text-xs font-mono bg-surface-raised border-border-subtle"
                 />
               </div>
@@ -429,65 +478,147 @@ function RunnerContent() {
           {/* Target HTTP Request Configuration */}
           <Card className="border-border bg-surface">
             <CardHeader className="pb-4 border-b border-border-subtle">
-              <CardTitle className="text-sm font-semibold font-heading text-foreground">
-                3. Target Endpoint Specification
-              </CardTitle>
-              <CardDescription className="text-xs text-foreground-muted font-mono">
-                Select from the registered endpoint registry or provide custom request parameters.
-              </CardDescription>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-sm font-semibold font-heading text-foreground">
+                    3. Target Scope & Endpoint Specification
+                  </CardTitle>
+                  <CardDescription className="text-xs text-foreground-muted font-mono">
+                    Benchmark all discovered APIs simultaneously or target a specific route.
+                  </CardDescription>
+                </div>
+
+                {/* Feature 2: Test Scope Toggle */}
+                <div className="inline-flex rounded-lg border border-border-subtle bg-surface-raised p-0.5 font-mono text-xs shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setTestScope("full_server")}
+                    className={`rounded px-3 py-1.5 transition-colors font-medium flex items-center gap-1.5 ${
+                      testScope === "full_server"
+                        ? "bg-brand text-white shadow-xs"
+                        : "text-foreground-muted hover:text-foreground"
+                    }`}
+                  >
+                    <Layers className="size-3.5" />
+                    <span>Full Server (All APIs)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTestScope("single")}
+                    className={`rounded px-3 py-1.5 transition-colors font-medium flex items-center gap-1.5 ${
+                      testScope === "single"
+                        ? "bg-brand text-white shadow-xs"
+                        : "text-foreground-muted hover:text-foreground"
+                    }`}
+                  >
+                    <Server className="size-3.5" />
+                    <span>Single / Custom Route</span>
+                  </button>
+                </div>
+              </div>
             </CardHeader>
 
             <CardContent className="pt-6 space-y-4 font-mono text-xs">
-              {/* Endpoint Preset Dropdown */}
-              {endpoints.length > 0 && (
-                <div className="space-y-1.5">
-                  <Label className="text-foreground-muted text-xs">Choose Registered Endpoint</Label>
-                  <select
-                    value={selectedEndpointId}
-                    onChange={(e) => handleEndpointSelect(e.target.value)}
-                    className="w-full rounded-md border border-border-subtle bg-surface-raised px-3 py-2 text-xs font-mono text-foreground focus:outline-none focus:border-brand"
-                  >
-                    <option value="">-- Custom Target Request --</option>
-                    {endpoints.map((ep) => (
-                      <option key={ep.id} value={ep.id}>
-                        [{ep.method.toUpperCase()}] {ep.path_template} ({ep.service})
-                      </option>
-                    ))}
-                  </select>
+              {testScope === "full_server" ? (
+                /* Full Server Mode Options */
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-border-subtle bg-surface-raised/40 p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Globe className="size-4 text-brand" />
+                        <span className="font-semibold text-foreground">
+                          Distributed Server-Wide Assault
+                        </span>
+                      </div>
+                      <span className="rounded bg-brand/10 border border-brand/20 px-2 py-0.5 text-[11px] text-brand font-bold">
+                        {endpoints.length} {endpoints.length === 1 ? "Discovered API" : "Discovered APIs"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-foreground-muted leading-relaxed">
+                      Strim Labs will distribute synthetic traffic across all discovered endpoints for{" "}
+                      <strong className="text-foreground">{activeProject?.name || "this project"}</strong>{" "}
+                      ({activeProject?.base_url}) to measure aggregate capacity, inflection points, and identify the weakest link.
+                    </p>
+                  </div>
+
+                  {/* Safe Mode Checkbox */}
+                  <label className="flex items-start gap-3 cursor-pointer rounded-xl border border-border-subtle bg-surface-raised/60 p-4 hover:border-border transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={safeOnly}
+                      onChange={(e) => setSafeOnly(e.target.checked)}
+                      className="mt-0.5 size-4 rounded border-border-subtle text-brand focus:ring-brand accent-brand cursor-pointer shrink-0"
+                    />
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold text-foreground text-xs">
+                          Safe Mode: Read-only (GET / HEAD only)
+                        </span>
+                        <span className="rounded bg-success/15 border border-success/30 px-1.5 py-0.5 text-[10px] text-success font-bold uppercase">
+                          Recommended
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-foreground-muted leading-relaxed">
+                        Restricts synthetic traffic generation exclusively to read-only idempotent endpoints. Automatically filters out state-mutating requests (POST, PUT, DELETE, PATCH) to safeguard production databases from unintended record modifications.
+                      </p>
+                    </div>
+                  </label>
                 </div>
-              )}
+              ) : (
+                /* Single / Custom Target Mode */
+                <div className="space-y-4">
+                  {/* Endpoint Preset Dropdown */}
+                  {endpoints.length > 0 && (
+                    <div className="space-y-1.5">
+                      <Label className="text-foreground-muted text-xs">Choose Registered Endpoint</Label>
+                      <select
+                        value={selectedEndpointId}
+                        onChange={(e) => handleEndpointSelect(e.target.value)}
+                        className="w-full rounded-md border border-border-subtle bg-surface-raised px-3 py-2 text-xs font-mono text-foreground focus:outline-none focus:border-brand"
+                      >
+                        <option value="">-- Custom Target Request --</option>
+                        {endpoints.map((ep) => (
+                          <option key={ep.id} value={ep.id}>
+                            [{ep.method.toUpperCase()}] {ep.path_template} ({ep.service})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
-              {/* Method + Path Row */}
-              <div className="flex gap-2">
-                <select
-                  value={targetMethod}
-                  onChange={(e) => setTargetMethod(e.target.value)}
-                  className="rounded-md border border-border-subtle bg-surface-raised px-3 py-2 font-mono text-xs font-bold text-foreground focus:outline-none focus:border-brand shrink-0"
-                >
-                  {["GET", "POST", "PUT", "PATCH", "DELETE"].map((m) => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
+                  {/* Method + Path Row */}
+                  <div className="flex gap-2">
+                    <select
+                      value={targetMethod}
+                      onChange={(e) => setTargetMethod(e.target.value)}
+                      className="rounded-md border border-border-subtle bg-surface-raised px-3 py-2 font-mono text-xs font-bold text-foreground focus:outline-none focus:border-brand shrink-0"
+                    >
+                      {["GET", "POST", "PUT", "PATCH", "DELETE"].map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
 
-                <Input
-                  placeholder="/orders/checkout"
-                  value={targetPath}
-                  onChange={(e) => setTargetPath(e.target.value)}
-                  className="font-mono text-xs bg-surface-raised border-border-subtle flex-1"
-                />
-              </div>
+                    <Input
+                      placeholder="/orders/checkout"
+                      value={targetPath}
+                      onChange={(e) => setTargetPath(e.target.value)}
+                      className="font-mono text-xs bg-surface-raised border-border-subtle flex-1"
+                    />
+                  </div>
 
-              {/* Request Body (for POST/PUT) */}
-              {(targetMethod === "POST" || targetMethod === "PUT" || targetMethod === "PATCH") && (
-                <div className="space-y-1.5">
-                  <Label className="text-foreground-muted text-xs">Request JSON Payload (Optional)</Label>
-                  <textarea
-                    rows={4}
-                    placeholder='{"sku": "prod-123", "qty": 1}'
-                    value={targetBody}
-                    onChange={(e) => setTargetBody(e.target.value)}
-                    className="w-full rounded-md border border-border-subtle bg-surface-raised p-2.5 font-mono text-xs text-foreground focus:outline-none focus:border-brand"
-                  />
+                  {/* Request Body (for POST/PUT) */}
+                  {(targetMethod === "POST" || targetMethod === "PUT" || targetMethod === "PATCH") && (
+                    <div className="space-y-1.5">
+                      <Label className="text-foreground-muted text-xs">Request JSON Payload (Optional)</Label>
+                      <textarea
+                        rows={4}
+                        placeholder='{"sku": "prod-123", "qty": 1}'
+                        value={targetBody}
+                        onChange={(e) => setTargetBody(e.target.value)}
+                        className="w-full rounded-md border border-border-subtle bg-surface-raised p-2.5 font-mono text-xs text-foreground focus:outline-none focus:border-brand"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </CardContent>
@@ -506,6 +637,13 @@ function RunnerContent() {
 
             <CardContent className="pt-4 space-y-3 font-mono text-xs">
               <div className="flex justify-between items-center py-1 border-b border-border-subtle/40">
+                <span className="text-foreground-subtle">Target Project</span>
+                <span className="text-foreground font-semibold truncate max-w-[170px]">
+                  {activeProject?.name || "None Selected"}
+                </span>
+              </div>
+
+              <div className="flex justify-between items-center py-1 border-b border-border-subtle/40">
                 <span className="text-foreground-subtle">Target Host</span>
                 <span className="text-foreground font-medium truncate max-w-[150px]">
                   {activeProject?.base_url || "—"}
@@ -513,9 +651,11 @@ function RunnerContent() {
               </div>
 
               <div className="flex justify-between items-center py-1 border-b border-border-subtle/40">
-                <span className="text-foreground-subtle">Target Endpoint</span>
+                <span className="text-foreground-subtle">Target Scope</span>
                 <span className="text-sand font-medium">
-                  {targetMethod} {targetPath}
+                  {testScope === "full_server"
+                    ? `Full Server (${safeOnly ? "Safe Read-Only" : "All Methods"})`
+                    : `${targetMethod} ${targetPath}`}
                 </span>
               </div>
 
@@ -566,12 +706,12 @@ function RunnerContent() {
                 {launchMutation.isPending ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
-                    <span>Deploying Test Run...</span>
+                    <span>Launching Test for {activeProject?.name || "Target"}...</span>
                   </>
                 ) : (
                   <>
                     <Play className="size-4 fill-current" />
-                    <span>Launch Distributed Load Test</span>
+                    <span>Launch Load Test for {activeProject?.name || "Target"}</span>
                   </>
                 )}
               </Button>
