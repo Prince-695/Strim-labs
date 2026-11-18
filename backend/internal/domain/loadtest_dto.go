@@ -20,7 +20,9 @@ type CreateLoadTestRequest struct {
 	Name               string              `json:"name" validate:"required,min=2,max=100" example:"Checkout Ramp Test"`
 	Model              LoadTestModel       `json:"model" validate:"required,oneof=open closed" example:"open"`
 	Profile            LoadTestProfile     `json:"profile" validate:"required,oneof=sustained ramp spike step" example:"ramp"`
-	Targets            []TargetItemRequest `json:"targets" validate:"required,min=1,max=20,dive"`
+	Targets            []TargetItemRequest `json:"targets" validate:"omitempty,max=100,dive"`
+	AllEndpoints       bool                `json:"all_endpoints,omitempty"`
+	SafeOnly           bool                `json:"safe_only,omitempty"`
 	StartRate          float64             `json:"start_rate" validate:"gte=0" example:"10"`
 	PeakRate           float64             `json:"peak_rate" validate:"gte=0" example:"500"`
 	RampUpSeconds      int                 `json:"ramp_up_seconds" validate:"gte=0" example:"120"`
@@ -92,18 +94,45 @@ type SSEProgressSnapshotData struct {
 	ConfigSummary  map[string]interface{} `json:"config_summary"`
 }
 
+// LiveRequestLog represents a live request entry streamed to the terminal console.
+type LiveRequestLog struct {
+	Time       string  `json:"time"`
+	Method     string  `json:"method"`
+	Path       string  `json:"path"`
+	StatusCode int     `json:"status_code"`
+	LatencyMS  float64 `json:"latency_ms"`
+	Bytes      int64   `json:"bytes"`
+	Error      string  `json:"error,omitempty"`
+	IsError    bool    `json:"is_error"`
+}
+
+// LiveEndpointHealth represents real-time health and degradation status of a specific route under test.
+type LiveEndpointHealth struct {
+	Method           string  `json:"method"`
+	Path             string  `json:"path"`
+	TotalRequests    int64   `json:"total_requests"`
+	CurrentRPS       float64 `json:"current_rps"`
+	P95LatencyMS     float64 `json:"p95_latency_ms"`
+	ErrorRate        float64 `json:"error_rate"`
+	Status           string  `json:"status"` // "healthy", "degraded", "failing"
+	FirstBrokeAtRPS  float64 `json:"first_broke_at_rps,omitempty"`
+	FirstBrokeReason string  `json:"first_broke_reason,omitempty"`
+}
+
 // SSEProgressTickData represents the payload for the per-second SSE 'tick' event.
 type SSEProgressTickData struct {
-	T             int              `json:"t" example:"1"`
-	OfferedRPS    float64          `json:"offered_rps" example:"10"`
-	AchievedRPS   float64          `json:"achieved_rps" example:"10"`
-	P50           float64          `json:"p50" example:"40"`
-	P95           float64          `json:"p95" example:"82"`
-	P99           float64          `json:"p99" example:"120"`
-	Errors        int              `json:"errors" example:"0"`
-	Active        int              `json:"active" example:"3"`
-	TotalRequests int64            `json:"total_requests" example:"10"`
-	StatusCodes   map[string]int64 `json:"status_codes"`
+	T              int                  `json:"t" example:"1"`
+	OfferedRPS     float64              `json:"offered_rps" example:"10"`
+	AchievedRPS    float64              `json:"achieved_rps" example:"10"`
+	P50            float64              `json:"p50" example:"40"`
+	P95            float64              `json:"p95" example:"82"`
+	P99            float64              `json:"p99" example:"120"`
+	Errors         int                  `json:"errors" example:"0"`
+	Active         int                  `json:"active" example:"3"`
+	TotalRequests  int64                `json:"total_requests" example:"10"`
+	StatusCodes    map[string]int64     `json:"status_codes"`
+	RecentLogs     []LiveRequestLog     `json:"recent_logs,omitempty"`
+	EndpointHealth []LiveEndpointHealth `json:"endpoint_health,omitempty"`
 }
 
 // SSEProgressStatusData represents the payload for the SSE 'status' event.

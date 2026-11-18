@@ -98,8 +98,12 @@ func (r *OpenRunner) Run(
 						latencyMs = 0
 					}
 					isTimeout := errors.Is(err, context.DeadlineExceeded)
+					var errDetail string
+					if err != nil {
+						errDetail = err.Error()
+					}
 
-					r.aggregator.Record(tgt, code, latencyMs, bytes, isTimeout)
+					r.aggregator.Record(tgt, code, latencyMs, bytes, isTimeout, errDetail)
 				}(target, intendedSendTime)
 
 			case <-ctx.Done():

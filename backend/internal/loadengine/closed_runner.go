@@ -96,8 +96,12 @@ func (r *ClosedRunner) Run(
 					latencyMs = 0
 				}
 				isTimeout := errors.Is(err, context.DeadlineExceeded)
+				var errDetail string
+				if err != nil {
+					errDetail = err.Error()
+				}
 
-				r.aggregator.Record(target, code, latencyMs, bytes, isTimeout)
+				r.aggregator.Record(target, code, latencyMs, bytes, isTimeout, errDetail)
 
 				if thinkTime > 0 {
 					select {
