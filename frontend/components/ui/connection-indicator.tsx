@@ -1,7 +1,8 @@
 import * as React from "react"
 import { cn } from "@/lib/utils"
 
-export type ConnectionState = "connected" | "reconnecting" | "disconnected" | "stale"
+export type ConnectionState =
+  "connected" | "reconnecting" | "disconnected" | "stale"
 
 interface ConnectionIndicatorProps {
   state: ConnectionState
@@ -44,7 +45,7 @@ export function ConnectionIndicator({
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-2 rounded-md border border-border-subtle bg-surface px-2.5 py-1 text-xs font-mono",
+        "inline-flex items-center gap-2 rounded-md border border-border-subtle bg-surface px-2.5 py-1 font-mono text-xs",
         className
       )}
     >
@@ -57,12 +58,18 @@ export function ConnectionIndicator({
             )}
           />
         )}
-        <span className={cn("relative inline-flex size-2 rounded-full", config.dot)} />
+        <span
+          className={cn("relative inline-flex size-2 rounded-full", config.dot)}
+        />
       </span>
       <span className={cn("font-medium", config.text)}>{config.label}</span>
       {lastUpdated && (
         <span className="text-foreground-subtle">
-          ({typeof lastUpdated === "string" ? lastUpdated : lastUpdated.toLocaleTimeString()})
+          (
+          {typeof lastUpdated === "string"
+            ? lastUpdated
+            : lastUpdated.toLocaleTimeString()}
+          )
         </span>
       )}
     </div>

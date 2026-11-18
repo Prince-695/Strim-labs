@@ -36,8 +36,12 @@ export function WorkspaceSwitcher() {
     },
   })
 
-  const organizations = React.useMemo(() => orgsResponse?.data || [], [orgsResponse?.data])
-  const activeOrg = organizations.find((o) => o.id === currentOrgId) || organizations[0]
+  const organizations = React.useMemo(
+    () => orgsResponse?.data || [],
+    [orgsResponse?.data]
+  )
+  const activeOrg =
+    organizations.find((o) => o.id === currentOrgId) || organizations[0]
 
   // Automatically select the first organization if none is active
   React.useEffect(() => {
@@ -62,7 +66,11 @@ export function WorkspaceSwitcher() {
           </div>
           <div className="flex flex-col truncate leading-tight">
             <span className="truncate text-xs font-medium text-foreground">
-              {isLoading ? "Loading workspaces..." : activeOrg ? activeOrg.name : "Select Workspace"}
+              {isLoading
+                ? "Loading workspaces..."
+                : activeOrg
+                  ? activeOrg.name
+                  : "Select Workspace"}
             </span>
             <span className="truncate font-mono text-[10px] text-foreground-subtle">
               {activeOrg ? `org-${activeOrg.slug}` : "No workspace"}
@@ -76,10 +84,10 @@ export function WorkspaceSwitcher() {
         align="start"
         className="w-64 border-border bg-surface-raised p-1 shadow-xl"
       >
-        <DropdownMenuLabel className="px-2 py-1.5 font-mono text-[11px] text-foreground-muted uppercase tracking-wider">
-          Workspaces
-        </DropdownMenuLabel>
         <DropdownMenuGroup>
+          <DropdownMenuLabel className="px-2 py-1.5 font-mono text-[11px] tracking-wider text-foreground-muted uppercase">
+            Workspaces
+          </DropdownMenuLabel>
           {organizations.map((org) => {
             const isSelected = org.id === activeOrg?.id
             return (
@@ -89,22 +97,26 @@ export function WorkspaceSwitcher() {
                 className="flex cursor-pointer items-center justify-between rounded-md px-2 py-2 text-xs hover:bg-surface-hover hover:text-foreground"
               >
                 <div className="flex items-center gap-2 truncate">
-                  <div className="flex size-6 shrink-0 items-center justify-center rounded bg-surface border border-border-subtle text-foreground-muted">
+                  <div className="flex size-6 shrink-0 items-center justify-center rounded border border-border-subtle bg-surface text-foreground-muted">
                     <Building2 className="size-3.5" />
                   </div>
                   <div className="truncate">
-                    <p className="font-medium text-foreground truncate">{org.name}</p>
-                    <p className="font-mono text-[10px] text-foreground-subtle truncate">
+                    <p className="truncate font-medium text-foreground">
+                      {org.name}
+                    </p>
+                    <p className="truncate font-mono text-[10px] text-foreground-subtle">
                       {org.slug}
                     </p>
                   </div>
                 </div>
-                {isSelected && <Check className="size-3.5 text-brand shrink-0" />}
+                {isSelected && (
+                  <Check className="size-3.5 shrink-0 text-brand" />
+                )}
               </DropdownMenuItem>
             )
           })}
         </DropdownMenuGroup>
-        <DropdownMenuSeparator className="bg-border-subtle my-1" />
+        <DropdownMenuSeparator className="my-1 bg-border-subtle" />
         <DropdownMenuItem
           onClick={() => router.push("/onboarding/organization")}
           className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs text-sand hover:bg-surface-hover hover:text-sand"

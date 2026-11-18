@@ -1,27 +1,33 @@
-import { LandingNavbar } from "@/components/landing/navbar"
-import { HeroSection } from "@/components/landing/hero-section"
-import { WorkflowSection } from "@/components/landing/workflow-section"
-import { ProductPillars } from "@/components/landing/product-pillars"
-import { TerminalDemo } from "@/components/landing/terminal-demo"
-import { SecurityTrust } from "@/components/landing/security-trust"
+import { Navbar } from "@/components/landing/navbar"
+import { Hero } from "@/components/landing/hero"
+import { MarqueeTicker } from "@/components/landing/marquee-ticker"
+import { Explore } from "@/components/landing/explore"
+import { Stats } from "@/components/landing/stats"
+import { PlatformBento } from "@/components/landing/platform-bento"
+import { PipelineProofs } from "@/components/landing/pipeline-proofs"
+import { LiveTrafficTerminal } from "@/components/landing/live-traffic-terminal"
+import { InstallWidget } from "@/components/landing/install-widget"
 import { FAQSection } from "@/components/landing/faq-section"
-import { CTASection } from "@/components/landing/cta-section"
-import { LandingFooter } from "@/components/landing/footer"
+import { CTA } from "@/components/landing/CallToAction"
+import { Footer } from "@/components/landing/footer"
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col selection:bg-brand/30 selection:text-foreground">
-      <LandingNavbar />
+    <div className="flex min-h-screen flex-col bg-background text-foreground selection:bg-brand/30 selection:text-foreground">
+      <Navbar />
       <main className="flex-1">
-        <HeroSection />
-        <ProductPillars />
-        <WorkflowSection />
-        <TerminalDemo />
-        <SecurityTrust />
+        <Hero />
+        <MarqueeTicker />
+        <Explore />
+        <Stats />
+        <PlatformBento />
+        <PipelineProofs />
+        <LiveTrafficTerminal />
+        <InstallWidget />
         <FAQSection />
-        <CTASection />
+        <CTA />
       </main>
-      <LandingFooter />
+      <Footer />
     </div>
   )
 }

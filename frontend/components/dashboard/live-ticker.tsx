@@ -1,7 +1,10 @@
 "use client"
 
 import * as React from "react"
-import { ConnectionIndicator, type ConnectionState } from "@/components/ui/connection-indicator"
+import {
+  ConnectionIndicator,
+  type ConnectionState,
+} from "@/components/ui/connection-indicator"
 import { tokenStorage, API_BASE_URL } from "@/lib/api-client"
 
 interface LiveTickerData {
@@ -21,9 +24,12 @@ interface LiveTickerProps {
 
 export function LiveTicker({ orgId, projectId, onUpdate }: LiveTickerProps) {
   const isConfigured = Boolean(orgId && projectId)
-  const [connectionState, setConnectionState] = React.useState<ConnectionState>("disconnected")
+  const [connectionState, setConnectionState] =
+    React.useState<ConnectionState>("disconnected")
   const [lastData, setLastData] = React.useState<LiveTickerData | null>(null)
-  const [lastUpdated, setLastUpdated] = React.useState<Date | undefined>(undefined)
+  const [lastUpdated, setLastUpdated] = React.useState<Date | undefined>(
+    undefined
+  )
 
   React.useEffect(() => {
     if (!orgId || !projectId) {
@@ -120,10 +126,20 @@ export function LiveTicker({ orgId, projectId, onUpdate }: LiveTickerProps) {
     <div className="flex flex-wrap items-center gap-3">
       <ConnectionIndicator state={displayState} lastUpdated={lastUpdated} />
       {lastData && (
-        <div className="hidden sm:flex items-center gap-3 font-mono text-xs text-foreground-muted bg-surface-raised/40 px-2.5 py-1 rounded-md border border-border-subtle">
-          <span>Live RPS: <strong className="text-foreground">{lastData.rps.toFixed(1)}</strong></span>
+        <div className="hidden items-center gap-3 rounded-md border border-border-subtle bg-surface-raised/40 px-2.5 py-1 font-mono text-xs text-foreground-muted sm:flex">
+          <span>
+            Live RPS:{" "}
+            <strong className="text-foreground">
+              {lastData.rps.toFixed(1)}
+            </strong>
+          </span>
           <span>•</span>
-          <span>Live P95: <strong className="text-foreground">{lastData.p95.toFixed(1)}ms</strong></span>
+          <span>
+            Live P95:{" "}
+            <strong className="text-foreground">
+              {lastData.p95.toFixed(1)}ms
+            </strong>
+          </span>
         </div>
       )}
     </div>

@@ -17,11 +17,20 @@ export interface CreateApiKeyResponse {
 
 export const apikeyApi = {
   list: async (orgId: string, projectId: string) => {
-    return api.get<ApiKeyItem[]>(`/organizations/${orgId}/projects/${projectId}/api-keys`)
+    return api.get<ApiKeyItem[]>(
+      `/organizations/${orgId}/projects/${projectId}/api-keys`
+    )
   },
 
-  create: async (orgId: string, projectId: string, payload: { name: string; scopes: string[] }) => {
-    return api.post<CreateApiKeyResponse>(`/organizations/${orgId}/projects/${projectId}/api-keys`, payload)
+  create: async (
+    orgId: string,
+    projectId: string,
+    payload: { name: string; scopes: string[] }
+  ) => {
+    return api.post<CreateApiKeyResponse>(
+      `/organizations/${orgId}/projects/${projectId}/api-keys`,
+      payload
+    )
   },
 
   rotate: async (orgId: string, projectId: string, keyId: string) => {

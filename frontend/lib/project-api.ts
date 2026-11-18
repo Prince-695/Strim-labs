@@ -1,7 +1,8 @@
 import { api } from "./api-client"
 
 export type ProjectEnvironment = "development" | "staging" | "production"
-export type VerificationStatus = "unverified" | "pending" | "verified" | "failed"
+export type VerificationStatus =
+  "unverified" | "pending" | "verified" | "failed"
 export type VerificationMethod = "dns" | "file"
 
 export interface Project {
@@ -81,25 +82,43 @@ export const projectApi = {
   },
 
   get: async (orgId: string, projectId: string) => {
-    return api.get<ProjectDetail>(`/organizations/${orgId}/projects/${projectId}`)
+    return api.get<ProjectDetail>(
+      `/organizations/${orgId}/projects/${projectId}`
+    )
   },
 
   create: async (orgId: string, payload: CreateProjectPayload) => {
     return api.post<Project>(`/organizations/${orgId}/projects`, payload)
   },
 
-  update: async (orgId: string, projectId: string, payload: UpdateProjectPayload) => {
-    return api.put<Project>(`/organizations/${orgId}/projects/${projectId}`, payload)
+  update: async (
+    orgId: string,
+    projectId: string,
+    payload: UpdateProjectPayload
+  ) => {
+    return api.put<Project>(
+      `/organizations/${orgId}/projects/${projectId}`,
+      payload
+    )
   },
 
   delete: async (orgId: string, projectId: string) => {
-    return api.delete<{ message: string }>(`/organizations/${orgId}/projects/${projectId}`)
+    return api.delete<{ message: string }>(
+      `/organizations/${orgId}/projects/${projectId}`
+    )
   },
 
-  initiateVerification: async (orgId: string, projectId: string, method: VerificationMethod = "dns") => {
-    return api.post<VerificationResponse>(`/organizations/${orgId}/projects/${projectId}/verification`, {
-      method,
-    })
+  initiateVerification: async (
+    orgId: string,
+    projectId: string,
+    method: VerificationMethod = "dns"
+  ) => {
+    return api.post<VerificationResponse>(
+      `/organizations/${orgId}/projects/${projectId}/verification`,
+      {
+        method,
+      }
+    )
   },
 
   checkVerification: async (orgId: string, projectId: string) => {
@@ -109,6 +128,8 @@ export const projectApi = {
   },
 
   getVerificationStatus: async (orgId: string, projectId: string) => {
-    return api.get<VerificationResponse>(`/organizations/${orgId}/projects/${projectId}/verification`)
+    return api.get<VerificationResponse>(
+      `/organizations/${orgId}/projects/${projectId}/verification`
+    )
   },
 }

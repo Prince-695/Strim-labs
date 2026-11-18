@@ -28,42 +28,55 @@ export function PageHeader({
     if (!breadcrumbs) return null
     if (Array.isArray(breadcrumbs)) {
       return (
-        <div className="flex items-center gap-2 text-xs font-mono text-foreground-subtle">
+        <div className="flex items-center gap-2 font-mono text-xs text-foreground-subtle">
           {breadcrumbs.map((crumb, idx) => (
             <React.Fragment key={idx}>
               {idx > 0 && <span>/</span>}
               {crumb.href ? (
-                <Link href={crumb.href} className="hover:text-foreground transition-colors">
+                <Link
+                  href={crumb.href}
+                  className="transition-colors hover:text-foreground"
+                >
                   {crumb.label}
                 </Link>
               ) : (
-                <span className="text-foreground font-medium">{crumb.label}</span>
+                <span className="font-medium text-foreground">
+                  {crumb.label}
+                </span>
               )}
             </React.Fragment>
           ))}
         </div>
       )
     }
-    return <div className="text-xs font-mono text-foreground-subtle">{breadcrumbs}</div>
+    return (
+      <div className="font-mono text-xs text-foreground-subtle">
+        {breadcrumbs}
+      </div>
+    )
   }
 
   return (
-    <div className={cn("border-b border-border/80 pb-5 mb-6 space-y-4", className)}>
+    <div
+      className={cn("mb-6 space-y-4 border-b border-border/80 pb-5", className)}
+    >
       {renderBreadcrumbs()}
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
-          <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl font-heading">
+          <h1 className="font-heading text-xl font-bold tracking-tight text-foreground sm:text-2xl">
             {title}
           </h1>
           {description && (
-            <p className="text-sm text-foreground-muted max-w-2xl leading-relaxed">
+            <p className="max-w-2xl text-sm leading-relaxed text-foreground-muted">
               {description}
             </p>
           )}
         </div>
 
-        {actions && <div className="flex items-center gap-2.5 shrink-0">{actions}</div>}
+        {actions && (
+          <div className="flex shrink-0 items-center gap-2.5">{actions}</div>
+        )}
       </div>
 
       {children && <div className="pt-2">{children}</div>}

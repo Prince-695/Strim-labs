@@ -56,7 +56,10 @@ export const authApi = {
   },
 
   verifyOtp: async (otp: string) => {
-    return api.post<{ message: string; is_verified: boolean }>("/auth/otp/verify", { otp })
+    return api.post<{ message: string; is_verified: boolean }>(
+      "/auth/otp/verify",
+      { otp }
+    )
   },
 
   sendOtp: async () => {

@@ -61,19 +61,29 @@ export const orgApi = {
     return api.get<OrgMember[]>(`/organizations/${orgId}/members`)
   },
 
-  addMember: async (orgId: string, payload: { email: string; role: OrgRole }) => {
+  addMember: async (
+    orgId: string,
+    payload: { email: string; role: OrgRole }
+  ) => {
     return api.post<OrgMember>(`/organizations/${orgId}/members`, payload)
   },
 
   updateMemberRole: async (orgId: string, userId: string, role: OrgRole) => {
-    return api.put<OrgMember>(`/organizations/${orgId}/members/${userId}/role`, { role })
+    return api.put<OrgMember>(
+      `/organizations/${orgId}/members/${userId}/role`,
+      { role }
+    )
   },
 
   removeMember: async (orgId: string, userId: string) => {
-    return api.delete<{ message: string }>(`/organizations/${orgId}/members/${userId}`)
+    return api.delete<{ message: string }>(
+      `/organizations/${orgId}/members/${userId}`
+    )
   },
 
   leave: async (orgId: string) => {
-    return api.post<{ message: string }>(`/organizations/${orgId}/members/leave`)
+    return api.post<{ message: string }>(
+      `/organizations/${orgId}/members/leave`
+    )
   },
 }

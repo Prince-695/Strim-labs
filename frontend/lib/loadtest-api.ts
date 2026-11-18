@@ -2,7 +2,8 @@ import { api } from "./api-client"
 
 export type LoadTestModel = "open" | "closed"
 export type LoadTestProfile = "sustained" | "ramp" | "spike" | "step"
-export type LoadTestStatus = "queued" | "running" | "completed" | "failed" | "stopped"
+export type LoadTestStatus =
+  "queued" | "running" | "completed" | "failed" | "stopped"
 
 export interface TargetItem {
   endpoint_id?: string
@@ -35,6 +36,8 @@ export interface CreateLoadTestPayload {
   model: LoadTestModel
   profile: LoadTestProfile
   targets: TargetItem[]
+  all_endpoints?: boolean
+  safe_only?: boolean
   start_rate: number
   peak_rate: number
   ramp_up_seconds?: number
@@ -49,6 +52,39 @@ export interface CreateLoadTestPayload {
   start_now?: boolean
 }
 
+export interface BottleneckInsight {
+  method: string
+  path: string
+  broke_at_second?: number
+  broke_at_rps: number
+  p95_latency_ms: number
+  error_rate: number
+  reason?: string
+}
+
+export interface LiveRequestLog {
+  time: string
+  method: string
+  path: string
+  status_code: number
+  latency_ms: number
+  bytes: number
+  error?: string
+  is_error: boolean
+}
+
+export interface LiveEndpointHealth {
+  method: string
+  path: string
+  total_requests: number
+  current_rps: number
+  p95_latency_ms: number
+  error_rate: number
+  status: "healthy" | "degraded" | "failing" | string
+  first_broke_at_rps?: number
+  first_broke_reason?: string
+}
+
 export interface LoadTestSummary {
   total_requests: number
   achieved_avg_rps: number
@@ -61,6 +97,27 @@ export interface LoadTestSummary {
   error_rate: number
   status_codes: Record<string, number>
   duration_seconds: number
+  first_bottleneck?: BottleneckInsight
+}
+
+export interface LoadTestResultsResponse {
+  summary: LoadTestSummary
+  per_endpoint?: {
+    method: string
+    path: string
+    requests: number
+    error_rate: number
+    latency_ms: {
+      p50: number
+      p90: number
+      p95: number
+      p99: number
+      avg: number
+      min: number
+      max: number
+    }
+  }[]
+  latency_distribution?: { le_ms: number; count: number }[]
 }
 
 export interface LoadTestItem {
@@ -151,32 +208,51 @@ export interface CompareResponse {
 }
 
 export const loadtestApi = {
-  create: async (orgId: string, projectId: string, payload: CreateLoadTestPayload) => {
-    return api.post<LoadTestItem>(`/organizations/${orgId}/projects/${projectId}/load-tests`, payload)
+  create: async (
+    orgId: string,
+    projectId: string,
+    payload: CreateLoadTestPayload
+  ) => {
+    return api.post<LoadTestItem>(
+      `/organizations/${orgId}/projects/${projectId}/load-tests`,
+      payload
+    )
   },
 
   list: async (orgId: string, projectId: string) => {
-    return api.get<LoadTestItem[]>(`/organizations/${orgId}/projects/${projectId}/load-tests`)
+    return api.get<LoadTestItem[]>(
+      `/organizations/${orgId}/projects/${projectId}/load-tests`
+    )
   },
 
   get: async (orgId: string, projectId: string, testId: string) => {
-    return api.get<LoadTestItem>(`/organizations/${orgId}/projects/${projectId}/load-tests/${testId}`)
+    return api.get<LoadTestItem>(
+      `/organizations/${orgId}/projects/${projectId}/load-tests/${testId}`
+    )
   },
 
   stop: async (orgId: string, projectId: string, testId: string) => {
-    return api.post<{ message: string }>(`/organizations/${orgId}/projects/${projectId}/load-tests/${testId}/stop`)
+    return api.post<{ message: string }>(
+      `/organizations/${orgId}/projects/${projectId}/load-tests/${testId}/stop`
+    )
   },
 
   rerun: async (orgId: string, projectId: string, testId: string) => {
-    return api.post<LoadTestItem>(`/organizations/${orgId}/projects/${projectId}/load-tests/${testId}/rerun`)
+    return api.post<LoadTestItem>(
+      `/organizations/${orgId}/projects/${projectId}/load-tests/${testId}/rerun`
+    )
   },
 
   delete: async (orgId: string, projectId: string, testId: string) => {
-    return api.delete<{ message: string }>(`/organizations/${orgId}/projects/${projectId}/load-tests/${testId}`)
+    return api.delete<{ message: string }>(
+      `/organizations/${orgId}/projects/${projectId}/load-tests/${testId}`
+    )
   },
 
   getResults: async (orgId: string, projectId: string, testId: string) => {
-    return api.get<unknown>(`/organizations/${orgId}/projects/${projectId}/load-tests/${testId}/results`)
+    return api.get<LoadTestResultsResponse>(
+      `/organizations/${orgId}/projects/${projectId}/load-tests/${testId}/results`
+    )
   },
 
   getTimeseries: async (orgId: string, projectId: string, testId: string) => {
@@ -186,7 +262,9 @@ export const loadtestApi = {
   },
 
   getCapacity: async (orgId: string, projectId: string, testId: string) => {
-    return api.get<CapacityReport>(`/organizations/${orgId}/projects/${projectId}/load-tests/${testId}/capacity`)
+    return api.get<CapacityReport>(
+      `/organizations/${orgId}/projects/${projectId}/load-tests/${testId}/capacity`
+    )
   },
 
   recomputeCapacity: async (
@@ -201,7 +279,14 @@ export const loadtestApi = {
     )
   },
 
-  compare: async (orgId: string, projectId: string, payload: { test_ids: string[]; baseline_id?: string }) => {
-    return api.post<CompareResponse>(`/organizations/${orgId}/projects/${projectId}/load-tests/compare`, payload)
+  compare: async (
+    orgId: string,
+    projectId: string,
+    payload: { test_ids: string[]; baseline_id?: string }
+  ) => {
+    return api.post<CompareResponse>(
+      `/organizations/${orgId}/projects/${projectId}/load-tests/compare`,
+      payload
+    )
   },
 }

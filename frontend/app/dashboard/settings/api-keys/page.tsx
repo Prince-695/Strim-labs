@@ -10,12 +10,18 @@ import {
   RotateCw,
   Trash2,
   AlertTriangle,
-  Loader2
+  Loader2,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+} from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { EmptyState } from "@/components/ui/empty-state"
 import { apikeyApi, type ApiKeyItem } from "@/lib/apikey-api"
@@ -46,14 +52,18 @@ export default function ApiKeysSettingsPage() {
         scopes: ["ingest", "read"],
       }),
     onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ["api_keys", currentOrgId, currentProjectId] })
+      queryClient.invalidateQueries({
+        queryKey: ["api_keys", currentOrgId, currentProjectId],
+      })
       setRevealedKey(res.data?.raw_key || "Generated")
       setIsCreateModalOpen(false)
       setKeyName("")
       setCreateError(null)
     },
     onError: (err: unknown) => {
-      setCreateError(err instanceof Error ? err.message : "Failed to create API key.")
+      setCreateError(
+        err instanceof Error ? err.message : "Failed to create API key."
+      )
     },
   })
 
@@ -62,7 +72,9 @@ export default function ApiKeysSettingsPage() {
     mutationFn: (keyId: string) =>
       apikeyApi.rotate(currentOrgId!, currentProjectId!, keyId),
     onSuccess: (res) => {
-      queryClient.invalidateQueries({ queryKey: ["api_keys", currentOrgId, currentProjectId] })
+      queryClient.invalidateQueries({
+        queryKey: ["api_keys", currentOrgId, currentProjectId],
+      })
       setRevealedKey(res.data?.raw_key || "Rotated")
     },
   })
@@ -72,7 +84,9 @@ export default function ApiKeysSettingsPage() {
     mutationFn: (keyId: string) =>
       apikeyApi.revoke(currentOrgId!, currentProjectId!, keyId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["api_keys", currentOrgId, currentProjectId] })
+      queryClient.invalidateQueries({
+        queryKey: ["api_keys", currentOrgId, currentProjectId],
+      })
     },
   })
 
@@ -86,20 +100,21 @@ export default function ApiKeysSettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h3 className="text-base font-semibold font-heading text-foreground">
+          <h3 className="font-heading text-base font-semibold text-foreground">
             Project API Keys & Automation Tokens
           </h3>
-          <p className="text-xs text-foreground-muted font-mono">
-            Cryptographic keys used to ingest telemetry metrics and trigger load runners via CI/CD pipelines.
+          <p className="font-mono text-xs text-foreground-muted">
+            Cryptographic keys used to ingest telemetry metrics and trigger load
+            runners via CI/CD pipelines.
           </p>
         </div>
 
         <Button
           onClick={() => setIsCreateModalOpen(true)}
           disabled={!currentProjectId}
-          className="bg-brand text-white hover:bg-brand-hover text-xs font-mono gap-1.5"
+          className="gap-1.5 bg-brand font-mono text-xs text-white hover:bg-brand-hover"
         >
           <Plus className="size-3.5" />
           <span>Generate API Key</span>
@@ -109,21 +124,26 @@ export default function ApiKeysSettingsPage() {
       {/* Secret Reveal Banner */}
       {revealedKey && (
         <Card className="border-warning/40 bg-warning/5 shadow-xl">
-          <CardContent className="p-4 space-y-2 font-mono text-xs">
-            <div className="flex items-center gap-2 text-warning font-semibold">
+          <CardContent className="space-y-2 p-4 font-mono text-xs">
+            <div className="flex items-center gap-2 font-semibold text-warning">
               <AlertTriangle className="size-4" />
               <span>Copy Your Secret Key Now</span>
             </div>
             <p className="text-[11px] text-foreground-muted">
-              For security, this raw key will not be displayed again. Store it securely in your CI/CD environment variables.
+              For security, this raw key will not be displayed again. Store it
+              securely in your CI/CD environment variables.
             </p>
-            <div className="flex items-center justify-between rounded-lg border border-border-subtle bg-surface-raised px-3 py-2 text-sand font-bold">
-              <span className="truncate mr-2">{revealedKey}</span>
+            <div className="flex items-center justify-between rounded-lg border border-border-subtle bg-surface-raised px-3 py-2 font-bold text-sand">
+              <span className="mr-2 truncate">{revealedKey}</span>
               <button
                 onClick={() => copySecret(revealedKey)}
-                className="text-foreground-subtle hover:text-foreground shrink-0"
+                className="shrink-0 text-foreground-subtle hover:text-foreground"
               >
-                {copiedKey ? <Check className="size-4 text-success" /> : <Copy className="size-4" />}
+                {copiedKey ? (
+                  <Check className="size-4 text-success" />
+                ) : (
+                  <Copy className="size-4" />
+                )}
               </button>
             </div>
             <div className="text-right">
@@ -142,16 +162,16 @@ export default function ApiKeysSettingsPage() {
       {isCreateModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
           <Card className="w-full max-w-md border-border bg-surface shadow-2xl">
-            <CardHeader className="pb-4 border-b border-border-subtle">
-              <CardTitle className="text-base font-semibold font-heading text-foreground">
+            <CardHeader className="border-b border-border-subtle pb-4">
+              <CardTitle className="font-heading text-base font-semibold text-foreground">
                 Generate Ingestion API Key
               </CardTitle>
-              <CardDescription className="text-xs text-foreground-muted font-mono">
+              <CardDescription className="font-mono text-xs text-foreground-muted">
                 Assigned scopes: Telemetry Ingest & Read Observability.
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="pt-5 space-y-4 font-mono text-xs">
+            <CardContent className="space-y-4 pt-5 font-mono text-xs">
               {createError && (
                 <div className="rounded-lg border border-danger/40 bg-danger/10 p-2.5 text-danger">
                   {createError}
@@ -159,12 +179,14 @@ export default function ApiKeysSettingsPage() {
               )}
 
               <div className="space-y-1.5">
-                <label className="text-foreground-muted">Key Identifier / Label</label>
+                <label className="text-foreground-muted">
+                  Key Identifier / Label
+                </label>
                 <Input
                   placeholder="GitHub Actions CI Runner"
                   value={keyName}
                   onChange={(e) => setKeyName(e.target.value)}
-                  className="text-xs font-mono bg-surface-raised border-border-subtle"
+                  className="border-border-subtle bg-surface-raised font-mono text-xs"
                 />
               </div>
 
@@ -173,14 +195,14 @@ export default function ApiKeysSettingsPage() {
                   variant="outline"
                   onClick={() => setIsCreateModalOpen(false)}
                   disabled={createMutation.isPending}
-                  className="text-xs font-mono"
+                  className="font-mono text-xs"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={() => createMutation.mutate()}
                   disabled={!keyName || createMutation.isPending}
-                  className="bg-brand text-white hover:bg-brand-hover text-xs font-mono gap-1.5"
+                  className="gap-1.5 bg-brand font-mono text-xs text-white hover:bg-brand-hover"
                 >
                   {createMutation.isPending ? (
                     <>
@@ -201,7 +223,7 @@ export default function ApiKeysSettingsPage() {
       <Card className="border-border bg-surface shadow-xs">
         <CardContent className="p-0">
           {isLoading ? (
-            <div className="p-6 space-y-3">
+            <div className="space-y-3 p-6">
               <Skeleton className="h-8 w-full" />
               <Skeleton className="h-8 w-full" />
             </div>
@@ -213,7 +235,7 @@ export default function ApiKeysSettingsPage() {
               action={
                 <Button
                   onClick={() => setIsCreateModalOpen(true)}
-                  className="bg-brand text-white hover:bg-brand-hover text-xs font-mono gap-1.5"
+                  className="gap-1.5 bg-brand font-mono text-xs text-white hover:bg-brand-hover"
                 >
                   <Plus className="size-3.5" />
                   <span>Generate Key</span>
@@ -225,44 +247,49 @@ export default function ApiKeysSettingsPage() {
               <table className="w-full text-left font-mono text-xs">
                 <thead>
                   <tr className="border-b border-border-subtle bg-surface-raised/40 text-[11px] text-foreground-subtle uppercase">
-                    <th className="py-3 px-4 font-semibold">Key Name</th>
-                    <th className="py-3 px-4 font-semibold">Prefix</th>
-                    <th className="py-3 px-4 font-semibold">Scopes</th>
-                    <th className="py-3 px-4 font-semibold">Created At</th>
-                    <th className="py-3 px-4 font-semibold text-right">Actions</th>
+                    <th className="px-4 py-3 font-semibold">Key Name</th>
+                    <th className="px-4 py-3 font-semibold">Prefix</th>
+                    <th className="px-4 py-3 font-semibold">Scopes</th>
+                    <th className="px-4 py-3 font-semibold">Created At</th>
+                    <th className="px-4 py-3 text-right font-semibold">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border-subtle">
                   {keys.map((k: ApiKeyItem) => (
-                    <tr key={k.id} className="hover:bg-surface-raised/30 transition-colors">
-                      <td className="py-3.5 px-4 font-medium text-foreground">
+                    <tr
+                      key={k.id}
+                      className="transition-colors hover:bg-surface-raised/30"
+                    >
+                      <td className="px-4 py-3.5 font-medium text-foreground">
                         {k.name}
                       </td>
-                      <td className="py-3.5 px-4 text-sand">
+                      <td className="px-4 py-3.5 text-sand">
                         <code>{k.key_prefix}...</code>
                       </td>
-                      <td className="py-3.5 px-4">
+                      <td className="px-4 py-3.5">
                         <div className="flex gap-1.5">
                           {k.scopes.map((s) => (
                             <span
                               key={s}
-                              className="rounded bg-surface-raised px-1.5 py-0.5 text-[10px] text-foreground-muted border border-border-subtle"
+                              className="rounded border border-border-subtle bg-surface-raised px-1.5 py-0.5 text-[10px] text-foreground-muted"
                             >
                               {s}
                             </span>
                           ))}
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 text-foreground-subtle">
+                      <td className="px-4 py-3.5 text-foreground-subtle">
                         {new Date(k.created_at).toLocaleDateString()}
                       </td>
-                      <td className="py-3.5 px-4 text-right">
+                      <td className="px-4 py-3.5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => rotateMutation.mutate(k.id)}
                             disabled={rotateMutation.isPending}
                             title="Rotate Key"
-                            className="text-foreground-subtle hover:text-foreground p-1 rounded"
+                            className="rounded p-1 text-foreground-subtle hover:text-foreground"
                           >
                             <RotateCw className="size-3.5" />
                           </button>
@@ -270,7 +297,7 @@ export default function ApiKeysSettingsPage() {
                             onClick={() => revokeMutation.mutate(k.id)}
                             disabled={revokeMutation.isPending}
                             title="Revoke Key"
-                            className="text-foreground-subtle hover:text-danger p-1 rounded"
+                            className="rounded p-1 text-foreground-subtle hover:text-danger"
                           >
                             <Trash2 className="size-3.5" />
                           </button>

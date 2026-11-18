@@ -2,66 +2,96 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { Menu, X, ArrowRight, BookOpen } from "lucide-react"
+import Image from "next/image"
+import { Menu, X, ArrowRight, BookOpen, Activity } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-export function LandingNavbar() {
+function GithubIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+      <path d="M9 18c-4.51 2-5-2-7-2" />
+    </svg>
+  )
+}
+
+export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 mx-auto w-full border-b backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand */}
-        <Link href="/" className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-lg border border-border bg-surface shadow-xs">
-            <span className="font-mono text-sm font-bold tracking-tighter text-brand">S</span>
-            <span className="font-mono text-sm font-bold tracking-tighter text-sand">L</span>
+        <Link href="/" className="group flex items-center">
+          <div className="">
+            <Image
+              src="/logo.png"
+              alt="Strim Labs Logo"
+              width={33}
+              height={33}
+              priority
+              className="size-full object-contain"
+            />
           </div>
-          <div className="flex flex-col leading-none">
-            <span className="font-mono text-sm font-bold tracking-tight text-foreground">
-              STRIM
-            </span>
-            <span className="text-[10px] font-mono tracking-widest text-sand uppercase">
-              LABS
+          <div className="flex items-baseline font-mono">
+            <span className="text-sm font-semibold tracking-tight text-foreground transition-colors group-hover:text-brand">
+              Strim Labs
             </span>
           </div>
         </Link>
 
         {/* Desktop Navigation Links */}
-        <nav className="hidden items-center gap-8 md:flex">
+        <nav className="hidden items-center gap-6 font-mono text-xs md:flex lg:gap-7">
           <Link
-            href="#capabilities"
-            className="text-xs font-medium text-foreground-muted hover:text-foreground transition-colors"
+            href="#workbench"
+            className="text-foreground-muted transition-colors hover:text-foreground"
           >
-            Capabilities
+            Explore
           </Link>
           <Link
-            href="#workflow"
-            className="text-xs font-medium text-foreground-muted hover:text-foreground transition-colors"
+            href="#benchmarks"
+            className="text-foreground-muted transition-colors hover:text-foreground"
           >
-            How It Works
+            Benchmarks
           </Link>
           <Link
             href="#architecture"
-            className="text-xs font-medium text-foreground-muted hover:text-foreground transition-colors"
+            className="text-foreground-muted transition-colors hover:text-foreground"
           >
             Architecture
           </Link>
           <Link
-            href="#security"
-            className="text-xs font-medium text-foreground-muted hover:text-foreground transition-colors"
+            href="#methodology"
+            className="text-foreground-muted transition-colors hover:text-foreground"
           >
-            Security & Verification
+            How it works
           </Link>
-          <a
-            href="https://strim-labs.onrender.com/swagger/index.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 text-xs font-medium text-foreground-muted hover:text-foreground transition-colors"
+          <Link
+            href="#simulator"
+            className="text-foreground-muted transition-colors hover:text-foreground"
           >
-            <BookOpen className="size-3.5" />
-            <span>API Docs</span>
-          </a>
+            Simulator
+          </Link>
+          <Link
+            href="#quickstart"
+            className="text-foreground-muted transition-colors hover:text-foreground"
+          >
+            Quickstart
+          </Link>
+          <Link
+            href="#faq"
+            className="text-foreground-muted transition-colors hover:text-foreground"
+          >
+            FAQ
+          </Link>
         </nav>
 
         {/* Right Actions */}
@@ -70,16 +100,17 @@ export function LandingNavbar() {
             variant="ghost"
             size="sm"
             render={<Link href="/login" />}
-            className="text-xs font-medium text-foreground-muted hover:text-foreground"
+            className="font-mono text-xs tracking-wider text-foreground-muted uppercase hover:bg-surface-raised hover:text-foreground"
           >
             Sign In
           </Button>
+
           <Button
             size="sm"
             render={<Link href="/signup" />}
-            className="gap-1.5 bg-brand text-white hover:bg-brand-hover shadow-xs font-medium text-xs"
+            className="gap-1.5 bg-brand px-3.5 font-mono text-xs font-bold tracking-wider text-white uppercase shadow-xs hover:bg-brand-hover"
           >
-            <span>Get Started</span>
+            <span>Start Test</span>
             <ArrowRight className="size-3.5" />
           </Button>
         </div>
@@ -89,63 +120,87 @@ export function LandingNavbar() {
           variant="ghost"
           size="icon-sm"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="md:hidden text-foreground-muted"
+          className="text-foreground-muted hover:text-foreground md:hidden"
           aria-label="Toggle mobile menu"
         >
-          {mobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+          {mobileMenuOpen ? (
+            <X className="size-5" />
+          ) : (
+            <Menu className="size-5" />
+          )}
         </Button>
       </div>
 
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div className="border-b border-border bg-surface px-4 py-4 md:hidden space-y-3">
-          <nav className="flex flex-col space-y-2.5">
+        <div className="space-y-4 border-b border-border-subtle bg-background px-4 py-6 font-mono text-xs md:hidden">
+          <div className="flex flex-col space-y-3">
             <Link
-              href="#capabilities"
+              href="#workbench"
               onClick={() => setMobileMenuOpen(false)}
-              className="text-sm font-medium text-foreground-muted hover:text-foreground"
+              className="text-foreground-muted hover:text-foreground"
             >
-              Capabilities
+              [01] EXPLORE COCKPIT
             </Link>
             <Link
-              href="#workflow"
+              href="#benchmarks"
               onClick={() => setMobileMenuOpen(false)}
-              className="text-sm font-medium text-foreground-muted hover:text-foreground"
+              className="text-foreground-muted hover:text-foreground"
             >
-              How It Works
+              [02] ACCURATE BENCHMARKS
             </Link>
             <Link
               href="#architecture"
               onClick={() => setMobileMenuOpen(false)}
-              className="text-sm font-medium text-foreground-muted hover:text-foreground"
+              className="text-foreground-muted hover:text-foreground"
             >
-              Architecture
+              [03] HOW IT WORKS
             </Link>
             <Link
-              href="#security"
+              href="#methodology"
               onClick={() => setMobileMenuOpen(false)}
-              className="text-sm font-medium text-foreground-muted hover:text-foreground"
+              className="text-foreground-muted hover:text-foreground"
             >
-              Security & Verification
+              [04] 4-STEP METHODOLOGY
             </Link>
-            <a
-              href="https://strim-labs.onrender.com/swagger/index.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-sm font-medium text-foreground-muted hover:text-foreground"
+            <Link
+              href="#simulator"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-foreground-muted hover:text-foreground"
             >
-              <BookOpen className="size-4" />
-              <span>Swagger API Docs</span>
-            </a>
-          </nav>
-          <div className="pt-3 border-t border-border-subtle flex flex-col gap-2">
+              [05] PROTOCOL SIMULATOR
+            </Link>
+            <Link
+              href="#quickstart"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-foreground-muted hover:text-foreground"
+            >
+              [06] QUICKSTART CLI
+            </Link>
+            <Link
+              href="#faq"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-foreground-muted hover:text-foreground"
+            >
+              [07] FREQUENTLY ASKED
+            </Link>
+          </div>
+
+          <div className="flex flex-col gap-2.5 border-t border-border-subtle pt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              render={<Link href="/login" />}
+              className="w-full justify-center border-border-subtle font-mono text-xs text-sand uppercase"
+            >
+              Sign In
+            </Button>
             <Button
               size="sm"
-              render={<Link href="/dashboard" />}
-              className="w-full justify-center bg-brand text-white hover:bg-brand-hover text-xs"
+              render={<Link href="/signup" />}
+              className="w-full justify-center bg-brand font-mono text-xs font-bold text-white uppercase hover:bg-brand-hover"
             >
-              <span>Launch App</span>
-              <ArrowRight className="ml-1.5 size-3.5" />
+              Start Load Test
             </Button>
           </div>
         </div>

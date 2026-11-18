@@ -1,125 +1,203 @@
+"use client"
+
 import * as React from "react"
 import Link from "next/link"
+import Image from "next/image"
+import { ArrowUp } from "lucide-react"
 
-export function LandingFooter() {
+function GithubIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
-    <footer className="border-t border-border bg-background py-14 text-xs font-mono">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4" />
+      <path d="M9 18c-4.51 2-5-2-7-2" />
+    </svg>
+  )
+}
+
+export function Footer() {
+  const currentYear = new Date().getFullYear()
+
+  const scrollToTop = (e: React.MouseEvent) => {
+    e.preventDefault()
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  return (
+    <footer className="border-t border-border bg-background py-14 font-mono text-xs">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
-          {/* Brand Col */}
-          <div className="space-y-3 lg:col-span-2">
-            <Link href="/" className="flex items-center gap-2.5">
-              <div className="flex size-7 items-center justify-center rounded-lg border border-border bg-surface">
-                <span className="font-mono text-xs font-bold text-brand">S</span>
-                <span className="font-mono text-xs font-bold text-sand">L</span>
+          {/* Brand Info */}
+          <div className="space-y-4 lg:col-span-2">
+            <Link href="/" className="group flex items-center gap-2.5">
+              <div>
+                <Image
+                  src="/logo.png"
+                  alt="Strim Labs Logo"
+                  width={32}
+                  height={32}
+                  className="size-full object-contain"
+                />
               </div>
-              <span className="font-bold tracking-tight text-foreground text-sm font-sans">
-                STRIM LABS
+              <span className="text-sm font-bold tracking-tight text-foreground transition-colors group-hover:text-brand">
+                Strim Labs
               </span>
             </Link>
-            <p className="text-xs text-foreground-muted leading-relaxed font-sans max-w-sm">
-              Production-grade API load testing, real-time observability, and capacity analysis platform.
-            </p>
-            <p className="text-[11px] text-foreground-subtle">
-              Find your API&apos;s breaking point before production does.
+            <p className="max-w-sm font-sans text-xs leading-relaxed text-foreground-muted">
+              API load testing, automatic discovery, and real-time performance
+              monitoring. Find your server&apos;s breaking point before
+              production does.
             </p>
           </div>
 
-          {/* Product Col */}
+          {/* Platform Navigation */}
           <div className="space-y-3">
-            <p className="font-semibold text-foreground tracking-wider uppercase text-[11px]">
+            <p className="text-[11px] font-semibold tracking-wider text-foreground uppercase">
               Platform
             </p>
-            <ul className="space-y-2 text-foreground-muted font-sans text-xs">
+            <ul className="space-y-2 font-sans text-xs text-foreground-muted">
               <li>
-                <Link href="/dashboard" className="hover:text-foreground">
-                  Load Runner
+                <Link
+                  href="#workbench"
+                  className="transition-colors hover:text-foreground"
+                >
+                  Explore Cockpit
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard" className="hover:text-foreground">
-                  Live Cockpit
+                <Link
+                  href="#benchmarks"
+                  className="transition-colors hover:text-foreground"
+                >
+                  Benchmarks
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard" className="hover:text-foreground">
-                  Capacity Analysis
+                <Link
+                  href="#architecture"
+                  className="transition-colors hover:text-foreground"
+                >
+                  Architecture
                 </Link>
               </li>
               <li>
-                <Link href="/dashboard" className="hover:text-foreground">
-                  Regression Comparison
+                <Link
+                  href="#methodology"
+                  className="transition-colors hover:text-foreground"
+                >
+                  How It Works
                 </Link>
               </li>
             </ul>
           </div>
 
-          {/* API & Docs Col */}
+          {/* Developer Tools */}
           <div className="space-y-3">
-            <p className="font-semibold text-foreground tracking-wider uppercase text-[11px]">
+            <p className="text-[11px] font-semibold tracking-wider text-foreground uppercase">
               Developers
             </p>
-            <ul className="space-y-2 text-foreground-muted font-sans text-xs">
+            <ul className="space-y-2 font-sans text-xs text-foreground-muted">
               <li>
-                <a
-                  href="https://strim-labs.onrender.com/swagger/index.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-foreground"
+                <Link
+                  href="#simulator"
+                  className="transition-colors hover:text-foreground"
                 >
-                  Swagger OpenAPI 3.0
-                </a>
+                  Protocol Simulator
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="#quickstart"
+                  className="transition-colors hover:text-foreground"
+                >
+                  Quickstart CLI
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="#faq"
+                  className="transition-colors hover:text-foreground"
+                >
+                  FAQ
+                </Link>
               </li>
               <li>
                 <a
-                  href="https://strim-labs.onrender.com/healthz"
+                  href="https://github.com/Prince-695"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-foreground"
+                  className="inline-flex items-center gap-1.5 transition-colors hover:text-foreground"
                 >
-                  System Liveness Probe
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://strim-labs.onrender.com/metrics"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-foreground"
-                >
-                  Prometheus Metrics
+                  <GithubIcon className="size-3 text-sand" />
+                  <span>GitHub</span>
                 </a>
               </li>
             </ul>
           </div>
 
-          {/* Security & System */}
+          {/* Account & Access */}
           <div className="space-y-3">
-            <p className="font-semibold text-foreground tracking-wider uppercase text-[11px]">
-              Security
+            <p className="text-[11px] font-semibold tracking-wider text-foreground uppercase">
+              Access
             </p>
-            <ul className="space-y-2 text-foreground-muted font-sans text-xs">
+            <ul className="space-y-2 font-sans text-xs text-foreground-muted">
               <li>
-                <span className="text-foreground-subtle">DNS TXT Verification</span>
+                <Link
+                  href="/login"
+                  className="transition-colors hover:text-foreground"
+                >
+                  Sign In
+                </Link>
               </li>
               <li>
-                <span className="text-foreground-subtle">Netguard SSRF Defense</span>
+                <Link
+                  href="/signup"
+                  className="font-medium text-brand transition-colors hover:text-foreground"
+                >
+                  Create Free Account →
+                </Link>
               </li>
               <li>
-                <span className="text-foreground-subtle">Argon2 Password Hashing</span>
-              </li>
-              <li>
-                <span className="text-foreground-subtle">AES-256 Webhook Secrets</span>
+                <Link
+                  href="/dashboard"
+                  className="transition-colors hover:text-foreground"
+                >
+                  Dashboard
+                </Link>
               </li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-12 flex flex-col sm:flex-row items-center justify-between border-t border-border-subtle pt-6 text-[11px] text-foreground-subtle">
-          <p>© {new Date().getFullYear()} STRIM Labs. All rights reserved.</p>
-          <p className="mt-2 sm:mt-0 font-sans">
-            Engineered for high-concurrency API performance decisions.
-          </p>
+        {/* Bottom Bar with Smooth Back to Top */}
+        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-border pt-6 text-[11px] text-foreground-subtle sm:flex-row">
+          <p>© {currentYear} STRIM Labs. Open Source under Apache 2.0.</p>
+          <div className="flex items-center gap-6">
+            <button
+              type="button"
+              onClick={scrollToTop}
+              className="flex cursor-pointer items-center gap-1 transition-colors hover:text-sand"
+            >
+              <span>Back to top</span>
+              <ArrowUp className="size-3" />
+            </button>
+            <a
+              href="https://github.com/Prince-695"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-colors hover:text-sand"
+            >
+              GitHub
+            </a>
+            <span className="text-brand">v1.0.0</span>
+          </div>
         </div>
       </div>
     </footer>
