@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "strim-labs"
+version = "0.1.0"
+description = "STRIM Labs telemetry and runtime API discovery middleware for Python (FastAPI, Flask, Starlette)"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [
+  { name = "STRIM Labs Team", email = "support@strimlabs.com" }
+]
+keywords = ["strim", "telemetry", "observability", "fastapi", "flask", "load-testing", "api-discovery"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://strimlabs.com"
+Repository = "https://github.com/Prince-695/strim"

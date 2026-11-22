@@ -1,0 +1,68 @@
+name: Publish SDKs
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'SDK to publish'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - node
+          - python
+
+jobs:
+  # ==========================================
+  # 🟢 NODE.JS (Direct publish to npm)
+  # ==========================================
+  publish-node:
+    name: Publish Node.js SDK
+    if: inputs.target == 'all' || inputs.target == 'node' || github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Build and Publish to npm
+        run: |
+          cd sdk/node
+          npm install --no-package-lock
+          npm run build
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # ==========================================
+  # 🐍 PYTHON (Direct publish to PyPI)
+  # ==========================================
+  publish-python:
+    name: Publish Python SDK
+    if: inputs.target == 'all' || inputs.target == 'python' || github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install packaging tools
+        run: pip install --upgrade setuptools wheel twine
+
+      - name: Build and Publish to PyPI
+        run: |
+          cd sdk/python
+          python setup.py sdist bdist_wheel
+          twine upload dist/* -u __token__ -p ${{ secrets.PYPI_API_TOKEN }}
