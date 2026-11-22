@@ -33,8 +33,7 @@
     "fastify"
   ],
   "scripts": {
-    "build": "tsc",
-    "prepublishOnly": "npm run build"
+    "build": "tsc"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
