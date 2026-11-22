@@ -3,8 +3,19 @@
 import * as React from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Menu, X, ArrowRight, BookOpen, Activity } from "lucide-react"
+import { Menu, X, ArrowRight, LayoutDashboard } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useAuthStore } from "@/lib/stores/auth-store"
+
+const emptySubscribe = () => () => {}
+
+function useMounted() {
+  return React.useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  )
+}
 
 function GithubIcon(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -25,6 +36,14 @@ function GithubIcon(props: React.SVGProps<SVGSVGElement>) {
 
 export function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false)
+  const { isAuthenticated, initialize } = useAuthStore()
+  const mounted = useMounted()
+
+  React.useEffect(() => {
+    initialize()
+  }, [initialize])
+
+  const isLoggedIn = mounted && isAuthenticated
 
   return (
     <header className="sticky top-0 z-50 mx-auto w-full border-b backdrop-blur-md">
@@ -96,39 +115,69 @@ export function Navbar() {
 
         {/* Right Actions */}
         <div className="hidden items-center gap-3 md:flex">
-          <Button
-            variant="ghost"
-            size="sm"
-            render={<Link href="/login" />}
-            className="font-mono text-xs tracking-wider text-foreground-muted uppercase hover:bg-surface-raised hover:text-foreground"
-          >
-            Sign In
-          </Button>
+          {isLoggedIn ? (
+            <Button
+              variant="outline"
+              size="icon-sm"
+              render={<Link href="/dashboard" />}
+              className="border-border-subtle bg-surface-raised text-foreground transition-all hover:border-brand/50 hover:bg-surface-raised/80 hover:text-brand"
+              aria-label="Dashboard"
+              title="Dashboard"
+            >
+              <LayoutDashboard className="size-4" />
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                render={<Link href="/login" />}
+                className="font-mono text-xs tracking-wider text-foreground-muted uppercase hover:bg-surface-raised hover:text-foreground"
+              >
+                Sign In
+              </Button>
 
-          <Button
-            size="sm"
-            render={<Link href="/signup" />}
-            className="gap-1.5 bg-brand px-3.5 font-mono text-xs font-bold tracking-wider text-white uppercase shadow-xs hover:bg-brand-hover"
-          >
-            <span>Start Test</span>
-            <ArrowRight className="size-3.5" />
-          </Button>
+              <Button
+                size="sm"
+                render={<Link href="/signup" />}
+                className="gap-1.5 bg-brand px-3.5 font-mono text-xs font-bold tracking-wider text-white uppercase shadow-xs hover:bg-brand-hover"
+              >
+                <span>Start Test</span>
+                <ArrowRight className="size-3.5" />
+              </Button>
+            </>
+          )}
         </div>
 
-        {/* Mobile Hamburger Toggle */}
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="text-foreground-muted hover:text-foreground md:hidden"
-          aria-label="Toggle mobile menu"
-        >
-          {mobileMenuOpen ? (
-            <X className="size-5" />
-          ) : (
-            <Menu className="size-5" />
+        {/* Mobile Actions & Hamburger Toggle */}
+        <div className="flex items-center gap-2 md:hidden">
+          {isLoggedIn && (
+            <Button
+              variant="outline"
+              size="icon-sm"
+              render={<Link href="/dashboard" />}
+              className="border-border-subtle bg-surface-raised text-foreground transition-all hover:border-brand/50 hover:bg-surface-raised/80 hover:text-brand"
+              aria-label="Dashboard"
+              title="Dashboard"
+            >
+              <LayoutDashboard className="size-4" />
+            </Button>
           )}
-        </Button>
+
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="text-foreground-muted hover:text-foreground"
+            aria-label="Toggle mobile menu"
+          >
+            {mobileMenuOpen ? (
+              <X className="size-5" />
+            ) : (
+              <Menu className="size-5" />
+            )}
+          </Button>
+        </div>
       </div>
 
       {/* Mobile Menu Dropdown */}
@@ -187,21 +236,35 @@ export function Navbar() {
           </div>
 
           <div className="flex flex-col gap-2.5 border-t border-border-subtle pt-4">
-            <Button
-              variant="outline"
-              size="sm"
-              render={<Link href="/login" />}
-              className="w-full justify-center border-border-subtle font-mono text-xs text-sand uppercase"
-            >
-              Sign In
-            </Button>
-            <Button
-              size="sm"
-              render={<Link href="/signup" />}
-              className="w-full justify-center bg-brand font-mono text-xs font-bold text-white uppercase hover:bg-brand-hover"
-            >
-              Start Load Test
-            </Button>
+            {isLoggedIn ? (
+              <Button
+                size="sm"
+                render={<Link href="/dashboard" />}
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full justify-center gap-2 bg-brand font-mono text-xs font-bold text-white uppercase hover:bg-brand-hover"
+              >
+                <LayoutDashboard className="size-4" />
+                <span>Dashboard</span>
+              </Button>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  render={<Link href="/login" />}
+                  className="w-full justify-center border-border-subtle font-mono text-xs text-sand uppercase"
+                >
+                  Sign In
+                </Button>
+                <Button
+                  size="sm"
+                  render={<Link href="/signup" />}
+                  className="w-full justify-center bg-brand font-mono text-xs font-bold text-white uppercase hover:bg-brand-hover"
+                >
+                  Start Load Test
+                </Button>
+              </>
+            )}
           </div>
         </div>
       )}
