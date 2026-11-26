@@ -1,0 +1,106 @@
+name: Publish SDKs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'sdk/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # ==========================================
+  # 🟢 NODE.JS (Build & Publish to npm)
+  # ==========================================
+  publish-node:
+    name: Publish Node.js SDK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Build and Publish to npm
+        run: |
+          cd sdk/node
+          npm install --no-package-lock
+          npm run build
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  # ==========================================
+  # 🐍 PYTHON (Build & Publish to PyPI)
+  # ==========================================
+  publish-python:
+    name: Publish Python SDK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install packaging tools
+        run: pip install --upgrade setuptools wheel twine
+
+      - name: Build and Publish to PyPI
+        run: |
+          cd sdk/python
+          python setup.py sdist bdist_wheel
+          twine upload dist/* -u __token__ -p ${{ secrets.PYPI_API_TOKEN }} --skip-existing
+
+  # ==========================================
+  # 🔷 GO (Test, Tag & Publish to Go Proxy)
+  # ==========================================
+  publish-go:
+    name: Publish Go SDK
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Run tests
+        run: |
+          cd sdk/go
+          go test -v ./...
+
+      - name: Tag and Index Go Module
+        run: |
+          LATEST_TAG=$(git tag -l "sdk/go/v*" | sort -V | tail -n 1)
+          if [ -z "$LATEST_TAG" ]; then
+            NEXT_TAG="sdk/go/v0.1.0"
+          else
+            BASE_VER=${LATEST_TAG#sdk/go/v}
+            MAJOR=$(echo $BASE_VER | cut -d. -f1)
+            MINOR=$(echo $BASE_VER | cut -d. -f2)
+            PATCH=$(echo $BASE_VER | cut -d. -f3)
+            NEXT_PATCH=$((PATCH + 1))
+            NEXT_TAG="sdk/go/v${MAJOR}.${MINOR}.${NEXT_PATCH}"
+          fi
+
+          echo "Publishing Go tag: $NEXT_TAG"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$NEXT_TAG" -m "Automated release $NEXT_TAG"
+          git push origin "$NEXT_TAG"
+
+          GOPROXY=proxy.golang.org go list -m "github.com/${{ github.repository }}/sdk/go@$NEXT_TAG" || true

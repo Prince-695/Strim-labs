@@ -1,0 +1,44 @@
+{
+  "name": "@strim-labs/node",
+  "version": "0.1.0",
+  "description": "Strim Labs telemetry and runtime API discovery middleware for Node.js",
+  "author": "Strim Labs Team",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "strim",
+    "telemetry",
+    "observability",
+    "api-discovery",
+    "load-testing",
+    "middleware",
+    "express",
+    "fastify"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0"
+  }
+}

@@ -20,3 +20,8 @@ phase*.md
 .agents/
 
 inspiration/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
