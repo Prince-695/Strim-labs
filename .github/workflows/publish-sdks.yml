@@ -33,7 +33,12 @@ jobs:
           cd sdk/node
           npm install --no-package-lock
           npm run build
-          npm publish --access public
+          CURRENT_VER=$(node -p "require('./package.json').version")
+          if npm view "@strim-labs/node@$CURRENT_VER" version > /dev/null 2>&1; then
+            echo "@strim-labs/node@$CURRENT_VER is already published on npm. Skipping publish."
+          else
+            npm publish --access public
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
