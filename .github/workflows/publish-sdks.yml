@@ -14,6 +14,12 @@ permissions:
 jobs:
   # ==========================================
   # 🟢 NODE.JS (Build & Publish to npm)
+  #
+  # PREREQUISITE:
+  # The GitHub repository secret `NPM_TOKEN` must be an npm publish token
+  # with 2FA bypass enabled (or account 2FA set to "Authorization only").
+  # Without 2FA bypass, headless CI execution fails with `EOTP` because
+  # one-time passwords cannot be interactively supplied by the runner.
   # ==========================================
   publish-node:
     name: Publish Node.js SDK
