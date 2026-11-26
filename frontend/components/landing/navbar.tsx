@@ -189,49 +189,49 @@ export function Navbar() {
               onClick={() => setMobileMenuOpen(false)}
               className="text-foreground-muted hover:text-foreground"
             >
-              [01] EXPLORE COCKPIT
+              EXPLORE COCKPIT
             </Link>
             <Link
               href="#benchmarks"
               onClick={() => setMobileMenuOpen(false)}
               className="text-foreground-muted hover:text-foreground"
             >
-              [02] ACCURATE BENCHMARKS
+              ACCURATE BENCHMARKS
             </Link>
             <Link
               href="#architecture"
               onClick={() => setMobileMenuOpen(false)}
               className="text-foreground-muted hover:text-foreground"
             >
-              [03] HOW IT WORKS
+              HOW IT WORKS
             </Link>
             <Link
               href="#methodology"
               onClick={() => setMobileMenuOpen(false)}
               className="text-foreground-muted hover:text-foreground"
             >
-              [04] 4-STEP METHODOLOGY
+              4-STEP METHODOLOGY
             </Link>
             <Link
               href="#simulator"
               onClick={() => setMobileMenuOpen(false)}
               className="text-foreground-muted hover:text-foreground"
             >
-              [05] PROTOCOL SIMULATOR
+              PROTOCOL SIMULATOR
             </Link>
             <Link
               href="#quickstart"
               onClick={() => setMobileMenuOpen(false)}
               className="text-foreground-muted hover:text-foreground"
             >
-              [06] QUICKSTART CLI
+              QUICKSTART CLI
             </Link>
             <Link
               href="#faq"
               onClick={() => setMobileMenuOpen(false)}
               className="text-foreground-muted hover:text-foreground"
             >
-              [07] FREQUENTLY ASKED
+              FREQUENTLY ASKED
             </Link>
           </div>
 
